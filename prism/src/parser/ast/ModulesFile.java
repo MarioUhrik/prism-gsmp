@@ -48,6 +48,7 @@ public class ModulesFile extends ASTElement implements ModelInfo
 	private FormulaList formulaList;
 	private LabelList labelList;
 	private ConstantList constantList;
+	private DistributionList distributionList; // TODO MAJO - make sure this works
 	private Vector<Declaration> globals; // Global variables
 	private Vector<Object> modules; // Modules (includes renamed modules)
 	private ArrayList<SystemDefn> systemDefns; // System definitions (system...endsystem constructs)
@@ -59,6 +60,8 @@ public class ModulesFile extends ASTElement implements ModelInfo
 	// Lists of all identifiers used
 	private Vector<String> formulaIdents;
 	private Vector<String> constantIdents;
+	private Vector<String> distributionIdents;
+	private Vector<String> eventIdents;
 	private Vector<String> varIdents; // TODO: don't need?
 	// List of all module names
 	private String[] moduleNames;
@@ -81,6 +84,7 @@ public class ModulesFile extends ASTElement implements ModelInfo
 		formulaList = new FormulaList();
 		labelList = new LabelList();
 		constantList = new ConstantList();
+		distributionList = new DistributionList();
 		modelType = ModelType.MDP; // default type
 		globals = new Vector<Declaration>();
 		modules = new Vector<Object>();
@@ -91,6 +95,8 @@ public class ModulesFile extends ASTElement implements ModelInfo
 		initStates = null;
 		formulaIdents = new Vector<String>();
 		constantIdents = new Vector<String>();
+		distributionIdents = new Vector<String>();
+		eventIdents = new Vector<String>();
 		varIdents = new Vector<String>();
 		varDecls = new Vector<Declaration>();
 		varNames = new Vector<String>();
@@ -114,6 +120,11 @@ public class ModulesFile extends ASTElement implements ModelInfo
 	public void setConstantList(ConstantList cl)
 	{
 		constantList = cl;
+	}
+	
+	public void setDistributionList(DistributionList dl)
+	{
+		distributionList = dl;
 	}
 
 	public void setModelType(ModelType t)
@@ -268,6 +279,11 @@ public class ModulesFile extends ASTElement implements ModelInfo
 	public ConstantList getConstantList()
 	{
 		return constantList;
+	}
+	
+	public DistributionList getDistributionList()
+	{
+		return distributionList;
 	}
 
 	@Override
@@ -494,7 +510,7 @@ public class ModulesFile extends ASTElement implements ModelInfo
 	 */
 	public boolean isIdentUsed(String ident)
 	{
-		return formulaIdents.contains(ident) || constantIdents.contains(ident) || varIdents.contains(ident);
+		return formulaIdents.contains(ident) || constantIdents.contains(ident) || varIdents.contains(ident) || distributionIdents.contains(ident) || eventIdents.contains(ident);
 	}
 
 	// get individual module name
@@ -531,6 +547,24 @@ public class ModulesFile extends ASTElement implements ModelInfo
 			return false;
 		else
 			return synchs.contains(s);
+	}
+	
+	// Event query methods
+	
+	public int getNumEvents() {
+		return eventIdents.size();
+	}
+	
+	public int getEventIndex(String ident) {
+		return eventIdents.indexOf(ident);
+	}
+	
+	public String getEventIdent(int i) {
+		return eventIdents.get(i);
+	}
+	
+	public Vector<String> getEventIdents(){
+		return eventIdents;
 	}
 
 	// Variable query methods
@@ -621,10 +655,12 @@ public class ModulesFile extends ASTElement implements ModelInfo
 		// (in case it has already been called previously).
 		formulaIdents.clear();
 		constantIdents.clear();
+		distributionIdents.clear();
 		varIdents.clear();
 		varDecls.clear();
 		varNames.clear();
 		varTypes.clear();
+		eventIdents.clear();
 		
 		// Expansion of formulas and renaming
 
@@ -654,12 +690,26 @@ public class ModulesFile extends ASTElement implements ModelInfo
 		findAllConstants(constantList);
 		// Check constants for cyclic dependencies
 		constantList.findCycles();
+		
+		// TODO MAJO - not sure about this
+		// Check distribution identifiers
+		checkDistributions();
+		// Find all instances of distributions
+		// (i.e. locate identifiers which are distributions)
+		findAllDistributions(distributionList);
+		// Check distributions for cyclic dependencies
+		distributionList.findCycles(); // TODO MAJO - may not be necessary
 
 		// Check variable names, etc.
 		checkVarNames();
 		// Find all instances of variables, replace identifiers with variables.
 		// Also check variables valid, store indices, etc.
 		findAllVars(varNames, varTypes);
+		
+		// Check event identifiers within each module
+		checkEvents(); // TODO MAJO - may not be needed
+		//find all event identifiers within each module
+		findAllEvents(eventIdents);
 
 		// Find all instances of property refs
 		findAllPropRefs(this, null);
@@ -853,6 +903,59 @@ public class ModulesFile extends ASTElement implements ModelInfo
 						.getConstantNameIdent(i));
 			} else {
 				constantIdents.add(s);
+			}
+		}
+	}
+	
+	
+	//check event identifiers
+	
+	/**
+	 * Checks whether any of the modules has multiple events with the same identifier
+	 * and whether each event is associated with an already declared distribution
+	 * @throws PrismLangException
+	 */
+	private void checkEvents() throws PrismLangException{
+		int i, n;
+		n = getNumModules();
+		
+		for (i = 0; i < n; i++) {
+			Module m = this.getModule(i);
+			for (int j = 0; j < m.getNumEvents() ; ++j) {
+				Event e = m.getEvent(j);
+				if (isIdentUsed(e.getEventName())) { // check that there are not two events with the same identifier
+					throw new PrismLangException("Duplicated identifier \"" + e.getEventName() + "\"", 
+							e.getEventNameIdent());
+				} else if (getDistributionList().getDistributionIndex(e.getDistributionName()) == -1) { 
+					// check that the assigned distribution has actually been declared
+					throw new PrismLangException("Event \"" + e.getEventName() + "\" is not assigned to a defined distribution",
+							e.getDistributionNameIdent());
+				} else {
+					eventIdents.add(e.getEventName());
+				}
+			}
+		}
+		
+	}
+	
+	// check distribution identifiers and parameter value ranges
+
+	private void checkDistributions() throws PrismLangException
+	{
+		int i, n;
+		String s;
+
+		n = distributionList.size();
+		for (i = 0; i < n; i++) {
+			s = distributionList.getDistributionName(i);
+			if (isIdentUsed(s)) { // distribution identifier check
+				throw new PrismLangException("Duplicated identifier \"" + s + "\"", distributionList
+						.getDistributionNameIdent(i));
+			} else if (!distributionList.getDistributionType(i).parameterValueCheck( //distribution parameter value check
+					   distributionList.getFirstParameter(i),
+					   distributionList.getSecondParameter(i))) {
+			} else {
+				distributionIdents.add(s);
 			}
 		}
 	}
@@ -1234,6 +1337,11 @@ public class ModulesFile extends ASTElement implements ModelInfo
 		if (tmp.length() > 0)
 			tmp += "\n";
 		s += tmp;
+		
+		tmp = "" + distributionList;
+		if (tmp.length() > 0)
+			tmp += "\n";
+		s += tmp;
 
 		n = getNumGlobals();
 		for (i = 0; i < n; i++) {
@@ -1284,6 +1392,7 @@ public class ModulesFile extends ASTElement implements ModelInfo
 		ret.setFormulaList((FormulaList) formulaList.deepCopy());
 		ret.setLabelList((LabelList) labelList.deepCopy());
 		ret.setConstantList((ConstantList) constantList.deepCopy());
+		ret.setDistributionList((DistributionList) distributionList.deepCopy());
 		n = getNumGlobals();
 		for (i = 0; i < n; i++) {
 			ret.addGlobal((Declaration) getGlobal(i).deepCopy());
@@ -1305,6 +1414,7 @@ public class ModulesFile extends ASTElement implements ModelInfo
 		// Copy other (generated) info
 		ret.formulaIdents = (formulaIdents == null) ? null : (Vector<String>)formulaIdents.clone();
 		ret.constantIdents = (constantIdents == null) ? null : (Vector<String>)constantIdents.clone();
+		ret.distributionIdents = (distributionIdents == null) ? null : (Vector<String>)distributionIdents.clone();
 		ret.varIdents = (varIdents == null) ? null : (Vector<String>)varIdents.clone();
 		ret.moduleNames = (moduleNames == null) ? null : moduleNames.clone();
 		ret.synchs = (synchs == null) ? null : (Vector<String>)synchs.clone();
@@ -1314,6 +1424,7 @@ public class ModulesFile extends ASTElement implements ModelInfo
 				ret.varDecls.add((Declaration) d.deepCopy());
 		}
 		ret.varNames = (varNames == null) ? null : (Vector<String>)varNames.clone();
+		ret.eventIdents = (eventIdents == null) ? null : (Vector<String>)eventIdents.clone();
 		ret.varTypes = (varTypes == null) ? null : (Vector<Type>)varTypes.clone();
 		ret.constantValues = (constantValues == null) ? null : new Values(constantValues);
 		

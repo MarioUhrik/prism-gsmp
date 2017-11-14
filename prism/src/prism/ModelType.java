@@ -80,6 +80,31 @@ public enum ModelType
 			return false;
 		}
 	},
+	GSMP("generalized semi-Markov process") { //TODO MAJO: is this correct?
+		@Override
+		public boolean choicesSumToOne()
+		{
+			return false;
+		}
+
+		@Override
+		public boolean continuousTime()
+		{
+			return true;
+		}
+
+		@Override
+		public boolean nondeterministic()
+		{
+			return false;
+		}
+
+		@Override
+		public String probabilityOrRate()
+		{
+			return RATE;
+		}
+	},
 	LTS("labelled transition system") {
 		@Override
 		public boolean isProbabilistic()

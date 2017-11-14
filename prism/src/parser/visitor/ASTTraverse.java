@@ -48,6 +48,7 @@ public class ASTTraverse implements ASTVisitor
 		if (e.getFormulaList() != null) e.getFormulaList().accept(this);
 		if (e.getLabelList() != null) e.getLabelList().accept(this);
 		if (e.getConstantList() != null) e.getConstantList().accept(this);
+		if (e.getDistributionList() != null) e.getDistributionList().accept(this);
 		n = e.getNumGlobals();
 		for (i = 0; i < n; i++) {
 			if (e.getGlobal(i) != null) e.getGlobal(i).accept(this);
@@ -134,6 +135,21 @@ public class ASTTraverse implements ASTVisitor
 		return null;
 	}
 	public void visitPost(ConstantList e) throws PrismLangException { defaultVisitPost(e); }
+	// -----------------------------------------------------------------------------------
+	public void visitPre(DistributionList e) throws PrismLangException { defaultVisitPre(e); }
+	public Object visit(DistributionList e) throws PrismLangException
+	{
+		visitPre(e);
+		int i, n;
+		n = e.size();
+		for (i = 0; i < n; i++) {
+			if (e.getFirstParameter(i) != null) e.getFirstParameter(i).accept(this); // TODO MAJO - this should never be null anyway
+			if (e.getSecondParameter(i) != null) e.getSecondParameter(i).accept(this);
+		}
+		visitPost(e);
+		return null;
+	}
+	public void visitPost(DistributionList e) throws PrismLangException { defaultVisitPost(e); }
 	// -----------------------------------------------------------------------------------
 	public void visitPre(Declaration e) throws PrismLangException { defaultVisitPre(e); }
 	public Object visit(Declaration e) throws PrismLangException
@@ -230,6 +246,19 @@ public class ASTTraverse implements ASTVisitor
 		return null;
 	}
 	public void visitPost(Command e) throws PrismLangException { defaultVisitPost(e); }
+	// -----------------------------------------------------------------------------------
+	public void visitPre(Event e) throws PrismLangException { defaultVisitPre(e); }
+	public Object visit(Event e) throws PrismLangException
+	{
+		// Note: a few classes override this method (e.g. SemanticCheck)
+		// so take care to update those versions if changing this method
+		visitPre(e);
+		e.getEventNameIdent().accept(this);
+		e.getDistributionNameIdent().accept(this);
+		visitPost(e);
+		return null;
+	}
+	public void visitPost(Event e) throws PrismLangException { defaultVisitPost(e); }
 	// -----------------------------------------------------------------------------------
 	public void visitPre(Updates e) throws PrismLangException { defaultVisitPre(e); }
 	public Object visit(Updates e) throws PrismLangException

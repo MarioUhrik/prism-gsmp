@@ -154,7 +154,10 @@ public class PTAParser
 			String name;
 			PTA pta;
 			Transition trans;
-			pta = new PTA();
+			//TODO MAJO : someone else has an error here. I changed
+			//pta = new PTA();
+			// to
+			pta = new PTA(new ArrayList<String>());
 			// Add all clocks
 			n = clockNames.size();
 			for (i = 0; i < n; i++)

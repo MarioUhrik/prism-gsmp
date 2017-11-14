@@ -123,20 +123,10 @@ public class PTAParser implements PTAParserConstants {
                         String name;
                         PTA pta;
                         Transition trans;
-                        LinkedHashSet <String> alphabet = new LinkedHashSet<String>();
-                        // Find alphabet
-                        n = locationNames.size();
-                        for (i = 0; i < n; i++) {
-                            ArrayList<astTransition> tt = transitions.get(locationNames.get(i));
-                            if (tt == null || tt.isEmpty()) continue;
-                            for (astTransition t : tt) {
-                            	if (t.action != null && !t.action.equals("")) {
-                            		alphabet.add(t.action);
-                            	}
-                            }
-                        }
-                        // Create new PTA
-                        pta = new PTA(new ArrayList<String> (alphabet));
+                        //TODO MAJO : someone else has an error here. I changed
+                        //pta = new PTA();
+                        // to
+                        pta = new PTA(new ArrayList<String>());
                         // Add all clocks
                         n = clockNames.size();
                         for (i = 0; i < n; i++)
