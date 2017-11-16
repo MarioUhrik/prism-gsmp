@@ -33,7 +33,7 @@ import prism.PrismLangException;
  * Find all idents which are distributions, replace with ExpressionConstant, return result.
  */
 public class FindAllDistributions extends ASTTraverseModify
-{
+{ // TODO MAJO : probably broken, probably not needed anyway
 	private DistributionList distributionList;
 	
 	public FindAllDistributions(DistributionList distributionList)

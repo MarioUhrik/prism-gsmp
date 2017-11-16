@@ -691,19 +691,19 @@ public class ModulesFile extends ASTElement implements ModelInfo
 		// Check constants for cyclic dependencies
 		constantList.findCycles();
 		
-		// TODO MAJO - not sure about this
-		// Check distribution identifiers
+		// TODO MAJO - not sure about this, or the placement of these
+		 // Check distribution identifiers
 		checkDistributions();
-		// Find all instances of distributions
-		// (i.e. locate identifiers which are distributions)
-		findAllDistributions(distributionList);
-		// Check distributions for cyclic dependencies
+		 // Find all instances of distributions
+		 // (i.e. locate identifiers which are distributions)
+		//findAllDistributions(distributionList);
+		 // Check distributions for cyclic dependencies
 		distributionList.findCycles(); // TODO MAJO - may not be necessary
 		
-		// Check event identifiers within each module
+		 // Check event identifiers within each module
 		checkEvents(); // TODO MAJO - may not be needed
-		//find all event identifiers within each module
-		findAllEvents(eventIdents);
+		 //find all event identifiers within each module
+		//findAllEvents(eventIdents);
 
 		// Check variable names, etc.
 		checkVarNames();
@@ -944,18 +944,16 @@ public class ModulesFile extends ASTElement implements ModelInfo
 	{
 		int i, n;
 		String s;
-
 		n = distributionList.size();
 		for (i = 0; i < n; i++) {
 			s = distributionList.getDistributionName(i);
-			constantValues = constantList.evaluateConstants(null, null);
 			if (isIdentUsed(s)) { // distribution identifier check
 				throw new PrismLangException("Duplicated identifier \"" + s + "\"", distributionList
 						.getDistributionNameIdent(i));
 			} else if (!distributionList.getDistributionType(i).parameterValueCheck( //distribution parameter value check
 					   distributionList.getFirstParameter(i),
 					   distributionList.getSecondParameter(i),
-					   getConstantValues())) {
+					   constantList.evaluateSomeConstants(null, null))) {
 			} else {
 				distributionIdents.add(s);
 			}

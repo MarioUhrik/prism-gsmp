@@ -556,13 +556,13 @@ ModulesFile ModulesFile() throws PrismLangException :
 	// Model type
 	( type=ModulesFileType() { typeCount++; if (typeCount == 2) typeDupe = getToken(0); } ) |
 	// Formula/label/constant/distribution definition
-	FormulaDef(mf.getFormulaList()) | LabelDef(mf.getLabelList()) | ConstantDef(mf.getConstantList()) | DistributionDef(mf.getDistributionList()) |
+	FormulaDef(mf.getFormulaList()) | LabelDef(mf.getLabelList()) | ConstantDef(mf.getConstantList()) | DistributionDec(mf.getDistributionList()) |
 	// Global variable
 	global = GlobalDecl() { mf.addGlobal(global); } |
 	// Renamed module (lookahead to distinguish from normal module)
 	LOOKAHEAD(<MODULE> Identifier() <EQ>) rm = RenamedModule() { mf.addRenamedModule(rm); } |
 	// Module
-	m = Module() { mf.addModule(m); } | 
+	m = Module(mf) { mf.addModule(m); } | 
 	// Reward structure
 	rs = RewardStruct() { mf.addRewardStruct(rs); } |
 	// Initial states ("init...endinit" construct)
@@ -737,27 +737,38 @@ void ConstantDef(ConstantList constantList) :
 	{ constantList.addConstant(name, expr, type); }
 }
 
-// Distribution definition
+// Distribution declaration
 
-void DistributionDef(DistributionList distributionList) :
+void DistributionDec(DistributionList distributionList) :
 {
-	TypeDistribution type = TypeDistribution.getInstance();
 	ExpressionIdent name = null;
-	Expression firstParameter = null;
-	Expression secondParameter = null;
 }
 {
 	// Distribution 
 	<DISTRIBUTION> 
-	// Name and initial value
+	// Name 
 	name = IdentifierExpression()
 	<EQ>
+	// definition
+	DistributionDef(distributionList, name)
+	<SEMICOLON>
+}
+
+// Distribution definition
+
+ExpressionIdent DistributionDef(DistributionList distributionList, ExpressionIdent name) :
+{
+	TypeDistribution type = TypeDistribution.getInstance();
+	Expression firstParameter = null;
+	Expression secondParameter = null;
+}
+{
 		 ( (<EXPONENTIAL> { type=TypeDistributionExponential.getInstance(); } <LPARENTH> firstParameter = Expression(false, false))
 		 | (<DIRAC> { type=TypeDistributionDirac.getInstance(); } <LPARENTH> firstParameter = Expression(false, false))
 		 | (<WEIBULL> { type=TypeDistributionWeibull.getInstance(); } <LPARENTH> firstParameter = Expression(false, false) <COMMA> secondParameter = Expression(false, false))
 		 | (<UNIFORM> { type=TypeDistributionUniform.getInstance(); } <LPARENTH> firstParameter = Expression(false, false) <COMMA> secondParameter = Expression(false, false)) )
-	<RPARENTH> <SEMICOLON>
-	{ distributionList.addDistribution(name, firstParameter, secondParameter, type); }
+	<RPARENTH>
+	{ distributionList.addDistribution(name, firstParameter, secondParameter, type); return name;}
 }
 
 // Global variable declaration
@@ -822,7 +833,7 @@ DeclarationType DeclarationVarType() :
 
 // Module
 
-parser.ast.Module Module() :
+parser.ast.Module Module(ModulesFile mf) :
 {
 	ExpressionIdent name = null;
 	Declaration var = null;
@@ -834,7 +845,7 @@ parser.ast.Module Module() :
 }
 {
 	begin = <MODULE> name = IdentifierExpression() { module = new parser.ast.Module(name.getName()); }
-	( event = EventDef() { module.addEvent(event); } )*
+	( event = EventDef(mf.getDistributionList()) { module.addEvent(event); } )*
 	( var = Declaration() { module.addDeclaration(var); } )*
 	( <INVARIANT> invar = Expression(false, false) <ENDINVARIANT> { module.setInvariant(invar); } )?
 	( comm = Command() { module.addCommand(comm); } )*
@@ -844,14 +855,23 @@ parser.ast.Module Module() :
 
 // Event
 
-Event EventDef() :
+Event EventDef(DistributionList dl) :
 {
 	ExpressionIdent eventNameIdent = null;
 	ExpressionIdent distributionNameIdent = null;
 	Event event;
 }
 {
-	<EVENT> eventNameIdent = IdentifierExpression() <EQ> distributionNameIdent = IdentifierExpression() <SEMICOLON>
+	<EVENT> eventNameIdent = IdentifierExpression()
+	<EQ> 
+		//can be defined either through identifier of an already declared distribution
+		( distributionNameIdent = IdentifierExpression()
+		// or it is possible to define event's own "private" distribution here
+		| distributionNameIdent = DistributionDef(
+		  dl,
+		  new ExpressionIdent(eventNameIdent.getName() + "_distribution_" + eventNameIdent.getBeginLine()))
+		  { distributionNameIdent.setPosition(eventNameIdent); } )
+	<SEMICOLON>
 	{ event = new Event(eventNameIdent, distributionNameIdent); return event; }
 }
 
