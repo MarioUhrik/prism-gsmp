@@ -699,17 +699,17 @@ public class ModulesFile extends ASTElement implements ModelInfo
 		findAllDistributions(distributionList);
 		// Check distributions for cyclic dependencies
 		distributionList.findCycles(); // TODO MAJO - may not be necessary
+		
+		// Check event identifiers within each module
+		checkEvents(); // TODO MAJO - may not be needed
+		//find all event identifiers within each module
+		findAllEvents(eventIdents);
 
 		// Check variable names, etc.
 		checkVarNames();
 		// Find all instances of variables, replace identifiers with variables.
 		// Also check variables valid, store indices, etc.
 		findAllVars(varNames, varTypes);
-		
-		// Check event identifiers within each module
-		checkEvents(); // TODO MAJO - may not be needed
-		//find all event identifiers within each module
-		findAllEvents(eventIdents);
 
 		// Find all instances of property refs
 		findAllPropRefs(this, null);
@@ -948,12 +948,14 @@ public class ModulesFile extends ASTElement implements ModelInfo
 		n = distributionList.size();
 		for (i = 0; i < n; i++) {
 			s = distributionList.getDistributionName(i);
+			constantValues = constantList.evaluateConstants(null, null);
 			if (isIdentUsed(s)) { // distribution identifier check
 				throw new PrismLangException("Duplicated identifier \"" + s + "\"", distributionList
 						.getDistributionNameIdent(i));
 			} else if (!distributionList.getDistributionType(i).parameterValueCheck( //distribution parameter value check
 					   distributionList.getFirstParameter(i),
-					   distributionList.getSecondParameter(i))) {
+					   distributionList.getSecondParameter(i),
+					   getConstantValues())) {
 			} else {
 				distributionIdents.add(s);
 			}

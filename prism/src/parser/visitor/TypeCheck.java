@@ -101,9 +101,9 @@ public class TypeCheck extends ASTTraverse
 			int whichParameterWrong = e.getDistributionType(i).canAssign(firstType, secondType);
 			switch (whichParameterWrong) {
 			case 1:
-				throw new PrismLangException("Type mismatch in definition of distribution \"" + e.getDistributionName(i) + "\"", e.getFirstParameter(i));
+				throw new PrismLangException("Distributions need parameters of type Int or Double ", e.getFirstParameter(i));
 			case 2:
-				throw new PrismLangException("Type mismatch in definition of distribution \"" + e.getDistributionName(i) + "\"", e.getSecondParameter(i));
+				throw new PrismLangException("Distributions need parameters of type Int or Double ", e.getSecondParameter(i));
 			}
 		}
 	}

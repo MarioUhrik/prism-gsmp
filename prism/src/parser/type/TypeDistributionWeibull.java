@@ -26,6 +26,7 @@
 
 package parser.type;
 
+import parser.Values;
 import parser.ast.Expression;
 import prism.PrismLangException;
 
@@ -84,11 +85,11 @@ public class TypeDistributionWeibull extends TypeDistribution {
 	 */
 	// TODO MAJO - not sure if calling evaluateDouble() is safe.
 	@Override
-	public boolean parameterValueCheck(Expression firstParameter, Expression secondParameter) throws PrismLangException{
-		if ((double)firstParameter.evaluateDouble() <= 0) {
+	public boolean parameterValueCheck(Expression firstParameter, Expression secondParameter, Values constantValues) throws PrismLangException{
+		if ((double)firstParameter.evaluateDouble(constantValues) <= 0) {
 			throw new PrismLangException("Weibull distribution must have two parameters of values >0", firstParameter);
 		}
-		if ((double)secondParameter.evaluateDouble() <= 0) {
+		if ((double)secondParameter.evaluateDouble(constantValues) <= 0) {
 			throw new PrismLangException("Weibull distribution must have two parameters of values >0", secondParameter);
 		}
 		return true;

@@ -26,6 +26,7 @@
 
 package parser.type;
 
+import parser.Values;
 import parser.ast.Expression;
 import prism.PrismLangException;
 
@@ -84,9 +85,15 @@ public class TypeDistributionUniform extends TypeDistribution {
 	 */
 	// TODO MAJO - not sure if calling evaluateDouble() is safe.
 	@Override
-	public boolean parameterValueCheck(Expression firstParameter, Expression secondParameter) throws PrismLangException{
-		if ((double)firstParameter.evaluateDouble() >= (double)secondParameter.evaluateDouble()) {
-			throw new PrismLangException("Uniform distribution must have two parameters of values a<b", firstParameter);
+	public boolean parameterValueCheck(Expression firstParameter, Expression secondParameter, Values constantValues) throws PrismLangException{
+		if ((double)firstParameter.evaluateDouble(constantValues) < 0) {
+			throw new PrismLangException("Uniform distribution must have two parameters of values 0<=a<b", firstParameter);
+		}
+		if ((double)secondParameter.evaluateDouble(constantValues) <= 0) {
+			throw new PrismLangException("Uniform distribution must have two parameters of values 0<=a<b", secondParameter);
+		}
+		if ((double)firstParameter.evaluateDouble(constantValues) >= (double)secondParameter.evaluateDouble(constantValues)) {
+			throw new PrismLangException("Uniform distribution must have two parameters of values 0<=a<b", firstParameter);
 		}
 		return true;
 	}

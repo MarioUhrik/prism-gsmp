@@ -31,6 +31,7 @@ import java.util.Vector;
 import parser.visitor.*;
 import prism.PrismLangException;
 import prism.PrismUtils;
+import parser.Values;
 import parser.type.*;
 
 /**
@@ -38,7 +39,7 @@ import parser.type.*;
  */
 public class DistributionList extends ASTElement
 {
-	// Name/firstParameter/secondParameter/type triples to define distributions. E.g. "distr1",1.0,2.0,TypeDistributionUniform
+	// Name/firstParameter/secondParameter/type tuples to define distributions. E.g. "distr1",1.0,2.0,TypeDistributionUniform
 	private Vector<String> names = new Vector<String>();
 	private Vector<Expression> firstParameters = new Vector<Expression>(); // should not be null (distributions tend to have at least one parameter)
 	private Vector<Expression> secondParameters = new Vector<Expression>(); // can be null (e.g. Dirac/Exponential distribution)

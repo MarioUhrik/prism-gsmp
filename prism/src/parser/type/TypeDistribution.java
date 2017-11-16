@@ -26,6 +26,7 @@
 
 package parser.type;
 
+import parser.Values;
 import parser.ast.Expression;
 import prism.PrismLangException;
 
@@ -89,7 +90,7 @@ public class TypeDistribution extends Type {
 	 * @return true if the parameters have sensible values
 	 * @throws PrismLangException if the parameters dont have sensible values
 	 */
-	public boolean parameterValueCheck(Expression firstParameter, Expression secondParameter)  throws PrismLangException{
+	public boolean parameterValueCheck(Expression firstParameter, Expression secondParameter, Values constantValues)  throws PrismLangException{
 		 // TODO MAJO - this should be overriden by children classes for now
 		throw new UnsupportedOperationException("not yet implemented");
 	}
