@@ -27,6 +27,7 @@
 package parser.ast;
 
 import java.util.*;
+import java.util.function.Predicate;
 
 import parser.*;
 import parser.visitor.*;
@@ -725,6 +726,13 @@ public class ModulesFile extends ASTElement implements ModelInfo
 		getSynchNames();
 		// Then identify/check any references to action names
 		findAllActions(synchs);
+		
+		// GSMP command check:
+		// 1) ensure that all GSMP event commands actually have an existing Event assigned to them
+		// 2) ensure that all GSMP slave commands:
+		//   2.1) have exactly 1 master of any distribution, or
+		//   2.2) they have >1 exponentially distributed masters.
+		checkGSMPCommands();
 
 		// Various semantic checks 
 		doSemanticChecks();
@@ -911,7 +919,7 @@ public class ModulesFile extends ASTElement implements ModelInfo
 	//check event identifiers
 	
 	/**
-	 * Checks whether any of the modules has multiple events with the same identifier
+	 * Checks whether any of the modules has events with an already used identifier
 	 * and whether each event is associated with an already declared distribution
 	 * @throws PrismLangException
 	 */
@@ -958,6 +966,106 @@ public class ModulesFile extends ASTElement implements ModelInfo
 				distributionIdents.add(s);
 			}
 		}
+	}
+	
+	/**
+	 *	1) ensure that all GSMP event commands actually have an existing Event assigned to them
+	 *	2) ensure that all GSMP slave commands:
+	 *	 2.1) have exactly 1 master of any distribution, or
+	 *   2.2) they have >1 exponentially distributed masters.
+	 *   
+	 *   Assumes eventIdents and synchs to not be null.
+	 * @throws PrismLangException when the above conditions do not hold
+	 */ 
+	private void checkGSMPCommands() throws PrismLangException // TODO MAJO - terrible code, rewrite
+	{
+		//get all commands from all modules
+		List<Command> commands = new ArrayList<Command>();
+		for (int i = 0; i < modules.size() ; ++i) {
+			Module m = (Module)modules.get(i);
+			commands.addAll(m.getCommands());
+		}
+		
+		//get all events from all modules
+		Vector<Event> allEvents = new Vector<Event>();
+		for (int i = 0 ; i < modules.size() ; ++i) {
+			allEvents.addAll(((Module)modules.get(i)).getEvents());
+		}
+		
+		// for all commands
+		for (int i = 0; i < commands.size() ; ++i) {
+			Command comm = commands.get(i);
+			
+			// if it is not even a GSMP command, then just move on
+			ExpressionIdent commEvent = comm.getEventIdent();
+			if (commEvent == null && comm.isSlave() == false) {
+				continue;
+			}
+			//1) if the command has an assigned event that does not exist, throw exception
+			if ( commEvent != null && !eventIdents.contains(commEvent.getName())) {
+				throw new PrismLangException("This command is assigned to a non-existing Event!",commEvent);
+			}
+			
+			// if the command is a slave
+			if (comm.isSlave()) { // TODO MAJO - unnecessarily done for all slaves, even of the same label.
+				//2) if the slave and has no label, throw exception
+				if (comm.getSynch() == null || comm.getSynch().equals("")) {
+					throw new PrismLangException("All slave commands must have a label!", comm);
+				}
+				
+				Vector<Command> masterComms = getMastersOfLabel(comm.getSynch());
+				//2.1) if the slave has no masters, throw exception
+				if (masterComms.size() <= 0) {
+					throw new PrismLangException("All slave commands must have a master!", comm);
+				}
+				//2.2) if the slave has multiple masters and they are not all exponential, throw exception
+				if (masterComms.size() > 1) {
+					for (int j = 0; j < masterComms.size() ; ++j) {
+						Command master = masterComms.get(j);
+						// if a master is a usual exponential command, continue
+						if (master.getEventIdent() == null) {
+							continue;
+						}
+						
+						// if a master is a GSMP command that is not exponential, throw exception
+						for (int k = 0 ; k < allEvents.size() ; ++k) {
+							Event event = allEvents.get(k);
+							if (event.getEventName().equals(master.getEventIdent().getName())) {
+								int distrIndex = distributionList.getDistributionIndex(event.getDistributionName());
+								TypeDistribution distrType = distributionList.getDistributionType(distrIndex);
+								if (!(distrType instanceof TypeDistributionExponential)) {
+									throw new PrismLangException("All slave commands must have either exactly 1 non-exponential master, or any number of exponential masters", comm);
+								}
+							}
+						}
+					}
+				}
+				
+			}
+			
+			
+		}	
+	}
+	
+	/**
+	 * 
+	 * @param label 
+	 * @return vector of commands from all modules with the given synch label that are not slaves
+	 */
+	private Vector<Command> getMastersOfLabel(String label)
+	{
+		//get all commands from all modules
+		Vector<Command> masters = new Vector<Command>();
+		for (int i = 0; i < modules.size() ; ++i) {
+			Module m = (Module)modules.get(i);
+			masters.addAll(m.getCommands());
+		}
+		
+		//filter out the wrong ones
+		Predicate<Command> filter = c-> (!(c.getSynch().equals(label))) || c.isSlave() == true;
+		masters.removeIf(filter);
+		
+		return masters;
 	}
 
 	// check variable names

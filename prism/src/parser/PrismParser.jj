@@ -480,6 +480,7 @@ TOKEN :
 |	< TRUE:				"true" >
 |	< U:				"U" >
 |	< UNIFORM:			"uniform" >
+|	< VOID:				"void" >
 |	< W:				"W" >
 |	< WEIBULL:			"weibull" >
 	// Punctuation, etc.
@@ -490,6 +491,7 @@ TOKEN :
 |	< OR:			"|" >
 |	< IMPLIES:		"=>" >
 |	< IFF:			"<=>" >
+|	< DMINUS:		"--" >
 |	< RARROW:		"->" >
 |	< COLON:		":" >
 |	< SEMICOLON:	";" >
@@ -885,12 +887,19 @@ Command Command() :
 	Updates updates = null;
 	Command comm = new Command();
 	Token begin = null;
+	ExpressionIdent eventIdent = null;
 }
 {
 	// Synchronisation action-label
 	begin = <LBRACKET> ( synch = Identifier() { comm.setSynch(synch); } )? <RBRACKET>
 	// Guard/updates
-	guard = Expression(false, false) { comm.setGuard(guard); } <RARROW> updates = Updates() { comm.setUpdates(updates); } <SEMICOLON>
+	guard = Expression(false, false) { comm.setGuard(guard); }
+	( <DMINUS>
+		( <VOID> { comm.setSlave(true); }
+		| eventIdent = IdentifierExpression() { comm.setEventIdent(eventIdent); }
+		)
+	)?
+	<RARROW> updates = Updates() { comm.setUpdates(updates); } <SEMICOLON>
 	{ comm.setPosition(begin, getToken(0)); return comm; }
 }
 

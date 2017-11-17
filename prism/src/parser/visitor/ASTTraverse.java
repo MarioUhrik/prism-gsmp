@@ -242,6 +242,7 @@ public class ASTTraverse implements ASTVisitor
 		visitPre(e);
 		e.getGuard().accept(this);
 		e.getUpdates().accept(this);
+		//e.getEventIdent().accept(this); TODO MAJO
 		visitPost(e);
 		return null;
 	}
