@@ -264,6 +264,24 @@ public class Module extends ASTElement
 		return getAllSynchs().contains(s);
 	}
 	
+	/**
+	 * Checks whether this module has an event of a given name. 
+	 *   Assumes that eventNames are globally unique.
+	 * @param eventName name of the event
+	 * @return If this module contains event eventName, returns 
+	 *         	the index i for this.getEvent(int i)
+	 *         else this module does not contain event eventName and returns -1.
+	 */
+	public int getEvent(String eventName) 
+	{
+		for (int i = 0; i < events.size() ; ++i) {
+			if (getEvent(i).getEventName().equals(eventName)) {
+				return i;
+			}
+		}
+		return -1;
+	}
+	
 	public boolean isLocalVariable(String s)
 	{
 		int i, n;

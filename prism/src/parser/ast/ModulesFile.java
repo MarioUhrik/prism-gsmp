@@ -970,6 +970,7 @@ public class ModulesFile extends ASTElement implements ModelInfo
 	
 	/**
 	 *	1) ensure that all GSMP event commands actually have an existing Event assigned to them
+	 *  1.1) ensure that the assigned Event is from the same Module
 	 *	2) ensure that all GSMP slave commands:
 	 *	 2.1) have exactly 1 master of any distribution, or
 	 *   2.2) they have >1 exponentially distributed masters.
@@ -1003,7 +1004,11 @@ public class ModulesFile extends ASTElement implements ModelInfo
 			}
 			//1) if the command has an assigned event that does not exist, throw exception
 			if ( commEvent != null && !eventIdents.contains(commEvent.getName())) {
-				throw new PrismLangException("This command is assigned to a non-existing Event!",commEvent);
+				throw new PrismLangException("This command is assigned to a non-existing event!",commEvent);
+			}
+			//1.1) if the command has an assigned event that is not from this module, throw exception
+			if ((commEvent != null) && (comm.getParent().getEvent(commEvent.getName()) == -1)) {
+				throw new PrismLangException("This command is assigned to an event from different module!",commEvent);
 			}
 			
 			// if the command is a slave
