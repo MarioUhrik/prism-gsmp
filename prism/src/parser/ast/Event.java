@@ -59,7 +59,7 @@ public class Event extends ASTElement
 		this.distributionName = distributionEI.getName();
 	}
 
-	/** Constructor from a Values object, i.e., a list of name=value tuples */
+	///** Constructor from a Values object, i.e., a list of name=value tuples */
 	/*
 	public EventList(Values constValues) throws PrismLangException
 	{
@@ -136,16 +136,21 @@ public class Event extends ASTElement
 	
 	//setters
 	
-	public void setEventNameIdent(ExpressionIdent eventNameIdent) // MAJO use with caution
+	public void setEventNameIdent(ExpressionIdent eventNameIdent)
 	{
 		this.eventNameIdent = eventNameIdent;
 		this.eventName = eventNameIdent.getName();
 	}
 	
-	public void setDistributionNameIdent(ExpressionIdent distributionNameIdent) // MAJO use with caution
+	public void setDistributionNameIdent(ExpressionIdent distributionNameIdent)
 	{
 		this.distributionNameIdent = distributionNameIdent;
 		this.distributionName = distributionNameIdent.getName();
+	}
+	
+	public void setEventName(String eventName) //added for module renaming
+	{
+		this.eventName = eventName;
 	}
 	
 	public void setParent(Module parent) {

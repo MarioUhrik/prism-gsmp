@@ -143,7 +143,7 @@ public class ASTTraverse implements ASTVisitor
 		int i, n;
 		n = e.size();
 		for (i = 0; i < n; i++) {
-			if (e.getFirstParameter(i) != null) e.getFirstParameter(i).accept(this); // TODO MAJO - this should never be null anyway
+			e.getFirstParameter(i).accept(this);
 			if (e.getSecondParameter(i) != null) e.getSecondParameter(i).accept(this);
 		}
 		visitPost(e);
@@ -223,6 +223,10 @@ public class ASTTraverse implements ASTVisitor
 		for (i = 0; i < n; i++) {
 			if (e.getDeclaration(i) != null) e.getDeclaration(i).accept(this);
 		}
+		n = e.getNumEvents();
+		for (i = 0; i < n; i++) {
+			if (e.getEvent(i) != null) e.getEvent(i).accept(this);
+		}
 		if (e.getInvariant() != null)
 			e.getInvariant().accept(this);
 		n = e.getNumCommands();
@@ -242,7 +246,7 @@ public class ASTTraverse implements ASTVisitor
 		visitPre(e);
 		e.getGuard().accept(this);
 		e.getUpdates().accept(this);
-		//e.getEventIdent().accept(this); TODO MAJO
+		if (e.getEventIdent() != null && (!(this instanceof TypeCheck))) e.getEventIdent().accept(this);
 		visitPost(e);
 		return null;
 	}
@@ -254,8 +258,8 @@ public class ASTTraverse implements ASTVisitor
 		// Note: a few classes override this method (e.g. SemanticCheck)
 		// so take care to update those versions if changing this method
 		visitPre(e);
-		e.getEventNameIdent().accept(this);
-		e.getDistributionNameIdent().accept(this);
+		if (!(this instanceof TypeCheck)) e.getEventNameIdent().accept(this);
+		if (!(this instanceof TypeCheck)) e.getDistributionNameIdent().accept(this);
 		visitPost(e);
 		return null;
 	}

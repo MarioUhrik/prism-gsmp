@@ -158,7 +158,7 @@ public class ASTTraverseModify implements ASTVisitor
 		int i, n;
 		n = e.size();
 		for (i = 0; i < n; i++) {
-			if (e.getFirstParameter(i) != null) e.setFirstParameter(i, (Expression)(e.getFirstParameter(i).accept(this))); // TODO MAJO - first param should never be null anyway
+			e.setFirstParameter(i, (Expression)(e.getFirstParameter(i).accept(this)));
 			if (e.getSecondParameter(i) != null) e.setSecondParameter(i, (Expression)(e.getSecondParameter(i).accept(this)));
 		}
 		visitPost(e);
@@ -236,6 +236,10 @@ public class ASTTraverseModify implements ASTVisitor
 		for (i = 0; i < n; i++) {
 			if (e.getDeclaration(i) != null) e.setDeclaration(i, (Declaration)(e.getDeclaration(i).accept(this)));
 		}
+		n = e.getNumEvents();
+		for (i = 0; i < n; i++) {
+			if (e.getEvent(i) != null) e.setEvent(i, (Event)(e.getEvent(i).accept(this)));
+		}
 		if (e.getInvariant() != null)
 			e.setInvariant((Expression)(e.getInvariant().accept(this)));
 		n = e.getNumCommands();
@@ -253,6 +257,7 @@ public class ASTTraverseModify implements ASTVisitor
 		visitPre(e);
 		e.setGuard((Expression)(e.getGuard().accept(this)));
 		e.setUpdates((Updates)(e.getUpdates().accept(this)));
+		if (e.getEventIdent() != null) e.setEventIdent((ExpressionIdent)(e.getEventIdent().accept(this)));
 		visitPost(e);
 		return e;
 	}
@@ -267,7 +272,7 @@ public class ASTTraverseModify implements ASTVisitor
 		e.setEventNameIdent((ExpressionIdent)e.getEventNameIdent().accept(this));
 		e.setDistributionNameIdent((ExpressionIdent)e.getDistributionNameIdent().accept(this));
 		visitPost(e);
-		return null;
+		return e;
 	}
 	public void visitPost(Event e) throws PrismLangException { defaultVisitPost(e); }
 	// -----------------------------------------------------------------------------------

@@ -728,10 +728,6 @@ public class ModulesFile extends ASTElement implements ModelInfo
 		findAllActions(synchs);
 		
 		// GSMP command check:
-		// 1) ensure that all GSMP event commands actually have an existing Event assigned to them
-		// 2) ensure that all GSMP slave commands:
-		//   2.1) have exactly 1 master of any distribution, or
-		//   2.2) they have >1 exponentially distributed masters.
 		checkGSMPCommands();
 
 		// Various semantic checks 

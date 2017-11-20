@@ -360,6 +360,7 @@ public class Module extends ASTElement
 		if (invariant != null)
 			ret.setInvariant(invariant.deepCopy());
 		ret.setPosition(this);
+		ret.setParent(getParent());
 		return ret;
 	}
 }
