@@ -123,7 +123,6 @@ public class PTAParser implements PTAParserConstants {
                         String name;
                         PTA pta;
                         Transition trans;
-                        //TODO MAJO : fixed someone else's mess here. Someone edited PTAParser.java instead of PTAparser.jj
                         LinkedHashSet <String> alphabet = new LinkedHashSet<String>();
                         // Find alphabet
                         n = locationNames.size();
