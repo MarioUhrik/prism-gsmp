@@ -965,16 +965,16 @@ public class ModulesFile extends ASTElement implements ModelInfo
 	}
 	
 	/**
-	 *	1) ensure that all GSMP event commands actually have an existing Event assigned to them
-	 *  1.1) ensure that the assigned Event is from the same Module
-	 *	2) ensure that all GSMP slave commands:
-	 *	 2.1) have exactly 1 master of any distribution, or
-	 *   2.2) they have >1 exponentially distributed masters.
+	 *	1) Ensure that all GSMP event commands actually have an existing Event assigned to them.
+	 *   1.1) Ensure that the assigned Event is from the same Module.
+	 *	2) Ensure that all GSMP slave commands have a synch label.
+	 *   2.1) Ensure that all GSMP slave commands have at least one master (by label).
+	 *  3) Ensure for all synch labels that if they have multiple masters, they are exponential.
 	 *   
 	 *   Assumes eventIdents and synchs to not be null.
 	 * @throws PrismLangException when the above conditions do not hold
 	 */ 
-	private void checkGSMPCommands() throws PrismLangException // TODO MAJO - terrible code, rewrite
+	private void checkGSMPCommands() throws PrismLangException // TODO MAJO - potential for nicer code
 	{
 		//get all commands from all modules
 		List<Command> commands = new ArrayList<Command>();
@@ -1013,39 +1013,39 @@ public class ModulesFile extends ASTElement implements ModelInfo
 				if (comm.getSynch() == null || comm.getSynch().equals("")) {
 					throw new PrismLangException("All slave commands must have a label!", comm);
 				}
-				
-				Vector<Command> masterComms = getMastersOfLabel(comm.getSynch());
 				//2.1) if the slave has no masters, throw exception
-				if (masterComms.size() <= 0) {
+				if (getMastersOfLabel(comm.getSynch()).size() <= 0) {
 					throw new PrismLangException("All slave commands must have a master!", comm);
 				}
-				//2.2) if the slave has multiple masters and they are not all exponential, throw exception
-				if (masterComms.size() > 1) {
-					for (int j = 0; j < masterComms.size() ; ++j) {
-						Command master = masterComms.get(j);
-						// if a master is a usual exponential command, continue
-						if (master.getEventIdent() == null) {
-							continue;
-						}
-						
-						// if a master is a GSMP command that is not exponential, throw exception
-						for (int k = 0 ; k < allEvents.size() ; ++k) {
-							Event event = allEvents.get(k);
-							if (event.getEventName().equals(master.getEventIdent().getName())) {
-								int distrIndex = distributionList.getDistributionIndex(event.getDistributionName());
-								TypeDistribution distrType = distributionList.getDistributionType(distrIndex);
-								if (!(distrType instanceof TypeDistributionExponential)) {
-									throw new PrismLangException("All slave commands must have either exactly 1 non-exponential master, or any number of exponential masters", comm);
-								}
+			}
+		}
+		
+		//for all synch labels
+		for (int i = 0; i < getSynchs().size() ; ++i) {
+			Vector<Command> masterComms = getMastersOfLabel(getSynch(i));
+			//3) if the label has multiple masters and they are not all exponential, throw exception
+			if (masterComms.size() > 1) {
+				for (int j = 0; j < masterComms.size() ; ++j) {
+					Command master = masterComms.get(j);
+					// if a master is a usual exponential command, continue
+					if (master.getEventIdent() == null) {
+						continue;
+					}
+				
+					// if a master is a GSMP command that is not exponential, throw exception
+					for (int k = 0 ; k < allEvents.size() ; ++k) {
+						Event event = allEvents.get(k);
+						if (event.getEventName().equals(master.getEventIdent().getName())) {
+							int distrIndex = distributionList.getDistributionIndex(event.getDistributionName());
+							TypeDistribution distrType = distributionList.getDistributionType(distrIndex);
+							if (!(distrType instanceof TypeDistributionExponential)) {
+								throw new PrismLangException("Multiple non-exponential master commands detected!", master);
 							}
 						}
 					}
 				}
-				
 			}
-			
-			
-		}	
+		}
 	}
 	
 	/**
