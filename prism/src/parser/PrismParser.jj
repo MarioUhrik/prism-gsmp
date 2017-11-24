@@ -558,7 +558,7 @@ ModulesFile ModulesFile() throws PrismLangException :
 	// Model type
 	( type=ModulesFileType() { typeCount++; if (typeCount == 2) typeDupe = getToken(0); } ) |
 	// Formula/label/constant/distribution definition
-	FormulaDef(mf.getFormulaList()) | LabelDef(mf.getLabelList()) | ConstantDef(mf.getConstantList()) | DistributionDec(mf.getDistributionList()) |
+	FormulaDef(mf.getFormulaList()) | LabelDef(mf.getLabelList()) | LOOKAHEAD(2) ConstantDef(mf.getConstantList()) | LOOKAHEAD(2) DistributionDec(mf.getDistributionList()) |
 	// Global variable
 	global = GlobalDecl() { mf.addGlobal(global); } |
 	// Renamed module (lookahead to distinguish from normal module)
@@ -739,13 +739,15 @@ void ConstantDef(ConstantList constantList) :
 	{ constantList.addConstant(name, expr, type); }
 }
 
-// Distribution declaration
+// Distribution declaration 
 
 void DistributionDec(DistributionList distributionList) :
 {
 	ExpressionIdent name = null;
 }
 {
+  	// Const - requires a lookahead because of common prefix with constants!
+  	<CONST>
 	// Distribution 
 	<DISTRIBUTION> 
 	// Name 
