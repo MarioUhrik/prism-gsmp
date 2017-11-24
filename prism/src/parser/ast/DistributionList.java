@@ -48,9 +48,12 @@ public class DistributionList extends ASTElement
 	// This is to just to provide positional info.
 	private Vector<ExpressionIdent> nameIdents = new Vector<ExpressionIdent>();
 	
+	private ModulesFile parent = null;
+	
 	/** Constructor */
-	public DistributionList()
+	public DistributionList(ModulesFile parent)
 	{
+		this.parent = parent;
 	}
 
 	/** Constructor from a Values object, i.e., a list of name=value tuples */
@@ -99,6 +102,11 @@ public class DistributionList extends ASTElement
 		secondParameters.setElementAt(param, i);
 	}
 	
+	public void setParent(ModulesFile parent)
+	{
+		this.parent = parent;
+	}
+	
 	// Get methods
 
 	public int size()
@@ -129,6 +137,11 @@ public class DistributionList extends ASTElement
 	public ExpressionIdent getDistributionNameIdent(int i)
 	{
 		return nameIdents.elementAt(i);
+	}
+	
+	public ModulesFile getParent()
+	{
+		return parent;
 	}
 
 	/**
@@ -169,280 +182,6 @@ public class DistributionList extends ASTElement
 		types.remove(i);
 		nameIdents.remove(i);
 	}
-
-	/**
-	 * Find cyclic dependencies.
-	 */
-	public void findCycles() throws PrismLangException // TODO MAJO - not sure if it really works this way. Also, could be done in a less nasty way
-	{
-		// Create boolean matrix of dependencies
-		// (matrix[i][j] is true if constant i contains constant j)
-		int n = firstParameters.size() * 2;
-		boolean matrix[][] = new boolean[n][n];
-		for (int i = 0; i < n; i++) {
-			Expression e;
-			if (i < (n/2)) {
-				e = getFirstParameter(i);
-			} else {
-				e = getSecondParameter(i % (n/2));
-			}
-			if (e != null) {
-				Vector<String> v = e.getAllConstants();
-				for (int j = 0; j < v.size(); j++) {
-					int k = getDistributionIndex(v.elementAt(j));
-					if (k != -1) {
-						matrix[i][k] = true;
-					}
-				}
-			}
-		}
-		// Check for and report dependencies
-		int firstCycle = PrismUtils.findCycle(matrix);
-		if (firstCycle != -1) {
-			int index;
-			Expression e;
-			if (firstCycle < (n/2)) {
-				index = firstCycle;
-				e = getFirstParameter(index);
-			} else {
-				index = firstCycle % (n/2);
-				e = getSecondParameter(index);
-			}
-			String s = "Cyclic dependency in definition of distribution \"" + getDistributionName(index) + "\"";
-			
-			throw new PrismLangException(s, e);
-		}
-	}
-	
-	/**
-	 * Get the number of undefined constants in the list.
-	 */
-	/*
-	public int getNumUndefined()
-	{
-		int i, n, res;
-		Expression e;
-		
-		res = 0;
-		n = constants.size();
-		for (i = 0; i < n; i++) {
-			e = getConstant(i);
-			if (e == null) {
-				res++;
-			}
-		}
-		
-		return res;
-	}
-	*/
-	
-	/**
-	 * Get a list of the undefined constants in the list.
-	 */
-	/*
-	public Vector<String> getUndefinedConstants()
-	{
-		int i, n;
-		Expression e;
-		Vector<String> v;
-		
-		v = new Vector<String>();
-		n = constants.size();
-		for (i = 0; i < n; i++) {
-			e = getConstant(i);
-			if (e == null) {
-				v.addElement(getConstantName(i));
-			}
-		}
-		
-		return v;
-	}
-	*/
-	
-	/**
-	 * Check if {@code name} is a *defined* constants in the list,
-	 * i.e. a constant whose value was *not* left unspecified in the model/property.
-	 */
-	/*
-	public boolean isDefinedConstant(String name)
-	{
-		int i = getConstantIndex(name);
-		if (i == -1)
-			return false;
-		return (getConstant(i) != null);
-	}
-	*/
-	
-	/**
-	 * Set values for *all* undefined constants, evaluate values for *all* constants
-	 * and return a Values object with values for *all* constants.
-	 * Argument 'someValues' contains values for undefined ones, can be null if all already defined
-	 * Argument 'otherValues' contains any other values which may be needed, null if none
-	 */
-	/*
-	public Values evaluateConstants(Values someValues, Values otherValues) throws PrismLangException
-	{
-		return evaluateSomeOrAllConstants(someValues, otherValues, true);
-	}
-	*/
-	
-	/**
-	 * Set values for *some* undefined constants, evaluate values for constants where possible
-	 * and return a Values object with values for all constants that could be evaluated.
-	 * Argument 'someValues' contains values for undefined ones, can be null if all already defined
-	 * Argument 'otherValues' contains any other values which may be needed, null if none
-	 */
-	/*
-	public Values evaluateSomeConstants(Values someValues, Values otherValues) throws PrismLangException
-	{
-		return evaluateSomeOrAllConstants(someValues, otherValues, false);
-	}
-	*/
-	
-	/**
-	 * Set values for *some* or *all* undefined constants, evaluate values for constants where possible
-	 * and return a Values object with values for all constants that could be evaluated.
-	 * Argument 'someValues' contains values for undefined ones, can be null if all already defined.
-	 * Argument 'otherValues' contains any other values which may be needed, null if none.
-	 * If argument 'all' is true, an exception is thrown if any undefined constant is not defined.
-	 */
-	/*
-	private Values evaluateSomeOrAllConstants(Values someValues, Values otherValues, boolean all) throws PrismLangException
-	{
-		DistributionList cl;
-		Expression e;
-		Values allValues;
-		int i, j, n, numToEvaluate;
-		Type t = null;
-		ExpressionIdent s;
-		Object val;
-		
-		// Create new copy of this ConstantList
-		// (copy existing constant definitions, add new ones where undefined)
-		cl = new DistributionList();
-		n = constants.size();
-		for (i = 0; i < n; i++) {
-			s = getConstantNameIdent(i);
-			e = getConstant(i);
-			t = getConstantType(i);
-			if (e != null) {
-				cl.addConstant((ExpressionIdent)s.deepCopy(), e.deepCopy(), t);
-			} else {
-				// Create new literal expression using values passed in (if possible and needed)
-				if (someValues != null && (j = someValues.getIndexOf(s.getName())) != -1) {
-					cl.addConstant((ExpressionIdent) s.deepCopy(), new ExpressionLiteral(t, t.castValueTo(someValues.getValue(j))), t);
-				} else {
-					if (all)
-						throw new PrismLangException("No value specified for constant", s);
-				}
-			}
-		}
-		numToEvaluate = cl.size();
-		
-		// Now add constants corresponding to the 'otherValues' argument to the new constant list
-		if (otherValues != null) {
-			n = otherValues.getNumValues();
-			for (i = 0; i < n; i++) {
-				Type iType = otherValues.getType(i);
-				cl.addConstant(new ExpressionIdent(otherValues.getName(i)), new ExpressionLiteral(iType, iType.castValueTo(otherValues.getValue(i))), iType);
-			}
-		}
-		
-		// Go trough and expand definition of each constant
-		// (i.e. replace other constant references with their definitions)
-		// Note: work with new copy of constant list, don't need to expand 'otherValues' ones.
-		for (i = 0; i < numToEvaluate; i++) {
-			try {
-				e = (Expression)cl.getConstant(i).expandConstants(cl);
-				cl.setConstant(i, e);
-			} catch (PrismLangException ex) {
-				if (all) {
-					throw ex;
-				} else {
-					cl.setConstant(i, null);
-				}
-			}
-		}
-		
-		// Evaluate constants and store in new Values object (again, ignoring 'otherValues' ones)		
-		allValues = new Values();
-		for (i = 0; i < numToEvaluate; i++) {
-			if (cl.getConstant(i) != null) {
-				val = cl.getConstant(i).evaluate(null, otherValues);
-				allValues.addValue(cl.getConstantName(i), val);
-			}
-		}
-		
-		return allValues;
-	}
-	*/
-
-	/**
-	 * Set values for some undefined constants, then partially evaluate values for constants where possible
-	 * and return a map from constant names to the Expression representing its value. 
-	 * Argument 'someValues' contains values for undefined ones, can be null if all already defined.
-	 * Argument 'otherValues' contains any other values which may be needed, null if none.
-	 */
-	/*
-	public Map<String,Expression> evaluateConstantsPartially(Values someValues, Values otherValues) throws PrismLangException
-	{
-		DistributionList cl;
-		Expression e;
-		int i, j, n, numToEvaluate;
-		Type t = null;
-		ExpressionIdent s;
-		
-		// Create new copy of this ConstantList
-		// (copy existing constant definitions, add new ones where undefined)
-		cl = new DistributionList();
-		n = constants.size();
-		for (i = 0; i < n; i++) {
-			s = getConstantNameIdent(i);
-			e = getConstant(i);
-			t = getConstantType(i);
-			if (e != null) {
-				cl.addConstant((ExpressionIdent)s.deepCopy(), e.deepCopy(), t);
-			} else {
-				// Create new literal expression using values passed in (if possible and needed)
-				if (someValues != null && (j = someValues.getIndexOf(s.getName())) != -1) {
-					cl.addConstant((ExpressionIdent) s.deepCopy(), new ExpressionLiteral(t, t.castValueTo(someValues.getValue(j))), t);
-				}
-			}
-		}
-		numToEvaluate = cl.size();
-		
-		// Now add constants corresponding to the 'otherValues' argument to the new constant list
-		if (otherValues != null) {
-			n = otherValues.getNumValues();
-			for (i = 0; i < n; i++) {
-				Type iType = otherValues.getType(i);
-				cl.addConstant(new ExpressionIdent(otherValues.getName(i)), new ExpressionLiteral(iType, iType.castValueTo(otherValues.getValue(i))), iType);
-			}
-		}
-		
-		// Go trough and expand definition of each constant
-		// (i.e. replace other constant references with their definitions)
-		// Note: work with new copy of constant list, don't need to expand 'otherValues' ones.
-		for (i = 0; i < numToEvaluate; i++) {
-			try {
-				e = (Expression)cl.getConstant(i).expandConstants(cl);
-				cl.setConstant(i, e);
-			} catch (PrismLangException ex) {
-				cl.setConstant(i, null);
-			}
-		}
-		
-		// Store final expressions for each constant in a map and return
-		Map<String,Expression> constExprs = new HashMap<>();
-		for (i = 0; i < numToEvaluate; i++) {
-			if (cl.getConstant(i) != null) {
-				constExprs.put(cl.getConstantName(i), cl.getConstant(i).deepCopy());
-			}
-		}
-		
-		return constExprs;
-	}
-	*/
 
 	// Methods required for ASTElement:
 	
@@ -488,7 +227,7 @@ public class DistributionList extends ASTElement
 	public ASTElement deepCopy()
 	{
 		int i, n;
-		DistributionList ret = new DistributionList();
+		DistributionList ret = new DistributionList(getParent());
 		n = size();
 		for (i = 0; i < n; i++) {
 			Expression firstParam = (getFirstParameter(i) == null) ? null : getFirstParameter(i).deepCopy();

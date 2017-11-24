@@ -49,7 +49,7 @@ public class ModulesFile extends ASTElement implements ModelInfo
 	private FormulaList formulaList;
 	private LabelList labelList;
 	private ConstantList constantList;
-	private DistributionList distributionList; // TODO MAJO - make sure this works
+	private DistributionList distributionList;
 	private Vector<Declaration> globals; // Global variables
 	private Vector<Object> modules; // Modules (includes renamed modules)
 	private ArrayList<SystemDefn> systemDefns; // System definitions (system...endsystem constructs)
@@ -85,7 +85,7 @@ public class ModulesFile extends ASTElement implements ModelInfo
 		formulaList = new FormulaList();
 		labelList = new LabelList();
 		constantList = new ConstantList();
-		distributionList = new DistributionList();
+		distributionList = new DistributionList(this);
 		modelType = ModelType.MDP; // default type
 		globals = new Vector<Declaration>();
 		modules = new Vector<Object>();
@@ -692,19 +692,11 @@ public class ModulesFile extends ASTElement implements ModelInfo
 		// Check constants for cyclic dependencies
 		constantList.findCycles();
 		
-		// TODO MAJO - not sure about this, or the placement of these
-		 // Check distribution identifiers
-		checkDistributions();
-		 // Find all instances of distributions
-		 // (i.e. locate identifiers which are distributions)
-		//findAllDistributions(distributionList);
-		 // Check distributions for cyclic dependencies
-		distributionList.findCycles(); // TODO MAJO - may not be necessary
+		// Check distribution identifiers
+		checkDistributionIdents();
 		
-		 // Check event identifiers within each module
-		checkEvents(); // TODO MAJO - may not be needed
-		 //find all event identifiers within each module
-		//findAllEvents(eventIdents);
+		// Check event identifiers within each module
+		checkEvents();
 
 		// Check variable names, etc.
 		checkVarNames();
@@ -728,6 +720,10 @@ public class ModulesFile extends ASTElement implements ModelInfo
 		findAllActions(synchs);
 		
 		// GSMP command check:
+		/* TODO MAJO - not completely valid, because it only cares about labels.
+		   Such a check should also care about guards, and it should
+		   be done as postprocessing after the GSMP has been built fully.
+		 */
 		checkGSMPCommands();
 
 		// Various semantic checks 
@@ -927,7 +923,7 @@ public class ModulesFile extends ASTElement implements ModelInfo
 			Module m = this.getModule(i);
 			for (int j = 0; j < m.getNumEvents() ; ++j) {
 				Event e = m.getEvent(j);
-				if (isIdentUsed(e.getEventName())) { // check that there are not two events with the same identifier
+				if (isIdentUsed(e.getEventName())) { // check that no two events with the same identifier exist
 					throw new PrismLangException("Duplicated identifier \"" + e.getEventName() + "\"", 
 							e.getEventNameIdent());
 				} else if (getDistributionList().getDistributionIndex(e.getDistributionName()) == -1) { 
@@ -942,9 +938,13 @@ public class ModulesFile extends ASTElement implements ModelInfo
 		
 	}
 	
-	// check distribution identifiers and parameter value ranges
+	// check for duplicate distribution identifiers
 
-	private void checkDistributions() throws PrismLangException
+	/**
+	 * Checks whether any of the distributions have an already used identifier
+	 * @throws PrismLangException
+	 */
+	private void checkDistributionIdents() throws PrismLangException
 	{
 		int i, n;
 		String s;
@@ -954,10 +954,6 @@ public class ModulesFile extends ASTElement implements ModelInfo
 			if (isIdentUsed(s)) { // distribution identifier check
 				throw new PrismLangException("Duplicated identifier \"" + s + "\"", distributionList
 						.getDistributionNameIdent(i));
-			} else if (!distributionList.getDistributionType(i).parameterValueCheck( //distribution parameter value check
-					   distributionList.getFirstParameter(i),
-					   distributionList.getSecondParameter(i),
-					   constantList.evaluateSomeConstants(null, null))) {
 			} else {
 				distributionIdents.add(s);
 			}

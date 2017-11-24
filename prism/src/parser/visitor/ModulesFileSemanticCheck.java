@@ -28,6 +28,7 @@ package parser.visitor;
 
 import java.util.Vector;
 
+import parser.Values;
 import parser.ast.*;
 import parser.type.*;
 import prism.ModelType;
@@ -133,7 +134,16 @@ public class ModulesFileSemanticCheck extends SemanticCheck
 		}
 	}
 	
-	//TODO MAJO - distribution list should probably be here too
+	public void visitPost(DistributionList e) throws PrismLangException
+	{
+		int i, n;
+		n = e.size();
+		Values constantValues = e.getParent().getConstantList().evaluateSomeConstants(null, null);
+		for (i = 0; i < n ; ++i) {
+			TypeDistribution dType = e.getDistributionType(i);
+			dType.parameterValueCheck(e.getFirstParameter(i), e.getSecondParameter(i), constantValues); 	
+		}
+	}
 
 	public void visitPost(Declaration e) throws PrismLangException
 	{

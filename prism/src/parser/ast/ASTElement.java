@@ -252,17 +252,6 @@ public abstract class ASTElement
 		FindAllConstants visitor = new FindAllConstants(constantList);
 		return (ASTElement) accept(visitor);
 	}
-	
-	/**
-	 * Find all idents which are distributions, replace with ExpressionConstant,
-	 * return result.
-	 */
-	// TODO MAJO - unsure about this one
-	public ASTElement findAllDistributions(DistributionList distributionList) throws PrismLangException
-	{
-		FindAllDistributions visitor = new FindAllDistributions(distributionList);
-		return (ASTElement) accept(visitor);
-	}
 
 	/**
 	 * Get all constants (i.e. ExpressionConstant objects), store names in set.
@@ -325,12 +314,6 @@ public abstract class ASTElement
 	public ASTElement findAllVars(List<String> varIdents, List<Type> varTypes) throws PrismLangException
 	{
 		FindAllVars visitor = new FindAllVars(varIdents, varTypes);
-		return (ASTElement) accept(visitor);
-	}
-	
-	public ASTElement findAllEvents(List<String> eventIdents) throws PrismLangException
-	{
-		FindAllEvents visitor = new FindAllEvents(eventIdents);
 		return (ASTElement) accept(visitor);
 	}
 
