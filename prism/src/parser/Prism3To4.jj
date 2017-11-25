@@ -98,12 +98,16 @@ TOKEN :
 |	< CEIL:				"ceil" >
 |	< CTMC:				"ctmc" >
 |	< CUMUL:			"C" >
+|	< DISTRIBUTION:		"distribution" >
+|	< DIRAC:			"dirac" >
 |	< DOUBLE:			"double" >
 |	< DTMC:				"dtmc" >
 |	< ENDINIT:			"endinit" >
 |	< ENDMODULE:		"endmodule" >
 |	< ENDREWARDS:		"endrewards" >
 |	< ENDSYSTEM:		"endsystem" >
+|	< EVENT:			"event" >
+|	< EXPONENTIAL:		"exponential" >
 |	< FALSE:			"false" >
 |	< FLOOR:			"floor" >
 |	< FORMULA:			"formula" >
@@ -111,6 +115,7 @@ TOKEN :
 |	< FUTURE:			"F" >
 |	< GLOBAL:			"global" >
 |	< GLOB:				"G" >
+|	< GSMP:				"gsmp" >
 |	< INIT:				"init" >
 |	< INST:				"I" >
 |	< INT:				"int" >
@@ -135,7 +140,9 @@ TOKEN :
 |	< STOCHASTIC:		"stochastic" >
 |	< SYSTEM:			"system" >
 |	< TRUE:				"true" >
+|	< UNIFORM:			"uniform" >
 |	< UNTIL:			"U" >
+|	< WEIBULL:			"weibull" >
 	// punctuation, etc.
 	// note that "NOT" must be the first item of punctuation in this list
 	// (PrismSyntaxHighlighter relies on this fact)

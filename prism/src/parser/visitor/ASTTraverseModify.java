@@ -49,6 +49,7 @@ public class ASTTraverseModify implements ASTVisitor
 		if (e.getFormulaList() != null) e.setFormulaList((FormulaList)(e.getFormulaList().accept(this)));
 		if (e.getLabelList() != null) e.setLabelList((LabelList)(e.getLabelList().accept(this)));
 		if (e.getConstantList() != null) e.setConstantList((ConstantList)(e.getConstantList().accept(this)));
+		if (e.getDistributionList() != null) e.setDistributionList((DistributionList)(e.getDistributionList().accept(this)));
 		n = e.getNumGlobals();
 		for (i = 0; i < n; i++) {
 			if (e.getGlobal(i) != null) e.setGlobal(i, (Declaration)(e.getGlobal(i).accept(this)));
@@ -150,6 +151,21 @@ public class ASTTraverseModify implements ASTVisitor
 	}
 	public void visitPost(ConstantList e) throws PrismLangException { defaultVisitPost(e); }
 	// -----------------------------------------------------------------------------------
+	public void visitPre(DistributionList e) throws PrismLangException { defaultVisitPre(e); }
+	public Object visit(DistributionList e) throws PrismLangException
+	{
+		visitPre(e);
+		int i, n;
+		n = e.size();
+		for (i = 0; i < n; i++) {
+			e.setFirstParameter(i, (Expression)(e.getFirstParameter(i).accept(this)));
+			if (e.getSecondParameter(i) != null) e.setSecondParameter(i, (Expression)(e.getSecondParameter(i).accept(this)));
+		}
+		visitPost(e);
+		return e;
+	}
+	public void visitPost(DistributionList e) throws PrismLangException { defaultVisitPost(e); }
+	// -----------------------------------------------------------------------------------
 	public void visitPre(Declaration e) throws PrismLangException { defaultVisitPre(e); }
 	public Object visit(Declaration e) throws PrismLangException
 	{
@@ -220,6 +236,10 @@ public class ASTTraverseModify implements ASTVisitor
 		for (i = 0; i < n; i++) {
 			if (e.getDeclaration(i) != null) e.setDeclaration(i, (Declaration)(e.getDeclaration(i).accept(this)));
 		}
+		n = e.getNumEvents();
+		for (i = 0; i < n; i++) {
+			if (e.getEvent(i) != null) e.setEvent(i, (Event)(e.getEvent(i).accept(this)));
+		}
 		if (e.getInvariant() != null)
 			e.setInvariant((Expression)(e.getInvariant().accept(this)));
 		n = e.getNumCommands();
@@ -237,10 +257,24 @@ public class ASTTraverseModify implements ASTVisitor
 		visitPre(e);
 		e.setGuard((Expression)(e.getGuard().accept(this)));
 		e.setUpdates((Updates)(e.getUpdates().accept(this)));
+		if (e.getEventIdent() != null) e.setEventIdent((ExpressionIdent)(e.getEventIdent().accept(this)));
 		visitPost(e);
 		return e;
 	}
 	public void visitPost(Command e) throws PrismLangException { defaultVisitPost(e); }
+	// -----------------------------------------------------------------------------------
+	public void visitPre(Event e) throws PrismLangException { defaultVisitPre(e); }
+	public Object visit(Event e) throws PrismLangException
+	{
+		// Note: a few classes override this method (e.g. SemanticCheck)
+		// so take care to update those versions if changing this method
+		visitPre(e);
+		e.setEventNameIdent((ExpressionIdent)e.getEventNameIdent().accept(this));
+		e.setDistributionNameIdent((ExpressionIdent)e.getDistributionNameIdent().accept(this));
+		visitPost(e);
+		return e;
+	}
+	public void visitPost(Event e) throws PrismLangException { defaultVisitPost(e); }
 	// -----------------------------------------------------------------------------------
 	public void visitPre(Updates e) throws PrismLangException { defaultVisitPre(e); }
 	public Object visit(Updates e) throws PrismLangException

@@ -87,6 +87,26 @@ public class TypeCheck extends ASTTraverse
 			}
 		}
 	}
+	
+	public void visitPost(DistributionList e) throws PrismLangException
+	{
+		int i, n;
+		n = e.size();
+		for (i = 0; i < n; i++) {
+			Type firstType = e.getFirstParameter(i).getType(); // this should always work, because there always is a first parameter
+			Type secondType = null; 
+			if (e.getSecondParameter(i) != null) { //secondParameter might be null
+				secondType = e.getSecondParameter(i).getType();
+			}
+			int whichParameterWrong = e.getDistributionType(i).canAssign(firstType, secondType);
+			switch (whichParameterWrong) {
+			case 1:
+				throw new PrismLangException("Distributions need parameters of type Int or Double ", e.getFirstParameter(i));
+			case 2:
+				throw new PrismLangException("Distributions need parameters of type Int or Double ", e.getSecondParameter(i));
+			}
+		}
+	}
 
 	public void visitPost(Declaration e) throws PrismLangException
 	{

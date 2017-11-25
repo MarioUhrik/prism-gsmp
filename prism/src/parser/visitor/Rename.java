@@ -73,11 +73,25 @@ public class Rename extends ASTTraverseModify
 		e.setName(rm.getName());
 	}
 	
+	public void visitPost(Event e) throws PrismLangException
+	{
+		// This should have been already done, because EventNameIdent and DistributionNameIdent get renamed first.
+		// So I just check the event is already renamed. If it is not, throw exception
+		if (rm.getOldName(e.getEventName()) == null) {
+			throw new PrismLangException("Definition of module \"" + rm.getName() + "\" must rename event \"" + e.getEventName() + "\"", rm);
+		}
+	}
+	
 	public void visitPost(Command e) throws PrismLangException
 	{
 		// Rename synchronising action of command
 		String s = rm.getNewName(e.getSynch());
 		if (s != null) e.setSynch(s);
+		// This should have been already done, because eventIdent gets renamed first.
+		// So I just check eventIdent is already renamed. If it is not, throw exception
+		if (rm.getOldName(e.getEventIdent().getName()) == null) {
+			throw new PrismLangException("Definition of module \"" + rm.getName() + "\" must rename event \"" + e.getEventIdent().getName() + "\"", rm);
+		}
 	}
 	
 	public void visitPost(Update e) throws PrismLangException

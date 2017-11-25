@@ -2965,35 +2965,6 @@ String Double() throws ParseException {
     finally { jj_save(186, xla); }
   }
 
-  static private boolean jj_3_63()
- {
-    if (jj_3R_47()) return true;
-    return false;
-  }
-
-  static private boolean jj_3_180()
- {
-    if (jj_scan_token(FALSE)) return true;
-    return false;
-  }
-
-  static private boolean jj_3R_48()
- {
-    if (jj_3R_49()) return true;
-    if (jj_scan_token(OR)) return true;
-    if (jj_scan_token(LBRACKET)) return true;
-    if (jj_3R_50()) return true;
-    Token xsp;
-    while (true) {
-      xsp = jj_scanpos;
-      if (jj_3_68()) { jj_scanpos = xsp; break; }
-    }
-    if (jj_scan_token(RBRACKET)) return true;
-    if (jj_scan_token(OR)) return true;
-    if (jj_3R_49()) return true;
-    return false;
-  }
-
   static private boolean jj_3_59()
  {
     if (jj_scan_token(MAX)) return true;
@@ -4135,7 +4106,7 @@ String Double() throws ParseException {
 
   static private boolean jj_3_129()
  {
-    if (jj_scan_token(41)) return true;
+    if (jj_scan_token(46)) return true;
     return false;
   }
 
@@ -5265,6 +5236,35 @@ String Double() throws ParseException {
     return false;
   }
 
+  static private boolean jj_3_63()
+ {
+    if (jj_3R_47()) return true;
+    return false;
+  }
+
+  static private boolean jj_3_180()
+ {
+    if (jj_scan_token(FALSE)) return true;
+    return false;
+  }
+
+  static private boolean jj_3R_48()
+ {
+    if (jj_3R_49()) return true;
+    if (jj_scan_token(OR)) return true;
+    if (jj_scan_token(LBRACKET)) return true;
+    if (jj_3R_50()) return true;
+    Token xsp;
+    while (true) {
+      xsp = jj_scanpos;
+      if (jj_3_68()) { jj_scanpos = xsp; break; }
+    }
+    if (jj_scan_token(RBRACKET)) return true;
+    if (jj_scan_token(OR)) return true;
+    if (jj_3R_49()) return true;
+    return false;
+  }
+
   static private boolean jj_initialized_once = false;
   /** Generated Token Manager. */
   static public Prism3To4TokenManager token_source;
@@ -5496,7 +5496,7 @@ String Double() throws ParseException {
   /** Generate ParseException. */
   static public ParseException generateParseException() {
     jj_expentries.clear();
-    boolean[] la1tokens = new boolean[80];
+    boolean[] la1tokens = new boolean[87];
     if (jj_kind >= 0) {
       la1tokens[jj_kind] = true;
       jj_kind = -1;
@@ -5516,7 +5516,7 @@ String Double() throws ParseException {
         }
       }
     }
-    for (int i = 0; i < 80; i++) {
+    for (int i = 0; i < 87; i++) {
       if (la1tokens[i]) {
         jj_expentry = new int[1];
         jj_expentry[0] = i;

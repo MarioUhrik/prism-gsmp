@@ -431,6 +431,8 @@ TOKEN :
 |	< CONST:			"const" >
 |	< CTMC:				"ctmc" >
 |	< C:				"C" >
+|	< DISTRIBUTION:		"distribution" >
+|	< DIRAC:			"dirac" >
 |	< DOUBLE:			"double" >
 |	< DTMC:				"dtmc" >
 |	< E:				"E" >
@@ -439,6 +441,8 @@ TOKEN :
 |	< ENDMODULE:		"endmodule" >
 |	< ENDREWARDS:		"endrewards" >
 |	< ENDSYSTEM:		"endsystem" >
+|	< EVENT:			"event" >
+|	< EXPONENTIAL:		"exponential" >
 |	< FALSE:			"false" >
 |	< FORMULA:			"formula" >
 |	< FILTER:			"filter" >
@@ -447,6 +451,7 @@ TOKEN :
 |	< GLOBAL:			"global" >
 |	< G:				"G" >
 |	< INIT:				"init" >
+|	< GSMP:				"gsmp" >
 |	< INVARIANT:		"invariant" >
 |	< I:				"I" >
 |	< INT:				"int" >
@@ -474,7 +479,10 @@ TOKEN :
 |	< SYSTEM:			"system" >
 |	< TRUE:				"true" >
 |	< U:				"U" >
+|	< UNIFORM:			"uniform" >
+|	< VOID:				"void" >
 |	< W:				"W" >
+|	< WEIBULL:			"weibull" >
 	// Punctuation, etc.
 	// Note that "NOT" must be the first item of punctuation in this list
 	// (PrismSyntaxHighlighter relies on this fact)
@@ -483,6 +491,7 @@ TOKEN :
 |	< OR:			"|" >
 |	< IMPLIES:		"=>" >
 |	< IFF:			"<=>" >
+|	< DMINUS:		"--" >
 |	< RARROW:		"->" >
 |	< COLON:		":" >
 |	< SEMICOLON:	";" >
@@ -548,14 +557,14 @@ ModulesFile ModulesFile() throws PrismLangException :
 	( { begin = getToken(1); }
 	// Model type
 	( type=ModulesFileType() { typeCount++; if (typeCount == 2) typeDupe = getToken(0); } ) |
-	// Formula/label/constant definition
-	FormulaDef(mf.getFormulaList()) | LabelDef(mf.getLabelList()) | ConstantDef(mf.getConstantList()) |
+	// Formula/label/constant/distribution definition
+	FormulaDef(mf.getFormulaList()) | LabelDef(mf.getLabelList()) | LOOKAHEAD(2) ConstantDef(mf.getConstantList()) | LOOKAHEAD(2) DistributionDec(mf.getDistributionList()) |
 	// Global variable
 	global = GlobalDecl() { mf.addGlobal(global); } |
 	// Renamed module (lookahead to distinguish from normal module)
 	LOOKAHEAD(<MODULE> Identifier() <EQ>) rm = RenamedModule() { mf.addRenamedModule(rm); } |
 	// Module
-	m = Module() { mf.addModule(m); } | 
+	m = Module(mf) { mf.addModule(m); } | 
 	// Reward structure
 	rs = RewardStruct() { mf.addRewardStruct(rs); } |
 	// Initial states ("init...endinit" construct)
@@ -680,6 +689,7 @@ ModelType ModulesFileType() :
 	| (<MDP>|<NONDETERMINISTIC>) { modelType=ModelType.MDP; }
 	| (<CTMC>|<STOCHASTIC>) { modelType=ModelType.CTMC; }
 	| <PTA> { modelType=ModelType.PTA; }
+	| (<GSMP>) { modelType=ModelType.GSMP; }
 	)
 	{ return modelType; }
 }
@@ -727,6 +737,42 @@ void ConstantDef(ConstantList constantList) :
 	name = IdentifierExpression()
 	( <EQ> expr = Expression(false, false) )? <SEMICOLON>
 	{ constantList.addConstant(name, expr, type); }
+}
+
+// Distribution declaration 
+
+void DistributionDec(DistributionList distributionList) :
+{
+	ExpressionIdent name = null;
+}
+{
+  	// Const - requires a lookahead because of common prefix with constants!
+  	<CONST>
+	// Distribution 
+	<DISTRIBUTION> 
+	// Name 
+	name = IdentifierExpression()
+	<EQ>
+	// definition
+	DistributionDef(distributionList, name)
+	<SEMICOLON>
+}
+
+// Distribution definition
+
+ExpressionIdent DistributionDef(DistributionList distributionList, ExpressionIdent name) :
+{
+	TypeDistribution type = TypeDistribution.getInstance();
+	Expression firstParameter = null;
+	Expression secondParameter = null;
+}
+{
+		 ( (<EXPONENTIAL> { type=TypeDistributionExponential.getInstance(); } <LPARENTH> firstParameter = Expression(false, false))
+		 | (<DIRAC> { type=TypeDistributionDirac.getInstance(); } <LPARENTH> firstParameter = Expression(false, false))
+		 | (<WEIBULL> { type=TypeDistributionWeibull.getInstance(); } <LPARENTH> firstParameter = Expression(false, false) <COMMA> secondParameter = Expression(false, false))
+		 | (<UNIFORM> { type=TypeDistributionUniform.getInstance(); } <LPARENTH> firstParameter = Expression(false, false) <COMMA> secondParameter = Expression(false, false)) )
+	<RPARENTH>
+	{ distributionList.addDistribution(name, firstParameter, secondParameter, type); return name;}
 }
 
 // Global variable declaration
@@ -791,23 +837,48 @@ DeclarationType DeclarationVarType() :
 
 // Module
 
-parser.ast.Module Module() :
+parser.ast.Module Module(ModulesFile mf) :
 {
 	ExpressionIdent name = null;
 	Declaration var = null;
 	Expression invar;
+	Event event = null;
 	Command comm = null;
 	parser.ast.Module module = null;
 	Token begin = null;
 }
 {
 	begin = <MODULE> name = IdentifierExpression() { module = new parser.ast.Module(name.getName()); }
+	( event = EventDef(mf.getDistributionList()) { module.addEvent(event); } )*
 	( var = Declaration() { module.addDeclaration(var); } )*
 	( <INVARIANT> invar = Expression(false, false) <ENDINVARIANT> { module.setInvariant(invar); } )?
 	( comm = Command() { module.addCommand(comm); } )*
 	<ENDMODULE>
 	{ module.setPosition(begin, getToken(0)); module.setNameASTElement(name); return module; }
 }
+
+// Event
+
+Event EventDef(DistributionList dl) :
+{
+	ExpressionIdent eventNameIdent = null;
+	ExpressionIdent distributionNameIdent = null;
+	Event event;
+}
+{
+	<EVENT> eventNameIdent = IdentifierExpression()
+	<EQ> 
+		//can be defined either through identifier of an already declared distribution
+		( distributionNameIdent = IdentifierExpression()
+		// or it is possible to define event's own "private" distribution here
+		| distributionNameIdent = DistributionDef(
+		  dl,
+		  new ExpressionIdent(eventNameIdent.getName() + "_distribution_" + eventNameIdent.getBeginLine()))
+		  { distributionNameIdent.setPosition(eventNameIdent); } )
+	<SEMICOLON>
+	{ event = new Event(eventNameIdent, distributionNameIdent); return event; }
+}
+
 
 // Command
 
@@ -818,12 +889,19 @@ Command Command() :
 	Updates updates = null;
 	Command comm = new Command();
 	Token begin = null;
+	ExpressionIdent eventIdent = null;
 }
 {
 	// Synchronisation action-label
 	begin = <LBRACKET> ( synch = Identifier() { comm.setSynch(synch); } )? <RBRACKET>
 	// Guard/updates
-	guard = Expression(false, false) { comm.setGuard(guard); } <RARROW> updates = Updates() { comm.setUpdates(updates); } <SEMICOLON>
+	guard = Expression(false, false) { comm.setGuard(guard); }
+	( <DMINUS>
+		( <VOID> { comm.setSlave(true); }
+		| eventIdent = IdentifierExpression() { comm.setEventIdent(eventIdent); }
+		)
+	)?
+	<RARROW> updates = Updates() { comm.setUpdates(updates); } <SEMICOLON>
 	{ comm.setPosition(begin, getToken(0)); return comm; }
 }
 

@@ -21,6 +21,7 @@ jklein = Joachim Klein <klein@tcs.inf.tu-dresden.de>
 kostas = Kostas Chatzikokolakis <kostas@chatzi.org>
 krause = Christian Krause <christian.krause@hpi.uni-potsdam.de>
 lukeh = Luke Herbert <herbert.luke@gmail.com>
+muhrik = Mario Uhrik <433501@mail.muni.cz>
 mceska = mceska <xceska@fi.muni.cz>
 mujma = Mateusz Ujma <mateusz.ujma@cs.ox.ac.uk>
 mxk = Mark Kattenbelt <mark.kattenbelt@comlab.ox.ac.uk>

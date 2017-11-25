@@ -36,6 +36,8 @@ public class Module extends ASTElement
 	// Module name
 	private String name;
 	private ExpressionIdent nameASTElement;
+	// Events
+	private ArrayList<Event> events;
 	// Local variables
 	private ArrayList<Declaration> decls;
 	// Commands
@@ -54,6 +56,7 @@ public class Module extends ASTElement
 	public Module(String n)
 	{
 		name = n;
+		events = new ArrayList<Event>();
 		decls = new ArrayList<Declaration>();
 		commands = new ArrayList<Command>();
 		invariant = null;
@@ -62,6 +65,20 @@ public class Module extends ASTElement
 	}
 
 	// Set methods
+	
+	public void addEvent(Event event) {
+		event.setParent(this);
+		events.add(event);
+	}
+	
+	public void setEvent(int i, Event e) {
+		e.setParent(this);
+		events.set(i, e);
+	}
+	
+	public void removeEvent(Event e) {
+		events.remove(e);
+	}
 	
 	public void setName(String n)
 	{
@@ -126,6 +143,18 @@ public class Module extends ASTElement
 	}
 	
 	// Get methods
+	
+	public Event getEvent(int i) {
+		return events.get(i);
+	}
+	
+	public int getNumEvents() {
+		return events.size();
+	}
+	
+	public List<Event> getEvents(){
+		return events;
+	}
 	
 	public String getName()
 	{
@@ -235,6 +264,24 @@ public class Module extends ASTElement
 		return getAllSynchs().contains(s);
 	}
 	
+	/**
+	 * Checks whether this module has an event of a given name. 
+	 *   Assumes that eventNames are globally unique.
+	 * @param eventName name of the event
+	 * @return If this module contains event eventName, returns 
+	 *         	the index i for this.getEvent(int i)
+	 *         else this module does not contain event eventName and returns -1.
+	 */
+	public int getEvent(String eventName) 
+	{
+		for (int i = 0; i < events.size() ; ++i) {
+			if (getEvent(i).getEventName().equals(eventName)) {
+				return i;
+			}
+		}
+		return -1;
+	}
+	
 	public boolean isLocalVariable(String s)
 	{
 		int i, n;
@@ -265,6 +312,10 @@ public class Module extends ASTElement
 		int i, n;
 		
 		s = s + "module " + name + "\n\n";
+		n = getNumEvents();
+		for (i = 0; i < n; i++) {
+			s = s + "\t" + getEvent(i) + ";\n";
+		}
 		n = getNumDeclarations();
 		for (i = 0; i < n; i++) {
 			s = s + "\t" + getDeclaration(i) + ";\n";
@@ -299,9 +350,17 @@ public class Module extends ASTElement
 		for (i = 0; i < n; i++) {
 			ret.addCommand((Command)getCommand(i).deepCopy());
 		}
+		n = getNumEvents();
+		for (i = 0; i < n; i++) {
+			ExpressionIdent newEventNameIdent = (ExpressionIdent)getEvent(i).getEventNameIdent().deepCopy();
+			ExpressionIdent newDistributionNameIdent = (ExpressionIdent)getEvent(i).getDistributionNameIdent().deepCopy();
+			Event event = new Event(newEventNameIdent, newDistributionNameIdent);
+			ret.addEvent(event);
+		}
 		if (invariant != null)
 			ret.setInvariant(invariant.deepCopy());
 		ret.setPosition(this);
+		ret.setParent(getParent());
 		return ret;
 	}
 }

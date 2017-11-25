@@ -25,149 +25,163 @@ public interface Prism3To4Constants {
   /** RegularExpression Id. */
   int CUMUL = 7;
   /** RegularExpression Id. */
-  int DOUBLE = 8;
+  int DISTRIBUTION = 8;
   /** RegularExpression Id. */
-  int DTMC = 9;
+  int DIRAC = 9;
   /** RegularExpression Id. */
-  int ENDINIT = 10;
+  int DOUBLE = 10;
   /** RegularExpression Id. */
-  int ENDMODULE = 11;
+  int DTMC = 11;
   /** RegularExpression Id. */
-  int ENDREWARDS = 12;
+  int ENDINIT = 12;
   /** RegularExpression Id. */
-  int ENDSYSTEM = 13;
+  int ENDMODULE = 13;
   /** RegularExpression Id. */
-  int FALSE = 14;
+  int ENDREWARDS = 14;
   /** RegularExpression Id. */
-  int FLOOR = 15;
+  int ENDSYSTEM = 15;
   /** RegularExpression Id. */
-  int FORMULA = 16;
+  int EVENT = 16;
   /** RegularExpression Id. */
-  int FUNC = 17;
+  int EXPONENTIAL = 17;
   /** RegularExpression Id. */
-  int FUTURE = 18;
+  int FALSE = 18;
   /** RegularExpression Id. */
-  int GLOBAL = 19;
+  int FLOOR = 19;
   /** RegularExpression Id. */
-  int GLOB = 20;
+  int FORMULA = 20;
   /** RegularExpression Id. */
-  int INIT = 21;
+  int FUNC = 21;
   /** RegularExpression Id. */
-  int INST = 22;
+  int FUTURE = 22;
   /** RegularExpression Id. */
-  int INT = 23;
+  int GLOBAL = 23;
   /** RegularExpression Id. */
-  int LABEL = 24;
+  int GLOB = 24;
   /** RegularExpression Id. */
-  int MAX = 25;
+  int GSMP = 25;
   /** RegularExpression Id. */
-  int MDP = 26;
+  int INIT = 26;
   /** RegularExpression Id. */
-  int MIN = 27;
+  int INST = 27;
   /** RegularExpression Id. */
-  int MODULE = 28;
+  int INT = 28;
   /** RegularExpression Id. */
-  int NEXT = 29;
+  int LABEL = 29;
   /** RegularExpression Id. */
-  int NONDETERMINISTIC = 30;
+  int MAX = 30;
   /** RegularExpression Id. */
-  int PMAX = 31;
+  int MDP = 31;
   /** RegularExpression Id. */
-  int PMIN = 32;
+  int MIN = 32;
   /** RegularExpression Id. */
-  int P = 33;
+  int MODULE = 33;
   /** RegularExpression Id. */
-  int PROBABILISTIC = 34;
+  int NEXT = 34;
   /** RegularExpression Id. */
-  int PROB = 35;
+  int NONDETERMINISTIC = 35;
   /** RegularExpression Id. */
-  int RATE = 36;
+  int PMAX = 36;
   /** RegularExpression Id. */
-  int REWARDS = 37;
+  int PMIN = 37;
   /** RegularExpression Id. */
-  int RMAX = 38;
+  int P = 38;
   /** RegularExpression Id. */
-  int RMIN = 39;
+  int PROBABILISTIC = 39;
   /** RegularExpression Id. */
-  int R = 40;
+  int PROB = 40;
   /** RegularExpression Id. */
-  int S = 41;
+  int RATE = 41;
   /** RegularExpression Id. */
-  int STOCHASTIC = 42;
+  int REWARDS = 42;
   /** RegularExpression Id. */
-  int SYSTEM = 43;
+  int RMAX = 43;
   /** RegularExpression Id. */
-  int TRUE = 44;
+  int RMIN = 44;
   /** RegularExpression Id. */
-  int UNTIL = 45;
+  int R = 45;
   /** RegularExpression Id. */
-  int NOT = 46;
+  int S = 46;
   /** RegularExpression Id. */
-  int AND = 47;
+  int STOCHASTIC = 47;
   /** RegularExpression Id. */
-  int OR = 48;
+  int SYSTEM = 48;
   /** RegularExpression Id. */
-  int IMPLIES = 49;
+  int TRUE = 49;
   /** RegularExpression Id. */
-  int RARROW = 50;
+  int UNIFORM = 50;
   /** RegularExpression Id. */
-  int COLON = 51;
+  int UNTIL = 51;
   /** RegularExpression Id. */
-  int SEMICOLON = 52;
+  int WEIBULL = 52;
   /** RegularExpression Id. */
-  int COMMA = 53;
+  int NOT = 53;
   /** RegularExpression Id. */
-  int DOTS = 54;
+  int AND = 54;
   /** RegularExpression Id. */
-  int LPARENTH = 55;
+  int OR = 55;
   /** RegularExpression Id. */
-  int RPARENTH = 56;
+  int IMPLIES = 56;
   /** RegularExpression Id. */
-  int LBRACKET = 57;
+  int RARROW = 57;
   /** RegularExpression Id. */
-  int RBRACKET = 58;
+  int COLON = 58;
   /** RegularExpression Id. */
-  int LBRACE = 59;
+  int SEMICOLON = 59;
   /** RegularExpression Id. */
-  int RBRACE = 60;
+  int COMMA = 60;
   /** RegularExpression Id. */
-  int EQ = 61;
+  int DOTS = 61;
   /** RegularExpression Id. */
-  int NE = 62;
+  int LPARENTH = 62;
   /** RegularExpression Id. */
-  int LT = 63;
+  int RPARENTH = 63;
   /** RegularExpression Id. */
-  int GT = 64;
+  int LBRACKET = 64;
   /** RegularExpression Id. */
-  int LE = 65;
+  int RBRACKET = 65;
   /** RegularExpression Id. */
-  int GE = 66;
+  int LBRACE = 66;
   /** RegularExpression Id. */
-  int PLUS = 67;
+  int RBRACE = 67;
   /** RegularExpression Id. */
-  int MINUS = 68;
+  int EQ = 68;
   /** RegularExpression Id. */
-  int TIMES = 69;
+  int NE = 69;
   /** RegularExpression Id. */
-  int DIVIDE = 70;
+  int LT = 70;
   /** RegularExpression Id. */
-  int PRIME = 71;
+  int GT = 71;
   /** RegularExpression Id. */
-  int RENAME = 72;
+  int LE = 72;
   /** RegularExpression Id. */
-  int QMARK = 73;
+  int GE = 73;
   /** RegularExpression Id. */
-  int DQUOTE = 74;
+  int PLUS = 74;
   /** RegularExpression Id. */
-  int REG_INT = 75;
+  int MINUS = 75;
   /** RegularExpression Id. */
-  int REG_DOUBLE = 76;
+  int TIMES = 76;
   /** RegularExpression Id. */
-  int REG_IDENTPRIME = 77;
+  int DIVIDE = 77;
   /** RegularExpression Id. */
-  int REG_IDENT = 78;
+  int PRIME = 78;
   /** RegularExpression Id. */
-  int PREPROC = 79;
+  int RENAME = 79;
+  /** RegularExpression Id. */
+  int QMARK = 80;
+  /** RegularExpression Id. */
+  int DQUOTE = 81;
+  /** RegularExpression Id. */
+  int REG_INT = 82;
+  /** RegularExpression Id. */
+  int REG_DOUBLE = 83;
+  /** RegularExpression Id. */
+  int REG_IDENTPRIME = 84;
+  /** RegularExpression Id. */
+  int REG_IDENT = 85;
+  /** RegularExpression Id. */
+  int PREPROC = 86;
 
   /** Lexical state. */
   int DEFAULT = 0;
@@ -182,12 +196,16 @@ public interface Prism3To4Constants {
     "\"ceil\"",
     "\"ctmc\"",
     "\"C\"",
+    "\"distribution\"",
+    "\"dirac\"",
     "\"double\"",
     "\"dtmc\"",
     "\"endinit\"",
     "\"endmodule\"",
     "\"endrewards\"",
     "\"endsystem\"",
+    "\"event\"",
+    "\"exponential\"",
     "\"false\"",
     "\"floor\"",
     "\"formula\"",
@@ -195,6 +213,7 @@ public interface Prism3To4Constants {
     "\"F\"",
     "\"global\"",
     "\"G\"",
+    "\"gsmp\"",
     "\"init\"",
     "\"I\"",
     "\"int\"",
@@ -219,7 +238,9 @@ public interface Prism3To4Constants {
     "\"stochastic\"",
     "\"system\"",
     "\"true\"",
+    "\"uniform\"",
     "\"U\"",
+    "\"weibull\"",
     "\"!\"",
     "\"&\"",
     "\"|\"",

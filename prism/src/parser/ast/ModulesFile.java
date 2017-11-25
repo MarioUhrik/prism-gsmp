@@ -27,6 +27,7 @@
 package parser.ast;
 
 import java.util.*;
+import java.util.function.Predicate;
 
 import parser.*;
 import parser.visitor.*;
@@ -48,6 +49,7 @@ public class ModulesFile extends ASTElement implements ModelInfo
 	private FormulaList formulaList;
 	private LabelList labelList;
 	private ConstantList constantList;
+	private DistributionList distributionList;
 	private Vector<Declaration> globals; // Global variables
 	private Vector<Object> modules; // Modules (includes renamed modules)
 	private ArrayList<SystemDefn> systemDefns; // System definitions (system...endsystem constructs)
@@ -59,6 +61,8 @@ public class ModulesFile extends ASTElement implements ModelInfo
 	// Lists of all identifiers used
 	private Vector<String> formulaIdents;
 	private Vector<String> constantIdents;
+	private Vector<String> distributionIdents;
+	private Vector<String> eventIdents;
 	private Vector<String> varIdents; // TODO: don't need?
 	// List of all module names
 	private String[] moduleNames;
@@ -81,6 +85,7 @@ public class ModulesFile extends ASTElement implements ModelInfo
 		formulaList = new FormulaList();
 		labelList = new LabelList();
 		constantList = new ConstantList();
+		distributionList = new DistributionList(this);
 		modelType = ModelType.MDP; // default type
 		globals = new Vector<Declaration>();
 		modules = new Vector<Object>();
@@ -91,6 +96,8 @@ public class ModulesFile extends ASTElement implements ModelInfo
 		initStates = null;
 		formulaIdents = new Vector<String>();
 		constantIdents = new Vector<String>();
+		distributionIdents = new Vector<String>();
+		eventIdents = new Vector<String>();
 		varIdents = new Vector<String>();
 		varDecls = new Vector<Declaration>();
 		varNames = new Vector<String>();
@@ -114,6 +121,11 @@ public class ModulesFile extends ASTElement implements ModelInfo
 	public void setConstantList(ConstantList cl)
 	{
 		constantList = cl;
+	}
+	
+	public void setDistributionList(DistributionList dl)
+	{
+		distributionList = dl;
 	}
 
 	public void setModelType(ModelType t)
@@ -268,6 +280,11 @@ public class ModulesFile extends ASTElement implements ModelInfo
 	public ConstantList getConstantList()
 	{
 		return constantList;
+	}
+	
+	public DistributionList getDistributionList()
+	{
+		return distributionList;
 	}
 
 	@Override
@@ -494,7 +511,7 @@ public class ModulesFile extends ASTElement implements ModelInfo
 	 */
 	public boolean isIdentUsed(String ident)
 	{
-		return formulaIdents.contains(ident) || constantIdents.contains(ident) || varIdents.contains(ident);
+		return formulaIdents.contains(ident) || constantIdents.contains(ident) || varIdents.contains(ident) || distributionIdents.contains(ident) || eventIdents.contains(ident);
 	}
 
 	// get individual module name
@@ -531,6 +548,24 @@ public class ModulesFile extends ASTElement implements ModelInfo
 			return false;
 		else
 			return synchs.contains(s);
+	}
+	
+	// Event query methods
+	
+	public int getNumEvents() {
+		return eventIdents.size();
+	}
+	
+	public int getEventIndex(String ident) {
+		return eventIdents.indexOf(ident);
+	}
+	
+	public String getEventIdent(int i) {
+		return eventIdents.get(i);
+	}
+	
+	public Vector<String> getEventIdents(){
+		return eventIdents;
 	}
 
 	// Variable query methods
@@ -621,10 +656,12 @@ public class ModulesFile extends ASTElement implements ModelInfo
 		// (in case it has already been called previously).
 		formulaIdents.clear();
 		constantIdents.clear();
+		distributionIdents.clear();
 		varIdents.clear();
 		varDecls.clear();
 		varNames.clear();
 		varTypes.clear();
+		eventIdents.clear();
 		
 		// Expansion of formulas and renaming
 
@@ -654,6 +691,12 @@ public class ModulesFile extends ASTElement implements ModelInfo
 		findAllConstants(constantList);
 		// Check constants for cyclic dependencies
 		constantList.findCycles();
+		
+		// Check distribution identifiers
+		checkDistributionIdents();
+		
+		// Check event identifiers within each module
+		checkEvents();
 
 		// Check variable names, etc.
 		checkVarNames();
@@ -675,6 +718,13 @@ public class ModulesFile extends ASTElement implements ModelInfo
 		getSynchNames();
 		// Then identify/check any references to action names
 		findAllActions(synchs);
+		
+		// GSMP command check:
+		/* TODO MAJO - not completely valid, because it only cares about labels.
+		   Such a check should also care about guards, and it should
+		   be done as postprocessing after the GSMP has been built fully.
+		 */
+		checkGSMPCommands();
 
 		// Various semantic checks 
 		doSemanticChecks();
@@ -855,6 +905,164 @@ public class ModulesFile extends ASTElement implements ModelInfo
 				constantIdents.add(s);
 			}
 		}
+	}
+	
+	
+	//check event identifiers
+	
+	/**
+	 * Checks whether any of the modules has events with an already used identifier
+	 * and whether each event is associated with an already declared distribution
+	 * @throws PrismLangException
+	 */
+	private void checkEvents() throws PrismLangException{
+		int i, n;
+		n = getNumModules();
+		
+		for (i = 0; i < n; i++) {
+			Module m = this.getModule(i);
+			for (int j = 0; j < m.getNumEvents() ; ++j) {
+				Event e = m.getEvent(j);
+				if (isIdentUsed(e.getEventName())) { // check that no two events with the same identifier exist
+					throw new PrismLangException("Duplicated identifier \"" + e.getEventName() + "\"", 
+							e.getEventNameIdent());
+				} else if (getDistributionList().getDistributionIndex(e.getDistributionName()) == -1) { 
+					// check that the assigned distribution has actually been declared
+					throw new PrismLangException("Event \"" + e.getEventName() + "\" is not assigned to a defined distribution",
+							e.getDistributionNameIdent());
+				} else {
+					eventIdents.add(e.getEventName());
+				}
+			}
+		}
+		
+	}
+	
+	// check for duplicate distribution identifiers
+
+	/**
+	 * Checks whether any of the distributions have an already used identifier
+	 * @throws PrismLangException
+	 */
+	private void checkDistributionIdents() throws PrismLangException
+	{
+		int i, n;
+		String s;
+		n = distributionList.size();
+		for (i = 0; i < n; i++) {
+			s = distributionList.getDistributionName(i);
+			if (isIdentUsed(s)) { // distribution identifier check
+				throw new PrismLangException("Duplicated identifier \"" + s + "\"", distributionList
+						.getDistributionNameIdent(i));
+			} else {
+				distributionIdents.add(s);
+			}
+		}
+	}
+	
+	/**
+	 *	1) Ensure that all GSMP event commands actually have an existing Event assigned to them.
+	 *   1.1) Ensure that the assigned Event is from the same Module.
+	 *	2) Ensure that all GSMP slave commands have a synch label.
+	 *   2.1) Ensure that all GSMP slave commands have at least one master (by label).
+	 *  3) Ensure for all synch labels that if they have multiple masters, they are exponential.
+	 *   
+	 *   Assumes eventIdents and synchs to not be null.
+	 * @throws PrismLangException when the above conditions do not hold
+	 */ 
+	private void checkGSMPCommands() throws PrismLangException // TODO MAJO - potential for nicer code
+	{
+		//get all commands from all modules
+		List<Command> commands = new ArrayList<Command>();
+		for (int i = 0; i < modules.size() ; ++i) {
+			Module m = (Module)modules.get(i);
+			commands.addAll(m.getCommands());
+		}
+		
+		//get all events from all modules
+		Vector<Event> allEvents = new Vector<Event>();
+		for (int i = 0 ; i < modules.size() ; ++i) {
+			allEvents.addAll(((Module)modules.get(i)).getEvents());
+		}
+		
+		// for all commands
+		for (int i = 0; i < commands.size() ; ++i) {
+			Command comm = commands.get(i);
+			
+			// if it is not even a GSMP command, then just move on
+			ExpressionIdent commEvent = comm.getEventIdent();
+			if (commEvent == null && comm.isSlave() == false) {
+				continue;
+			}
+			//1) if the command has an assigned event that does not exist, throw exception
+			if ( commEvent != null && !eventIdents.contains(commEvent.getName())) {
+				throw new PrismLangException("This command is assigned to a non-existing event!",commEvent);
+			}
+			//1.1) if the command has an assigned event that is not from this module, throw exception
+			if ((commEvent != null) && (comm.getParent().getEvent(commEvent.getName()) == -1)) {
+				throw new PrismLangException("This command is assigned to an event from different module!",commEvent);
+			}
+			
+			// if the command is a slave
+			if (comm.isSlave()) { // TODO MAJO - unnecessarily done for all slaves, even of the same label.
+				//2) if the slave and has no label, throw exception
+				if (comm.getSynch() == null || comm.getSynch().equals("")) {
+					throw new PrismLangException("All slave commands must have a label!", comm);
+				}
+				//2.1) if the slave has no masters, throw exception
+				if (getMastersOfLabel(comm.getSynch()).size() <= 0) {
+					throw new PrismLangException("All slave commands must have a master!", comm);
+				}
+			}
+		}
+		
+		//for all synch labels
+		for (int i = 0; i < getSynchs().size() ; ++i) {
+			Vector<Command> masterComms = getMastersOfLabel(getSynch(i));
+			//3) if the label has multiple masters and they are not all exponential, throw exception
+			if (masterComms.size() > 1) {
+				for (int j = 0; j < masterComms.size() ; ++j) {
+					Command master = masterComms.get(j);
+					// if a master is a usual exponential command, continue
+					if (master.getEventIdent() == null) {
+						continue;
+					}
+				
+					// if a master is a GSMP command that is not exponential, throw exception
+					for (int k = 0 ; k < allEvents.size() ; ++k) {
+						Event event = allEvents.get(k);
+						if (event.getEventName().equals(master.getEventIdent().getName())) {
+							int distrIndex = distributionList.getDistributionIndex(event.getDistributionName());
+							TypeDistribution distrType = distributionList.getDistributionType(distrIndex);
+							if (!(distrType instanceof TypeDistributionExponential)) {
+								throw new PrismLangException("Multiple non-exponential master commands detected!", master);
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	
+	/**
+	 * 
+	 * @param label 
+	 * @return vector of commands from all modules with the given synch label that are not slaves
+	 */
+	private Vector<Command> getMastersOfLabel(String label)
+	{
+		//get all commands from all modules
+		Vector<Command> masters = new Vector<Command>();
+		for (int i = 0; i < modules.size() ; ++i) {
+			Module m = (Module)modules.get(i);
+			masters.addAll(m.getCommands());
+		}
+		
+		//filter out the wrong ones
+		Predicate<Command> filter = c-> (!(c.getSynch().equals(label))) || c.isSlave() == true;
+		masters.removeIf(filter);
+		
+		return masters;
 	}
 
 	// check variable names
@@ -1234,6 +1442,11 @@ public class ModulesFile extends ASTElement implements ModelInfo
 		if (tmp.length() > 0)
 			tmp += "\n";
 		s += tmp;
+		
+		tmp = "" + distributionList;
+		if (tmp.length() > 0)
+			tmp += "\n";
+		s += tmp;
 
 		n = getNumGlobals();
 		for (i = 0; i < n; i++) {
@@ -1284,6 +1497,7 @@ public class ModulesFile extends ASTElement implements ModelInfo
 		ret.setFormulaList((FormulaList) formulaList.deepCopy());
 		ret.setLabelList((LabelList) labelList.deepCopy());
 		ret.setConstantList((ConstantList) constantList.deepCopy());
+		ret.setDistributionList((DistributionList) distributionList.deepCopy());
 		n = getNumGlobals();
 		for (i = 0; i < n; i++) {
 			ret.addGlobal((Declaration) getGlobal(i).deepCopy());
@@ -1305,6 +1519,7 @@ public class ModulesFile extends ASTElement implements ModelInfo
 		// Copy other (generated) info
 		ret.formulaIdents = (formulaIdents == null) ? null : (Vector<String>)formulaIdents.clone();
 		ret.constantIdents = (constantIdents == null) ? null : (Vector<String>)constantIdents.clone();
+		ret.distributionIdents = (distributionIdents == null) ? null : (Vector<String>)distributionIdents.clone();
 		ret.varIdents = (varIdents == null) ? null : (Vector<String>)varIdents.clone();
 		ret.moduleNames = (moduleNames == null) ? null : moduleNames.clone();
 		ret.synchs = (synchs == null) ? null : (Vector<String>)synchs.clone();
@@ -1314,6 +1529,7 @@ public class ModulesFile extends ASTElement implements ModelInfo
 				ret.varDecls.add((Declaration) d.deepCopy());
 		}
 		ret.varNames = (varNames == null) ? null : (Vector<String>)varNames.clone();
+		ret.eventIdents = (eventIdents == null) ? null : (Vector<String>)eventIdents.clone();
 		ret.varTypes = (varTypes == null) ? null : (Vector<Type>)varTypes.clone();
 		ret.constantValues = (constantValues == null) ? null : new Values(constantValues);
 		

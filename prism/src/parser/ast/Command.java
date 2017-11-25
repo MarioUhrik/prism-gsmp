@@ -39,6 +39,17 @@ public class Command extends ASTElement
 	private int synchIndex;
 	// Guard
 	private Expression guard;
+	// Assigned GSMP Event. If null, then this is a usual exponential command
+	private ExpressionIdent eventIdent;
+	// Used for GSMP. If true, this command is a slave to other commands with the same label.
+	// As a slave, this command does not have its own time distribution and relies on other
+	// commands (i.e. masters) to provide it during synchronization.
+	// Example use case: 
+	// There are 2 synchronized modules M1 and M2, each containing a command with label [a].
+	// Let the command in M1 be a "slave", and the command in M2 be a "master".
+	// The joint distribution for these synchronized commands is fully chosen by the master.
+	// This avoids confusion about what the joint distribution for the synchronized commands should be
+	private boolean isSlave;
 	// List of updates
 	private Updates updates;
 	// Parent module
@@ -52,6 +63,8 @@ public class Command extends ASTElement
 		synchIndex = -1;
 		guard = null;
 		updates = null;
+		isSlave = false;
+		eventIdent = null;
 	}
 	
 	// Set methods
@@ -80,6 +93,16 @@ public class Command extends ASTElement
 	public void setParent(Module m)
 	{
 		parent = m;
+	}
+	
+	public void setSlave(boolean s)
+	{
+		isSlave = s;
+	}
+	
+	public void setEventIdent(ExpressionIdent e)
+	{
+		eventIdent = e;
 	}
 
 	// Get methods
@@ -118,6 +141,16 @@ public class Command extends ASTElement
 		return parent;
 	}
 	
+	public boolean isSlave()
+	{
+		return isSlave;
+	}
+	
+	public ExpressionIdent getEventIdent()
+	{
+		return eventIdent;
+	}
+	
 	// Methods required for ASTElement:
 	
 	/**
@@ -134,7 +167,16 @@ public class Command extends ASTElement
 	public String toString()
 	{
 		String s = "[" + synch;
-		s += "] " + guard + " -> " + updates;
+		s += "] " + guard;
+		if (isSlave || eventIdent != null) {
+			s += " --";
+		}
+		if (isSlave) {
+			s += "void(slave)";
+		} else if (eventIdent != null) {
+			s += eventIdent.getName();
+		}
+		s += "-> " + updates;
 		return s;
 	}
 	
@@ -148,6 +190,8 @@ public class Command extends ASTElement
 		ret.setSynchIndex(getSynchIndex());
 		ret.setGuard(getGuard().deepCopy());
 		ret.setUpdates((Updates)getUpdates().deepCopy());
+		ret.setEventIdent((ExpressionIdent)getEventIdent().deepCopy());
+		ret.setSlave(isSlave());
 		ret.setPosition(this);
 		return ret;
 	}
