@@ -89,7 +89,7 @@ public class Rename extends ASTTraverseModify
 		if (s != null) e.setSynch(s);
 		// This should have been already done, because eventIdent gets renamed first.
 		// So I just check eventIdent is already renamed. If it is not, throw exception
-		if (rm.getOldName(e.getEventIdent().getName()) == null) {
+		if (e.getEventIdent() != null && rm.getOldName(e.getEventIdent().getName()) == null) {
 			throw new PrismLangException("Definition of module \"" + rm.getName() + "\" must rename event \"" + e.getEventIdent().getName() + "\"", rm);
 		}
 	}

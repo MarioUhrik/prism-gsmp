@@ -190,7 +190,10 @@ public class Command extends ASTElement
 		ret.setSynchIndex(getSynchIndex());
 		ret.setGuard(getGuard().deepCopy());
 		ret.setUpdates((Updates)getUpdates().deepCopy());
-		ret.setEventIdent((ExpressionIdent)getEventIdent().deepCopy());
+		
+		ExpressionIdent eventIdent = (getEventIdent() == null) ? null : (ExpressionIdent)getEventIdent().deepCopy();
+		ret.setEventIdent(eventIdent);
+		
 		ret.setSlave(isSlave());
 		ret.setPosition(this);
 		return ret;
