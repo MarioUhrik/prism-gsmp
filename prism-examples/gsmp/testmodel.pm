@@ -1,47 +1,50 @@
+// This is just a nonsensical model for testing. It does not model anything.
+// By default, the parsing and building should be successful!
+// Lines that should cause failure are commented out.
+
 gsmp
 
-const distribution hi = uniform(4,8.8 + kon); // mixed arithmetics test
+const distribution uniDistr = uniform(4,8.8 + defConstant); // mixed arithmetics test
 
-const distribution erlangtest = erlang(7.1,8); // erlang test (value AND type !)
+const distribution erlangTest = erlang(7.1,8); // erlang test (value AND type !)
 
-const kon = 4;
+const defConstant = 4;
 
-const lel;
+const undefConstant;
 
-const double heya;
+const double undefConstant2;
 
 const double timeout = 178.7;
 
-const distribution exptest = exponential((kon*kon*kon) - kon); // constant arithmetics test
+const distribution expDistr = exponential((defConstant*defConstant*timeout) - defConstant); // constant arithmetics test
 
-const distribution hahah = dirac(timeout);
+const distribution diracDistr = dirac(timeout);
 
 const int a = 4;
 
 const int b = 1;
 
-module die
+module firstModule
 
-	event testevent = dirac(kon);
+	event testEventDirectUsed = dirac(defConstant);
 
-	event testevent6 = dirac(kon);
+	event testEventDirectUnused = dirac(defConstant);
 
-	event ev5 = hahah;
+	event dirEventUnused = diracDistr;
 
-	event haihaihai = exptest;
+	event expEventUsedMultipleTimes = expDistr;
 
-	// local state
+	// states
 	s : [0..7] init 0;
-	// value of the die
 	d : [0..6] init 0;
 
-	[lol] s=0 --haihaihai-> (s'=1); // multiple exponential masters test
+	[lol] s=0 --expEventUsedMultipleTimes-> (s'=1); // multiple exponential masters test
 
-	[lol] s=0 --haihaihai-> (s'=1);
+	[lol] s=0 --expEventUsedMultipleTimes-> (s'=1);
 
-	[lol] s=0 --haihaihai-> (s'=1);
+	[lol] s=0 --expEventUsedMultipleTimes-> (s'=1);
 
-	[lol3] s=1 --testevent-> (s'=1);
+	[lol3] s=1 --testEventDirectUsed-> (s'=1);
 
 	[lol] s=2 --slave-> (s'=1); // slaves assigned to multiple exponential masters test
 
@@ -51,6 +54,7 @@ module die
 
 	//[] s=5 --slave-> (s'=1); // slave without a label - error
 	
+	//nonsensical CTMC commands
 	[] s=0 -> 0.5 : (s'=1) + 0.5 : (s'=2);
 	[] s=1 -> 0.5 : (s'=3) + 0.5 : (s'=4);
 	[] s=2 -> 0.5 : (s'=5) + 0.5 : (s'=6);
@@ -68,17 +72,17 @@ module secondModule
 
 	//event ev5 = hahah; // event not renamed in the last line - error
 
-	event secondModEvent = exponential(a); // if this one is not exponential, label lol2 has multiple non-exponential masters - error
+	event secondModEventDirect = exponential(a); // if this one is not exponential, label lol2 has multiple non-exponential masters - error
 
-	event localhai = exptest;
+	event secondModEvent = expDistr;
 
 	dk : [0..6] init 0;
 
-	[lol] dk=0 --localhai-> (dk'=1);
+	[lol] dk=0 --secondModEvent-> (dk'=1);
 
 
-	[lol2] dk=1 --secondModEvent-> (dk'=0);
+	[lol2] dk=1 --secondModEventDirect-> (dk'=0);
 
 endmodule
 
-module rm = secondModule [dk = dk3, secondModEvent = thirdModEvent, localhai = localhaiThird] endmodule
+module rm = secondModule [dk = dk3, secondModEvent = thirdModEvent, secondModEventDirect = thirdModEventDirect] endmodule
