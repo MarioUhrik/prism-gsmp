@@ -5,6 +5,8 @@
 \usepackage{amsmath}
 \usepackage{amsfonts}
 \usepackage{todonotes}
+\usepackage{url}
+\usepackage{hyperref}
 
 \newtheorem{theorem}{Theorem}[section]
 \newtheorem{definition}[theorem]{Definition}
@@ -13,6 +15,7 @@
 
 \newcommand{\arc}[1]{\;\;--{#1}\longrightarrow \;\;}
 %\newcommand{\arc}[1]{\text{\verb|--|}{#1}\text{\verb|->|}}
+%\newcommand{\arc}[1]{{-}{-}{#1}->}
 
 %%% sets
 \newcommand{\Nset}{\mathbb{N}}
@@ -39,6 +42,7 @@
 \newcommand{\calS}{\mathcal{S}}
 \newcommand{\calE}{\mathcal{E}}
 
+\renewcommand{\_}{\underline{~}}
 
 %%%%% GSMP definition
 \newcommand{\events}{{\calE}}
@@ -46,6 +50,7 @@
 \newcommand{\initstate}{s_\mathrm{in}}
 \newcommand{\act}{Act}
 \newcommand{\dist}{\mathcal{D}}
+\newcommand{\transmats}{\calM}
 %%%%%
 
 % formating
@@ -59,34 +64,36 @@
 
 \noindent
 This document provides the syntax and semantics for the \emph{generalized semi-Markov process} (GSMP) extension of the PRISM language.
-For syntax of the PRISM language for CTMC, DTMC, PTA, and MDP, see the manual:
+For syntax of the PRISM language, i.e., for CTMC, DTMC, PTA, and MDP, see the manual:
 \begin{itemize}
-	\item http://www.cs.bham.ac.uk/˜dxp/prism/manual/ThePRISMLanguage
+	\item \url{http://www.cs.bham.ac.uk/~dxp/prism/manual/ThePRISMLanguage}
 \end{itemize}
 For semantics of the PRISM language for CTMC, DTMC, and MDP, see:
 \begin{itemize}
-	\item http://www.prismmodelchecker.org/doc/semantics.pdf
+	\item \url{http://www.prismmodelchecker.org/doc/semantics.pdf}
 \end{itemize}
-This document uses most of the material of the source above.
+This document extends the above mentioned materials and the reader is expected to be familiar with them.
 
-Our goal is to be provide an extension of PRISM language syntax and semantics to be able to represent general GSMP in the most comprehensive way for current PRISM users. 
-We first provide a definition of a GSMP.
-\begin{definition}~\cite{Haas:book} A generalized semi-Markov process (GSMP) is a~tuple $%\calG = 
+Our goal is to provide an extension of the PRISM language syntax and semantics such that it will be able to represent GSMP in the most comprehensive way for current PRISM users. 
+We first provide a definition of GSMP.
+\begin{definition}[\cite{Haas:book}] 
+	A generalized semi-Markov process (GSMP) is a~tuple $%\calG = 
 	(S,\events,\act,F,\suc,\initstate)$ where
 	\begin{itemize}
 		\item $S$ is a~finite set of states,
 		\item $\events$ is a~finite set of \emph{events},
 		%Each event $e$ holds its CDF $F_e: \Rset \to [0,1]$ such that $F_e(0) = 0$,
 		\item $\act \colon S \rightarrow 2^{\events}$ assigns to each state $s$ a~nonempty set of active events $\act(s) \not = \emptyset$ in $s$,
-		\item $\suc : S \times 2^{\events} \rightarrow \dist(S)$ is a \emph{successor function} that assigns a~probability distribution $\suc(s,\events')$ specifying a successor state to a state $s$ and set of events $\events'$ that occurred simultaneously in $s$,	
-		\item $F\colon \events \times \Rset \rightarrow [0,1]$ provides for each event $e \in \events$ a CDF $F(e,\cdot)$ such that $F(e,0)=0$, and 
+		\item $\suc : \events \rightarrow \transmats(S)$ is a \emph{successor function} that assigns to an event $e$ a~probability matrix %$\suc(e)$
+		specifying probability of a successor state of a state $s$ when an event $e$ occurs in $s$,	
+		\item $F\colon \events \times \Rset \rightarrow [0,1]$ provides, for each event $e \in \events$, a cumulative distribution function (CDF) $F(e,\cdot)$ such that $F(e,0)=0$, and 
 		\item $\initstate \in S$ is an \emph{initial state}.
 	\end{itemize}
 \end{definition}
 
 \section*{Syntax of GSMP in PRISM}
 The syntax of GSMP extends the syntax for CTMC.
-Hence we specify the syntax that was added to the CTMC syntax. 
+Hence, we specify only the syntax that was added to the CTMC syntax. 
 Each GSMP model file must begin with the keyword \code{gsmp}. 
 %For the purpose of our synthesis and expected reward implementation, the set of target states has to be specified by label \code{"target"},~e.g.
 %\begin{center}
@@ -94,15 +101,14 @@ Each GSMP model file must begin with the keyword \code{gsmp}.
 %\end{center}
 
 \paragraph{Distributions}
-Before the specification of modules it is possible to specify several variables of type distribution, e.g., 
+Before the specification of modules, it is possible to specify several variables of type distribution, e.g., 
 \begin{center}
 	\code{const distribution dist1 = Dirac(3*1);}
 \end{center}
-Currently, we support 5 distributions: exponential, Weibull, Erlang, Dirac, and uniform.
-All the distributions have 2 arguments except the Dirac and exponential distributions that have only one argument of type double.
-Table~\ref{tab:dist} provides the syntax of the distribution specifications along with the associated CDF and restrictions of the arguments. 
-The value of a argument can be given by an arithmetic expression of numbers and constants that evaluates to a number.
-
+Currently, we support five distributions: exponential, Weibull, Erlang, Dirac, and uniform.
+All the distributions have two arguments of type double except for the Dirac and exponential distributions that have only one.
+Table~\ref{tab:dist} provides the syntax of the distribution specifications along with the associated CDF and restrictions on the arguments. 
+The value of an argument can be given by an arithmetic expression of numbers and constants that evaluates to a number.
 \begin{table}
 	\begin{center}
 		\begin{tabular}{| l | l | l | }
@@ -110,13 +116,18 @@ The value of a argument can be given by an arithmetic expression of numbers and 
 			Name & CDF & Argument Restrictions \\
 			\hline
 			\code{exponential(a)} & $F(\tau) = 1- e^{-\code{a} \tau}$ & $\code{a} \in \Rsetp$ \\
-			\code{Weibull(a,b)} & $F(\tau) = 1-e^{-(\tau/\code{a})^\code{b}}$ & $\code{a},\code{b} \in \Rsetp$ \\
-			\code{Erlang(a,b)} & $F(\tau) = 1- \sum_{n=0}^{\code{k}-1} \frac{1}{n!} \cdot (\code{a}\tau)^{n} \cdot e^{-\code{a}\tau}$ & $\code{a} \in \Rsetp$, $\code{b} \in \Nset$ \\			
-			\code{Dirac(a)} & $F(\tau) = \begin{cases}
-			0 \quad \text{if } \tau < \code{a}\\
-			1 \quad \text{if } \tau \geq \code{a}
+			\code{weibull(a,b)} & $F(\tau) = 1-e^{-(\tau/\code{a})^\code{b}}$ & $\code{a},\code{b} \in \Rsetp$ \\
+			\code{erlang(a,b)} & $F(\tau) = 1- \sum_{n=0}^{\code{k}-1} \frac{1}{n!} \cdot (\code{a}\tau)^{n} \cdot e^{-\code{a}\tau}$ & $\code{a} \in \Rsetp$, $\code{b} \in \Nset$ \\			
+			\code{dirac(a)} & $F(\tau) = \begin{cases}
+			0 & \text{if } \tau < \code{a}\\
+			1 & \text{if } \tau \geq \code{a}
 			\end{cases}$ & $\code{a} \in \Rsetp$ \\
-			\code{uniform(a,b)} & $F(\tau) =  \max\left\{0,\min\big\{1,\frac{\tau-\code{a}}{\code{b}-\code{a}}\big\}\right\}$ & $\code{a},\code{b} \in \Rsetpo, \code{a}<\code{b}$\\
+			\code{uniform(a,b)} & $F(\tau) = \begin{cases}
+			0  & \text{if } \tau < \code{a}\\
+			\frac{\tau-\code{a}}{\code{b}-\code{a}} & \text{if } \code{a} \leq \tau \leq \code{b}\\
+			1 & \text{if } \code{b} < \tau 
+			\end{cases}$
+			 & $\code{a},\code{b} \in \Rsetpo, \code{a}<\code{b}$\\
 			\hline
 		\end{tabular}
 	\end{center}	
@@ -126,59 +137,59 @@ The value of a argument can be given by an arithmetic expression of numbers and 
 
 \paragraph{Events}
 All events are local to a module.
-The events with exponential CDF can be specified also the same way as in CTMC models of PRISM. 
-The remaining events have a name and must be declared immediately after the module name.
+To preserve backward compatibility, the events with exponential CDF can be alp specified in the same way as in the PRISM CTMC models.
+The remaining events have assigned names and must be declared immediately after the module name.
 There are two possibilities how to declare an event:
 \begin{itemize}
 	\item \code{event f = dist1;} and
 	\item \code{event f = Dirac(3.0);}
 \end{itemize}
-Both declarations define the event $f$ with Dirac distributed delay of a double value $3.0$.
-For the event $f$ we specify its set of active states (i.e. $\act^{-1}(f)$) and successor function (i.e. $\suc(s, f)(\cdot)$) by PRISM commands where the event identifier $f$ is in the arrow. 
+Both such declarations define an event $f$ with a Dirac distributed delay set to the value $3.0$.
+For the event $f$, we specify its set of active states (i.e. $\act^{-1}(f)$) and successor function (i.e. $\suc(f)(\cdot,\cdot)$) by PRISM commands where the event identifier $f$ is in the arrow. 
 E.g., 
 \begin{center}
-	\code{[L] s=1 {-}{-}f-> 0.3:(s'=0) + 0.7:(s'=2)}
+	\code{[L] s=1 {-}{-}f-> 0.3:(s'=0) + 0.7:(s'=2);}
 \end{center}
 specifies that the event $f$ is active in all states where \code{s=1} and whenever it occurs, the next state is derived from the original one by changing variable \code{s} to \code{0} with probability $0.3$ and to \code{2} with probability $0.7$. 
-The probabilities in each command have to sum to one. 
-Observe that event commands are similar to DTMC commands in PRISM. 
-The labels (e.g., \code{L}) are used for synchronization and to impose impulse rewards as for CTMC. 
+The probabilities in each command have to sum to one (hence, the event commands are similar to DTMC commands in PRISM). 
+The labels (e.g., \code{L}) are used for synchronization and to impose impulse rewards as for CTMC.
 %E.g., 
 %\begin{center}
 %	\code{ rewards} ~~~ \code{[L] true : 1.0;}~~~\code{ endrewards}
 %\end{center}
 %The rate rewards are specified the same way as for CTMC in PRISM. 
 %The PRISM source code for the fdCTMC of Example~\ref{fig:dpmsleep} is in~\cite{KRF:ifm2016arxiv}. 
+
 Moreover, we allow ``slave'' commands for the synchronization purposes. 
-The slave command is denoted by a \code{{-}{-}0->} that indicates that it has no delay and obtains a delay of a (``master'') command that it synchronizes with.
+The slave command is denoted by a \code{{-}{-}slave->} that indicates that it has no delay and obtains a delay of a (``master'') command that it synchronizes with.
 E.g., 
 \begin{center}
-	\code{[L] t=1 {-}{-}0-> 0.3:(t'=0) + 0.7:(t'=2)}
+	\code{[L] t=1 {-}{-}slave-> 0.3:(t'=0) + 0.7:(t'=2)}
 \end{center}
 synchronizes with commands with label \code{L} of other modules.
 
 \newpage
 \section*{Semantics}
 
+First, we translate all (old-fashion) CTMC commands (one by one) into GSMP commands.
+For each CTMC command \code{[a] g -> r\_1:u\_1 + $\cdots$ + r\_n:u\_n} (where $a$ is a synchronization label or an empty string), we add 
+new events 
+\begin{center}
+	\code{e\_1 = exponential(r\_1);} \\
+%	$\vdots$ \\
+	\code{e\_n = exponential(r\_n);}
+\end{center}
+and exchange the command for the following list of commands
+\begin{center}
+	\code{[a] g {-}{-}e\_1-> 1:u\_1;} \\
+	$\vdots$ \\
+	\code{[a] g {-}{-}e\_n-> 1:u\_n;} 
+\end{center}
+
 An important observation is that we do not define the semantics in a compositional manner, i.e., by first giving the semantics of each module in the system and then combining these results. 
 The reason for this is that guards (and updates) of one module are allowed to refer to the variables of other modules (and indeed global variables). 
-Instead, we define the semantics of a system by translating its set of modules into a single “system module” (in a compositional manner) and then defining the semantics for the system through this single module.
+Instead, we define the semantics of a system by translating its set of modules into a single "system module" (in a compositional manner) and then defining the semantics for the system through this single system module.
 
-We first translate all CTMC commands (one by one) into GSMP commands.
-For each module $M$ command $[a] \; g \rightarrow \lambda_1 : u_1 + \cdots + \lambda_n : u_n$ of $M$ (where $a$ is a synchronization label or an empty string), we add 
-new events 
-\begin{align*}
-e1 &= \code{exponential(} \lambda_1 \code{);} \\
-& \; \; \vdots \\
-e1 &= \code{exponential(} \lambda_1 \code{);}
-\end{align*}
-and commands 
-\begin{align*}
-[a] \; g &\arc{e} 1 : u_1; \\
-& \quad \quad \: \: \: \vdots \\
-[a] \; g &\arc{e} 1 : u_n;
-\end{align*}
-to module $M$.
 
 \subsection*{Constructing the system module}
 In this section, we describe the process of constructing the system module from its component modules. 
@@ -190,6 +201,8 @@ We now consider each of these in turn. Note that, in this construction process, 
 Although there are three types of parallel composition, we need only consider the case
 $M_1|[A]|M_2$, since $M_1|||M_2$ is equivalent to $M_1|[\emptyset]|M_2$ and $M_1||M_2$ is equivalent to $M_1|[A_1 \cap A_2]|M_2$ where $A_i$ is the set of actions that appear in module $M_i$. 
 The commands of the module $M = M_1|[A]|M_2$ are constructed according to the following rules:
+
+TODO: repair from here
 
 \begin{enumerate}
 %	\setcounter{enumi}{5}
@@ -335,5 +348,13 @@ This normalisation can be considered as replacing any nondeterministic choice be
 %For the CTMC transitions, the transition rate matrix $\mathbf{P}_e \colon S \times S \to \mathbb{R}_{\geq 0}$ is such that for any $s,t \in S$:
 %
 %\[\mathbf{R} (s,t) \eqdef \sum_{c \in C} \mu_{\bot,c,s}(t). \]
+
+\bibliographystyle{plain}
+\begin{thebibliography}{1}
+\bibitem{Haas:book}
+P.J. Haas.
+\newblock {\em Stochastic {P}etri Nets: Modelling, Stability, Simulation}.
+\newblock Springer, 2010.
+\end{thebibliography}
 
 \end{document}
