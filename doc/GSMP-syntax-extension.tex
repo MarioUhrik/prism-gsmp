@@ -1,0 +1,360 @@
+\documentclass{article}
+
+\usepackage[a4paper, total={6in, 8in}]{geometry}
+
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{todonotes}
+\usepackage{url}
+\usepackage{hyperref}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{definition}[theorem]{Definition}
+
+\newcommand{\eqdef}{\ensuremath{\stackrel{\text{\tiny def}}{=}}}
+
+\newcommand{\arc}[1]{\;\;--{#1}\longrightarrow \;\;}
+%\newcommand{\arc}[1]{\text{\verb|--|}{#1}\text{\verb|->|}}
+%\newcommand{\arc}[1]{{-}{-}{#1}->}
+
+%%% sets
+\newcommand{\Nset}{\mathbb{N}}
+\newcommand{\Nseto}{\Nset_0}
+\newcommand{\Zset}{\mathbb{Z}}
+\newcommand{\Qset}{\mathbb{Q}}
+\newcommand{\Qsetp}{\mathbb{Q}_{>0}}
+\newcommand{\Qsetpo}{\mathbb{Q}_{\ge 0}}
+\newcommand{\Rset}{\mathbb{R}}
+\newcommand{\Rsetp}{\mathbb{R}_{>0}}
+\newcommand{\Rsetpo}{\mathbb{R}_{\ge 0}}
+
+%%% cals
+\newcommand{\calC}{\mathcal{C}}
+\newcommand{\calA}{\mathcal{A}}
+\newcommand{\calI}{\mathcal{I}}
+\newcommand{\calJ}{\mathcal{J}}
+\newcommand{\calN}{\mathcal{N}}
+\newcommand{\calM}{\mathcal{M}}
+\newcommand{\calR}{\mathcal{R}}
+\newcommand{\calP}{\mathcal{P}}
+\newcommand{\calL}{\mathcal{L}}
+\newcommand{\calG}{\mathcal{G}}
+\newcommand{\calS}{\mathcal{S}}
+\newcommand{\calE}{\mathcal{E}}
+
+\renewcommand{\_}{\underline{~}}
+
+%%%%% GSMP definition
+\newcommand{\events}{{\calE}}
+\newcommand{\suc}{Succ}
+\newcommand{\initstate}{s_\mathrm{in}}
+\newcommand{\act}{Act}
+\newcommand{\dist}{\mathcal{D}}
+\newcommand{\transmats}{\calM}
+%%%%%
+
+% formating
+\newcommand{\code}[1]{\texttt{#1}}
+
+\title{The PRISM GSMP Language - Syntax and Semantics}
+
+\begin{document}
+
+\maketitle
+
+\noindent
+This document provides the syntax and semantics for the \emph{generalized semi-Markov process} (GSMP) extension of the PRISM language.
+For syntax of the PRISM language, i.e., for CTMC, DTMC, PTA, and MDP, see the manual:
+\begin{itemize}
+	\item \url{http://www.cs.bham.ac.uk/~dxp/prism/manual/ThePRISMLanguage}
+\end{itemize}
+For semantics of the PRISM language for CTMC, DTMC, and MDP, see:
+\begin{itemize}
+	\item \url{http://www.prismmodelchecker.org/doc/semantics.pdf}
+\end{itemize}
+This document extends the above mentioned materials and the reader is expected to be familiar with them.
+
+Our goal is to provide an extension of the PRISM language syntax and semantics such that it will be able to represent GSMP in the most comprehensive way for current PRISM users. 
+We first provide a definition of GSMP.
+\begin{definition}[\cite{Haas:book}] 
+	A generalized semi-Markov process (GSMP) is a~tuple $%\calG = 
+	(S,\events,\act,F,\suc,\initstate)$ where
+	\begin{itemize}
+		\item $S$ is a~finite set of states,
+		\item $\events$ is a~finite set of \emph{events},
+		%Each event $e$ holds its CDF $F_e: \Rset \to [0,1]$ such that $F_e(0) = 0$,
+		\item $\act \colon S \rightarrow 2^{\events}$ assigns to each state $s$ a~nonempty set of active events $\act(s) \not = \emptyset$ in $s$,
+		\item $\suc : \events \rightarrow \transmats(S)$ is a \emph{successor function} that assigns to an event $e$ a~probability matrix %$\suc(e)$
+		specifying probability of a successor state of a state $s$ when an event $e$ occurs in $s$,	
+		\item $F\colon \events \times \Rset \rightarrow [0,1]$ provides, for each event $e \in \events$, a cumulative distribution function (CDF) $F(e,\cdot)$ such that $F(e,0)=0$, and 
+		\item $\initstate \in S$ is an \emph{initial state}.
+	\end{itemize}
+\end{definition}
+
+\section*{Syntax of GSMP in PRISM}
+The syntax of GSMP extends the syntax for CTMC.
+Hence, we specify only the syntax that was added to the CTMC syntax. 
+Each GSMP model file must begin with the keyword \code{gsmp}. 
+%For the purpose of our synthesis and expected reward implementation, the set of target states has to be specified by label \code{"target"},~e.g.
+%\begin{center}
+%	\code{label "target" = s=2;}
+%\end{center}
+
+\paragraph{Distributions}
+Before the specification of modules, it is possible to specify several variables of type distribution, e.g., 
+\begin{center}
+	\code{const distribution dist1 = Dirac(3*1);}
+\end{center}
+Currently, we support five distributions: exponential, Weibull, Erlang, Dirac, and uniform.
+All the distributions have two arguments of type double except for the Dirac and exponential distributions that have only one.
+Table~\ref{tab:dist} provides the syntax of the distribution specifications along with the associated CDF and restrictions on the arguments. 
+The value of an argument can be given by an arithmetic expression of numbers and constants that evaluates to a number.
+\begin{table}
+	\begin{center}
+		\begin{tabular}{| l | l | l | }
+			\hline
+			Name & CDF & Argument Restrictions \\
+			\hline
+			\code{exponential(a)} & $F(\tau) = 1- e^{-\code{a} \tau}$ & $\code{a} \in \Rsetp$ \\
+			\code{weibull(a,b)} & $F(\tau) = 1-e^{-(\tau/\code{a})^\code{b}}$ & $\code{a},\code{b} \in \Rsetp$ \\
+			\code{erlang(a,b)} & $F(\tau) = 1- \sum_{n=0}^{\code{k}-1} \frac{1}{n!} \cdot (\code{a}\tau)^{n} \cdot e^{-\code{a}\tau}$ & $\code{a} \in \Rsetp$, $\code{b} \in \Nset$ \\			
+			\code{dirac(a)} & $F(\tau) = \begin{cases}
+			0 & \text{if } \tau < \code{a}\\
+			1 & \text{if } \tau \geq \code{a}
+			\end{cases}$ & $\code{a} \in \Rsetp$ \\
+			\code{uniform(a,b)} & $F(\tau) = \begin{cases}
+			0  & \text{if } \tau < \code{a}\\
+			\frac{\tau-\code{a}}{\code{b}-\code{a}} & \text{if } \code{a} \leq \tau \leq \code{b}\\
+			1 & \text{if } \code{b} < \tau 
+			\end{cases}$
+			 & $\code{a},\code{b} \in \Rsetpo, \code{a}<\code{b}$\\
+			\hline
+		\end{tabular}
+	\end{center}	
+	\caption{Cumulative distribution functions.}
+	\label{tab:dist}
+\end{table}
+
+\paragraph{Events}
+All events are local to a module.
+To preserve backward compatibility, the events with exponential CDF can be alp specified in the same way as in the PRISM CTMC models.
+The remaining events have assigned names and must be declared immediately after the module name.
+There are two possibilities how to declare an event:
+\begin{itemize}
+	\item \code{event f = dist1;} and
+	\item \code{event f = Dirac(3.0);}
+\end{itemize}
+Both such declarations define an event $f$ with a Dirac distributed delay set to the value $3.0$.
+For the event $f$, we specify its set of active states (i.e. $\act^{-1}(f)$) and successor function (i.e. $\suc(f)(\cdot,\cdot)$) by PRISM commands where the event identifier $f$ is in the arrow. 
+E.g., 
+\begin{center}
+	\code{[L] s=1 {-}{-}f-> 0.3:(s'=0) + 0.7:(s'=2);}
+\end{center}
+specifies that the event $f$ is active in all states where \code{s=1} and whenever it occurs, the next state is derived from the original one by changing variable \code{s} to \code{0} with probability $0.3$ and to \code{2} with probability $0.7$. 
+The probabilities in each command have to sum to one (hence, the event commands are similar to DTMC commands in PRISM). 
+The labels (e.g., \code{L}) are used for synchronization and to impose impulse rewards as for CTMC.
+%E.g., 
+%\begin{center}
+%	\code{ rewards} ~~~ \code{[L] true : 1.0;}~~~\code{ endrewards}
+%\end{center}
+%The rate rewards are specified the same way as for CTMC in PRISM. 
+%The PRISM source code for the fdCTMC of Example~\ref{fig:dpmsleep} is in~\cite{KRF:ifm2016arxiv}. 
+
+Moreover, we allow ``slave'' commands for the synchronization purposes. 
+The slave command is denoted by a \code{{-}{-}slave->} that indicates that it has no delay and obtains a delay of a (``master'') command that it synchronizes with.
+E.g., 
+\begin{center}
+	\code{[L] t=1 {-}{-}slave-> 0.3:(t'=0) + 0.7:(t'=2)}
+\end{center}
+synchronizes with commands with label \code{L} of other modules.
+
+\newpage
+\section*{Semantics}
+
+First, we translate all (old-fashion) CTMC commands (one by one) into GSMP commands.
+For each CTMC command \code{[a] g -> r\_1:u\_1 + $\cdots$ + r\_n:u\_n} (where $a$ is a synchronization label or an empty string), we add 
+new events 
+\begin{center}
+	\code{e\_1 = exponential(r\_1);} \\
+%	$\vdots$ \\
+	\code{e\_n = exponential(r\_n);}
+\end{center}
+and exchange the command for the following list of commands
+\begin{center}
+	\code{[a] g {-}{-}e\_1-> 1:u\_1;} \\
+	$\vdots$ \\
+	\code{[a] g {-}{-}e\_n-> 1:u\_n;} 
+\end{center}
+
+An important observation is that we do not define the semantics in a compositional manner, i.e., by first giving the semantics of each module in the system and then combining these results. 
+The reason for this is that guards (and updates) of one module are allowed to refer to the variables of other modules (and indeed global variables). 
+Instead, we define the semantics of a system by translating its set of modules into a single "system module" (in a compositional manner) and then defining the semantics for the system through this single system module.
+
+
+\subsection*{Constructing the system module}
+In this section, we describe the process of constructing the system module from its component modules. 
+The composition of the modules is defined by a process-algebraic expression which can include parallel composition of modules, action hiding and action renaming. 
+We now consider each of these in turn. Note that, in this construction process, we require that all updates of all commands have been expanded to explicitly include all local variables of the module and all global variables, even those that do not change.
+
+
+\subsubsection*{Parallel composition}
+Although there are three types of parallel composition, we need only consider the case
+$M_1|[A]|M_2$, since $M_1|||M_2$ is equivalent to $M_1|[\emptyset]|M_2$ and $M_1||M_2$ is equivalent to $M_1|[A_1 \cap A_2]|M_2$ where $A_i$ is the set of actions that appear in module $M_i$. 
+The commands of the module $M = M_1|[A]|M_2$ are constructed according to the following rules:
+
+TODO: repair from here
+
+\begin{enumerate}
+%	\setcounter{enumi}{5}
+	\item for each command $[] \; g \arc{e}   \lambda_1 : u_1 + \cdots + \lambda_n : u_n$ of $M1$, \\ 
+	add	$[] \; g \arc{e}   \lambda_1 : u_1 + \cdots + \lambda_n : u_n$ to the commands of $M$;
+	
+	\item for each command $[] \; g \arc{e}   \lambda_1 : u_1 + \cdots + \lambda_n : u_n$ of $M2$, \\ 
+	add	$[] \; g \arc{e}   \lambda_1 : u_1 + \cdots + \lambda_n : u_n$ to the commands of $M$;
+
+	\item for each $a \neq A$ and command $[a] \; g \arc{e}   \lambda_1 : u_1 + \cdots + \lambda_n : u_n$ of $M1$, \\ 
+	add	$[a] \; g \arc{e}   \lambda_1 : u_1 + \cdots + \lambda_n : u_n$ to the commands of $M$;
+
+	\item for each $a \neq A$ and command $[a] \; g \arc{e}   \lambda_1 : u_1 + \cdots + \lambda_n : u_n$ of $M2$, \\ 
+	add	$[a] \; g \arc{e}   \lambda_1 : u_1 + \cdots + \lambda_n : u_n$ to the commands of $M$;
+
+	\item for each $a \in A$, command $[a] \; g \arc{e}   \lambda_1 : u_1 + \cdots + \lambda_n : u_n$ of $M1$ and command $[a] \; g' \arc{e'} \lambda_1' : u_1' + \cdots + \lambda_{n'}' : u_{n'}'$ of $M2$ 
+	\begin{itemize}
+		\item if $e = 0$ and $e' = 0$ return an error and
+		\item if $e \neq 0$ or  $e' \neq 0$ add  
+		\begin{align*}
+			[a] \; g \; \& \; g' \arc{f(e,e')} &\lambda_1 \cdot \lambda_1' : u_1 \; \& \; u_1' & &+ \cdots + & &\lambda_n \cdot \lambda_1' : u_n \; \& \; u_1' \\
+			+&\lambda_1 \cdot \lambda_2' : u_1 \; \& \; u_2' & &+ \cdots + & &\lambda_n \cdot \lambda_2' : u_n \; \& \; u_2' \\
+			& &  & \quad \;\:\, \vdots \\
+			+&\lambda_1 \cdot \lambda_{n'}' : u_1 \; \& \; u_{n'}' & &+ \cdots + & &\lambda_n \cdot \lambda_{n'}' : u_n \; \& \; u_{n'}',
+		\end{align*}
+		where function $f(e,e')$ returns $e$ or $e'$ if $e$ or $e'$ is a master event, respectively, otherwise it returns $0$.
+	\end{itemize}%\todo{state explicitly that we cannot synchronize CTMC and GSMP commands!}
+\end{enumerate}
+
+\subsubsection*{Action hiding}
+
+The commands od $M = M'/A$ are constructed according to the following rules:
+
+\begin{enumerate}
+%	\setcounter{enumi}{3}
+
+	\item for each command $[] \; g \arc{e}   \lambda_1 : u_1 + \cdots + \lambda_n : u_n$ of $M'$, \\ 
+	add	$[] \; g \arc{e}   \lambda_1 : u_1 + \cdots + \lambda_n : u_n$ to the commands of $M$;
+
+	\item for each $a \neq A$ and command $[a] \; g \arc{e}   \lambda_1 : u_1 + \cdots + \lambda_n : u_n$ of $M'$, \\ 
+	add	$[a] \; g \arc{e}   \lambda_1 : u_1 + \cdots + \lambda_n : u_n$ to the commands of $M$;
+
+	\item for each $a \in A$ and command $[a] \; g \arc{e} \lambda_1 : u_1 + \cdots + \lambda_n : u_n$ of $M'$ where $e \neq 0$ (i.e., $e$ is a master event), \\
+	add $[] \; g \arc{e} \lambda_1 : u_1 + \cdots + \lambda_n : u_n$ to the commands of $M$;
+	\item for each $a \in A$ and command $[a] \; g \arc{0} \lambda_1 : u_1 + \cdots + \lambda_n : u_n$ of $M'$ print warning.
+\end{enumerate}
+
+\subsubsection*{Action renaming}
+
+The commands of $M= M'\{a_1 \leftarrow b_1, \ldots, a_m \leftarrow b_m \}$ are constructed as follows:
+
+\begin{enumerate}
+%	\setcounter{enumi}{3}
+	
+	\item for each command $[] \; g \arc{e}   \lambda_1 : u_1 + \cdots + \lambda_n : u_n$ of $M'$, \\ 
+	add	$[] \; g \arc{e}   \lambda_1 : u_1 + \cdots + \lambda_n : u_n$ to the commands of $M$;
+	
+	\item for each $a \neq \{a_1,\ldots,a_m\}$ and command $[a] \; g \arc{e}   \lambda_1 : u_1 + \cdots + \lambda_n : u_n$ of $M'$, \\ 
+	add	$[a] \; g \arc{e}   \lambda_1 : u_1 + \cdots + \lambda_n : u_n$ to the commands of $M$;
+	
+	\item for each $1 \leq i \leq m$ and command $[a_i] \; g \arc{e} \lambda_1 : u_1 + \cdots + \lambda_n : u_n$ of $M'$, \\
+	add $[b_i] \; g \arc{e} \lambda_1 : u_1 + \cdots + \lambda_n : u_n$ to the commands of $M$.
+\end{enumerate}\todo{collect all event declarations in the beginning of a module (same as for states)}
+
+\subsection*{The Semantics of the System Module}
+In this section, we give the semantics of a system module, as constructed through the rules
+in the previous section. 
+We suppose that:
+\begin{itemize}
+	\item $C$ is the multiset of commands generated by the rules above;
+	\item $V = \{v_1, \ldots , v_m\}$ is the set of variables, both local and global, that appear in the system description; and
+	\item $\events$ is the set of all declared events;
+\end{itemize}
+
+We construct the state space of the system as follows. 
+A state is a tuple $(x_1, \ldots , x_m)$ where $x_i$ is a value for the variable $v_i$. 
+The set of all states $S$ is therefore the set of all possible valuations of the variables in $V$. 
+The set of initial states can be specified in one of two ways: either by giving an initial value for each variable, or by giving a predicate over variables (using the \code{init...endinit} construct). 
+In the former case, $\overline{S} = \overline{s}$ where $\overline{s} = (\overline{x}_1, \ldots , \overline{x}_m)$ and $\overline{x}_i$ is a the initial value of the variable $v_i$ (recall that, if the initial value of a variable is left unspecified, it is taken to be the minimum value of the variable’s range). 
+In the latter case, $\overline{S}$ is the subset of states $S$ which satisfy the
+predicate specified in the \code{init...endinit} construct.
+
+We now consider the semantics for a single command of the system module. 
+From this point, we ignore any action-labels assigned to commands in $C$; these were required only for the process-algebraic construction and can now be safely discarded.
+Moreover, for the same reason we ignore also slave commands, i.e., commands that use $\arc{0}$. 
+Hence, each command $c$ of $C$ takes the form:
+$$[] \; g \arc{e}   \lambda_1 : u_1 + \cdots + \lambda_n : u_n$$
+%
+Since the guard $g$ is a predicate over the variables in $V$ and each state of the system is a valuation of these variables, $g$ defines a subset of the global state space $S$. 
+We denote this set of states $S_c = \{s \in S | s \models g\}$.
+
+Each update $u_j$ of $c$ corresponds to a transition that the system can make when in a state $s \in S_c$. 
+The transition is defined by giving the new value of each variable as an expression.
+Hence, we can think of $u_j$ as a function from $S_c$ to $S$. 
+If $u_j$ is $(v_1' = expr_1)\wedge \cdots \wedge (v_m'
+= expr_m)$, then for each state $s \in S_c$:
+$$ u_j(s) = (expr_1(s), \ldots, expr_m(s)). $$
+%
+%Using the value $\lambda_j$ associated with each update $u_j$, the command $c$ defines, for each $s \in S_c$, a function $\mu_{c,s} \colon S \to \Rsetpo$ where for each $t \in S$:
+%
+Let $\mathcal{E}\colon C \to \events $ be a function that assigns to each event command the associated event. 
+%assigns the associated event to each event command
+For each event $e \in E$, command $c \in C$, and state $s \in S_c$ we define a function $\mu_{e,c,s} \colon S \to \mathbb{R}_{\geq0}$ where for each $t\in S$ 
+\[ \mu_{e,c,s}(t) \eqdef \sum_{\substack{
+		1 \leq J \leq n \\
+		\wedge u_j(s) = i \\
+		\wedge \mathcal{E}(c)=e}} \lambda_j. \]
+Note that, for GSMPs, the syntactic constraints placed on the constants $\lambda_j$ mean
+that the function $\mu_{e,c,s}$ is actually a probability distribution over $S$.
+
+%Finally, we can now define the probabilistic model itself, i.e. the successor function $\suc$.
+
+\subsection*{GSMP Semantics}
+We define the successor function $\suc$ as follows.
+For all states $s,t\in S$, event $e \in \mathcal{E}$ we define
+\[\suc(s,e)(t) \eqdef \frac{\sum_{c \in C} \mu_{e,c,s}(t)}{\sum_{c \in C \\ \wedge t'\in S} \mu_{e,c,s}(t')}. \]
+The normalisation is required since $\sum_{c \in C \\ \wedge t'\in S} \mu_{e,c,s}(t')$ can sum to more than one, through either the nondeterminism introduced through the parallel composition of modules or local nondeterminism in a module (i.e., overlapping guards). 
+This normalisation can be considered as replacing any nondeterministic choice between a set of transitions with a uniform (probabilistic) choice between the transitions.
+
+
+
+%%%% old
+%\subsection*{GSMP Semantics}
+%Let $E$ be the set of all events in the module. 
+%We extend the CTMC semantics by considering event commands. % separately for each event $e \in E$. 
+%Let $\mathcal{E}\colon C \to E \cup \{\bot\}$ be a function that assigns to each event command the associated event and $\bot$ to the CTMC commands. 
+%%assigns the associated event to each event command
+%For each event $e \in E$, command $c \in C$, and state $s \in S_c$ we define a function $\mu_{e,c,s} \colon S \to \mathbb{R}_{\geq0}$ where for each $t\in S$ 
+%
+%\[ \mu_{e,c,s}(t) \eqdef \sum_{\substack{
+%	1 \leq J \leq n \\
+%	\wedge u_j(s) = i \\
+%	\wedge \mathcal{E}(c)=e}} \lambda_j. \]
+%
+%For each $e \in \mathcal{E}$ such that $e \neq 0$ we define a transition probability matrix $\mathbf{P}_e \colon S \times S \to [0,1]$ to be the matrix $\overline{\mathbf{P}_e}$ after its rows have been normalised where for any $s,t \in S$:
+%
+%\[\overline{\mathbf{P}_e}(s,t) \eqdef \sum_{c \in C} \mu_{e,c,s}(t). \]
+%%
+%Note that the slave events are ignored. 
+%The normalisation is required since the values appearing in any row of this matrix $\overline{\mathbf{P}_e}$ can sum to more than one, through either the nondeterminism introduced through the parallel composition of modules or local nondeterminism in a module (i.e., overlapping guards). 
+%This normalisation can be considered as replacing any nondeterministic choice between a set of transitions with a uniform (probabilistic) choice between the transitions.
+%
+%For the CTMC transitions, the transition rate matrix $\mathbf{P}_e \colon S \times S \to \mathbb{R}_{\geq 0}$ is such that for any $s,t \in S$:
+%
+%\[\mathbf{R} (s,t) \eqdef \sum_{c \in C} \mu_{\bot,c,s}(t). \]
+
+\bibliographystyle{plain}
+\begin{thebibliography}{1}
+\bibitem{Haas:book}
+P.J. Haas.
+\newblock {\em Stochastic {P}etri Nets: Modelling, Stability, Simulation}.
+\newblock Springer, 2010.
+\end{thebibliography}
+
+\end{document}
