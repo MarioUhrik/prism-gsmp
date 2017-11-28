@@ -51,7 +51,7 @@ public class TypeDistributionExponential extends TypeDistribution {
 	@Override
 	public String getTypeString()
 	{
-		return "exponential distribution";
+		return "Exponential distribution";
 	}
 	
 	@Override
@@ -83,7 +83,6 @@ public class TypeDistributionExponential extends TypeDistribution {
 	 * @return true if the parameters have sensible values
 	 * @throws PrismLangException if the parameters dont have sensible values
 	 */
-	// TODO MAJO - not sure if calling evaluateDouble() is safe.
 	@Override
 	public boolean parameterValueCheck(Expression firstParameter, Expression secondParameter, Values constantValues) throws PrismLangException{
 		if ((double)firstParameter.evaluateDouble(constantValues) <= 0) {

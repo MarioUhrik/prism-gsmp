@@ -117,7 +117,7 @@ The value of an argument can be given by an arithmetic expression of numbers and
 			\hline
 			\code{exponential(a)} & $F(\tau) = 1- e^{-\code{a} \tau}$ & $\code{a} \in \Rsetp$ \\
 			\code{weibull(a,b)} & $F(\tau) = 1-e^{-(\tau/\code{a})^\code{b}}$ & $\code{a},\code{b} \in \Rsetp$ \\
-			\code{erlang(a,b)} & $F(\tau) = 1- \sum_{n=0}^{\code{k}-1} \frac{1}{n!} \cdot (\code{a}\tau)^{n} \cdot e^{-\code{a}\tau}$ & $\code{a} \in \Rsetp$, $\code{b} \in \Nset$ \\			
+			\code{erlang(a,b)} & $F(\tau) = 1- \sum_{n=0}^{\code{b}-1} \frac{1}{n!} \cdot (\code{a}\tau)^{n} \cdot e^{-\code{a}\tau}$ & $\code{a} \in \Rsetp$, $\code{b} \in \Nset$ \\			
 			\code{dirac(a)} & $F(\tau) = \begin{cases}
 			0 & \text{if } \tau < \code{a}\\
 			1 & \text{if } \tau \geq \code{a}

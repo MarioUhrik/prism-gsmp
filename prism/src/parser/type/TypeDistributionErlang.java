@@ -30,16 +30,16 @@ import parser.Values;
 import parser.ast.Expression;
 import prism.PrismLangException;
 
-public class TypeDistributionUniform extends TypeDistribution {
+public class TypeDistributionErlang extends TypeDistribution {
 
-	private static TypeDistributionUniform singleton;
+	private static TypeDistributionErlang singleton;
 	
 	static
 	{
-		singleton = new TypeDistributionUniform();
+		singleton = new TypeDistributionErlang();
 	}
 	
-	private TypeDistributionUniform()
+	private TypeDistributionErlang()
 	{		
 	}	
 	
@@ -51,7 +51,7 @@ public class TypeDistributionUniform extends TypeDistribution {
 	@Override
 	public String getTypeString()
 	{
-		return "Uniform distribution";
+		return "Erlang distribution";
 	}
 	
 	@Override
@@ -61,7 +61,7 @@ public class TypeDistributionUniform extends TypeDistribution {
 		//return new ExponentialDistr(1.0); // TODO MAJO
 	}
 	
-	public static TypeDistributionUniform getInstance()
+	public static TypeDistributionErlang getInstance()
 	{
 		return singleton;
 	}
@@ -72,7 +72,7 @@ public class TypeDistributionUniform extends TypeDistribution {
 		if (!(firstType instanceof TypeDouble || firstType instanceof TypeInt)) { // if first type NOK then report bad first type
 			return 1;
 		}
-		if (!(secondType instanceof TypeDouble || secondType instanceof TypeInt)) { // if second type NOK then report bad second type
+		if (!(secondType instanceof TypeInt)) { // if second type NOK then report bad second type
 			return 2;
 		}
 		return 0; // else all OK
@@ -85,14 +85,11 @@ public class TypeDistributionUniform extends TypeDistribution {
 	 */
 	@Override
 	public boolean parameterValueCheck(Expression firstParameter, Expression secondParameter, Values constantValues) throws PrismLangException{
-		if ((double)firstParameter.evaluateDouble(constantValues) < 0) {
-			throw new PrismLangException("Uniform distribution must have two parameters of values 0<=a<b", firstParameter);
+		if ((double)firstParameter.evaluateDouble(constantValues) <= 0) {
+			throw new PrismLangException("First parameter of " + getTypeString() + " must be of value >0", firstParameter);
 		}
-		if ((double)secondParameter.evaluateDouble(constantValues) <= 0) {
-			throw new PrismLangException("Uniform distribution must have two parameters of values 0<=a<b", secondParameter);
-		}
-		if ((double)firstParameter.evaluateDouble(constantValues) >= (double)secondParameter.evaluateDouble(constantValues)) {
-			throw new PrismLangException("Uniform distribution must have two parameters of values 0<=a<b", firstParameter);
+		if ((int)secondParameter.evaluateInt(constantValues) <= 0) {
+			throw new PrismLangException("Second parameter of " + getTypeString() + " must be an integer of value >0", secondParameter);
 		}
 		return true;
 	}

@@ -202,7 +202,7 @@ public class GSMPSimple extends CTMCSimple implements GSMP // TODO MAJO - copied
 
 	@Override
 	public String toString() {
-		return "GSMPSimple [fdEvents=" + events + ", transToSynchLabel="
+ 		return "GSMPSimple [events=" + events + ", transToSynchLabel="
 				+ transToSynchLabel + ", trans=" + trans + ", initialStates="
 				+ initialStates + "]";
 	}
