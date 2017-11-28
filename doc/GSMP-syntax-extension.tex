@@ -103,7 +103,7 @@ Each GSMP model file must begin with the keyword \code{gsmp}.
 \paragraph{Distributions}
 Before the specification of modules, it is possible to specify several variables of type distribution, e.g., 
 \begin{center}
-	\code{const distribution dist1 = Dirac(3*1);}
+	\code{const distribution dist1 = dirac(3*1);}
 \end{center}
 Currently, we support five distributions: exponential, Weibull, Erlang, Dirac, and uniform.
 All the distributions have two arguments of type double except for the Dirac and exponential distributions that have only one.
@@ -113,7 +113,7 @@ The value of an argument can be given by an arithmetic expression of numbers and
 	\begin{center}
 		\begin{tabular}{| l | l | l | }
 			\hline
-			Name & CDF & Argument Restrictions \\
+			Syntax & CDF & Argument Restrictions \\
 			\hline
 			\code{exponential(a)} & $F(\tau) = 1- e^{-\code{a} \tau}$ & $\code{a} \in \Rsetp$ \\
 			\code{weibull(a,b)} & $F(\tau) = 1-e^{-(\tau/\code{a})^\code{b}}$ & $\code{a},\code{b} \in \Rsetp$ \\
@@ -137,12 +137,12 @@ The value of an argument can be given by an arithmetic expression of numbers and
 
 \paragraph{Events}
 All events are local to a module.
-To preserve backward compatibility, the events with exponential CDF can be alp specified in the same way as in the PRISM CTMC models.
-The remaining events have assigned names and must be declared immediately after the module name.
-There are two possibilities how to declare an event:
+To preserve backward compatibility, events with exponential CDF can also be specified in the same way as in the PRISM CTMC models.
+The remaining events have assigned identifiers and must be declared immediately after the module name.
+There are two possibilities of declaring an event:
 \begin{itemize}
 	\item \code{event f = dist1;} and
-	\item \code{event f = Dirac(3.0);}
+	\item \code{event f = dirac(3.0);}
 \end{itemize}
 Both such declarations define an event $f$ with a Dirac distributed delay set to the value $3.0$.
 For the event $f$, we specify its set of active states (i.e. $\act^{-1}(f)$) and successor function (i.e. $\suc(f)(\cdot,\cdot)$) by PRISM commands where the event identifier $f$ is in the arrow. 
@@ -151,7 +151,7 @@ E.g.,
 	\code{[L] s=1 {-}{-}f-> 0.3:(s'=0) + 0.7:(s'=2);}
 \end{center}
 specifies that the event $f$ is active in all states where \code{s=1} and whenever it occurs, the next state is derived from the original one by changing variable \code{s} to \code{0} with probability $0.3$ and to \code{2} with probability $0.7$. 
-The probabilities in each command have to sum to one (hence, the event commands are similar to DTMC commands in PRISM). 
+The probabilities in each command have to sum to one (similarly to DTMC commands in PRISM). 
 The labels (e.g., \code{L}) are used for synchronization and to impose impulse rewards as for CTMC.
 %E.g., 
 %\begin{center}
@@ -161,10 +161,10 @@ The labels (e.g., \code{L}) are used for synchronization and to impose impulse r
 %The PRISM source code for the fdCTMC of Example~\ref{fig:dpmsleep} is in~\cite{KRF:ifm2016arxiv}. 
 
 Moreover, we allow ``slave'' commands for the synchronization purposes. 
-The slave command is denoted by a \code{{-}{-}slave->} that indicates that it has no delay and obtains a delay of a (``master'') command that it synchronizes with.
+The slave command is denoted by \code{{-}{-}slave->} that indicates that it has no delay and obtains a delay of a (``master'') command that it synchronizes with.
 E.g., 
 \begin{center}
-	\code{[L] t=1 {-}{-}slave-> 0.3:(t'=0) + 0.7:(t'=2)}
+	\code{[L] t=1 {-}{-}slave-> 0.3:(t'=0) + 0.7:(t'=2);}
 \end{center}
 synchronizes with commands with label \code{L} of other modules.
 
@@ -175,9 +175,9 @@ First, we translate all (old-fashion) CTMC commands (one by one) into GSMP comma
 For each CTMC command \code{[a] g -> r\_1:u\_1 + $\cdots$ + r\_n:u\_n} (where $a$ is a synchronization label or an empty string), we add 
 new events 
 \begin{center}
-	\code{e\_1 = exponential(r\_1);} \\
-%	$\vdots$ \\
-	\code{e\_n = exponential(r\_n);}
+	\code{event e\_1 = exponential(r\_1);} \\
+	$\vdots$ \\
+	\code{event e\_n = exponential(r\_n);}
 \end{center}
 and exchange the command for the following list of commands
 \begin{center}
@@ -358,3 +358,4 @@ P.J. Haas.
 \end{thebibliography}
 
 \end{document}
+
