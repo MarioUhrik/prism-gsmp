@@ -31,9 +31,7 @@ import parser.ast.Expression;
 import prism.PrismLangException;
 
 /**
- * General type distribution class. Might not be needed at all
- * @author Majo
- *
+ * General type distribution class.
  */
 public class TypeDistribution extends Type {
 
@@ -42,17 +40,6 @@ public class TypeDistribution extends Type {
 	static
 	{
 		singleton = new TypeDistribution();
-	}
-	
-	/*
-	private TypeDistribution()
-	{		
-	}	
-	*/
-	
-	public boolean equals(Object o)
-	{
-		return (o instanceof TypeDouble);
 	}
 	
 	@Override

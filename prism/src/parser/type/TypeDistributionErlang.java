@@ -43,11 +43,6 @@ public class TypeDistributionErlang extends TypeDistribution {
 	{		
 	}	
 	
-	public boolean equals(Object o)
-	{
-		return (o instanceof TypeDouble);
-	}
-	
 	@Override
 	public String getTypeString()
 	{
