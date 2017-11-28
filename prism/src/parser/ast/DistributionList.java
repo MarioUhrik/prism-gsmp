@@ -30,8 +30,6 @@ import java.util.Vector;
 
 import parser.visitor.*;
 import prism.PrismLangException;
-import prism.PrismUtils;
-import parser.Values;
 import parser.type.*;
 
 /**

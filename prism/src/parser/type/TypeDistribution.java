@@ -31,9 +31,7 @@ import parser.ast.Expression;
 import prism.PrismLangException;
 
 /**
- * General type distribution class. Might not be needed at all
- * @author Majo
- *
+ * General type distribution class.
  */
 public class TypeDistribution extends Type {
 
@@ -42,17 +40,6 @@ public class TypeDistribution extends Type {
 	static
 	{
 		singleton = new TypeDistribution();
-	}
-	
-	/*
-	private TypeDistribution()
-	{		
-	}	
-	*/
-	
-	public boolean equals(Object o)
-	{
-		return (o instanceof TypeDouble);
 	}
 	
 	@Override
@@ -79,10 +66,10 @@ public class TypeDistribution extends Type {
 	 * @param secondType
 	 * @return 0 if both can be assigned, 1 if firstType cannot be assigned, 2 else (OK = 0, NOK = index of first wrong type)
 	 */
-	public int canAssign(Type firstType, Type secondType) // TODO MAJO - this should be overriden by children classes for now
+	public int canAssign(Type firstType, Type secondType)
 	{
+		// TODO MAJO - this should be overriden by children classes for now
 		throw new UnsupportedOperationException("not yet implemented");
-		//return (type instanceof TypeDouble || type instanceof TypeInt);
 	}
 	
 	/**
@@ -95,18 +82,5 @@ public class TypeDistribution extends Type {
 		throw new UnsupportedOperationException("not yet implemented");
 	}
 	
-	
-	@Override
-	public Double castValueTo(Object value) throws PrismLangException
-	{
-		throw new UnsupportedOperationException("not yet implemented");
-		
-		/* TODO MAJO
-		if (value instanceof Distribution)
-			return (Distribution) value;
-		else
-			throw new PrismLangException("Can't convert " + value.getClass() + " to type " + getTypeString());
-			*/
-	}
 
 }

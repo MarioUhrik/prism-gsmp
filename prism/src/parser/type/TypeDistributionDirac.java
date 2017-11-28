@@ -43,22 +43,16 @@ public class TypeDistributionDirac extends TypeDistribution {
 	{		
 	}	
 	
-	public boolean equals(Object o)
-	{
-		return (o instanceof TypeDouble);
-	}
-	
 	@Override
 	public String getTypeString()
 	{
-		return "dirac distribution";
+		return "Dirac distribution";
 	}
 	
 	@Override
 	public Object defaultValue()
 	{
 		throw new UnsupportedOperationException("not yet implemented");
-		//return new ExponentialDistr(1.0); // TODO MAJO
 	}
 	
 	public static TypeDistributionDirac getInstance()
@@ -83,26 +77,13 @@ public class TypeDistributionDirac extends TypeDistribution {
 	 * @return true if the parameters have sensible values
 	 * @throws PrismLangException if the parameters dont have sensible values
 	 */
-	// TODO MAJO - not sure if calling evaluateDouble() is safe.
 	@Override
 	public boolean parameterValueCheck(Expression firstParameter, Expression secondParameter, Values constantValues) throws PrismLangException{
 		if ((double)firstParameter.evaluateDouble(constantValues) <= 0) {
-			throw new PrismLangException("Dirac distribution must have one parameter of value >0", firstParameter);
+			throw new PrismLangException(getTypeString() + " must have one parameter of value >0", firstParameter);
 		}
 		return true;
 	}
 	
-	@Override
-	public Double castValueTo(Object value) throws PrismLangException
-	{
-		throw new UnsupportedOperationException("not yet implemented");
-		
-		/* TODO MAJO
-		if (value instanceof Distribution)
-			return (Distribution) value;
-		else
-			throw new PrismLangException("Can't convert " + value.getClass() + " to type " + getTypeString());
-			*/
-	}
 
 }

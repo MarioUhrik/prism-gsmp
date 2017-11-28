@@ -30,23 +30,23 @@ import parser.Values;
 import parser.ast.Expression;
 import prism.PrismLangException;
 
-public class TypeDistributionWeibull extends TypeDistribution {
+public class TypeDistributionErlang extends TypeDistribution {
 
-	private static TypeDistributionWeibull singleton;
+	private static TypeDistributionErlang singleton;
 	
 	static
 	{
-		singleton = new TypeDistributionWeibull();
+		singleton = new TypeDistributionErlang();
 	}
 	
-	private TypeDistributionWeibull()
+	private TypeDistributionErlang()
 	{		
 	}	
 	
 	@Override
 	public String getTypeString()
 	{
-		return "Weibull distribution";
+		return "Erlang distribution";
 	}
 	
 	@Override
@@ -55,7 +55,7 @@ public class TypeDistributionWeibull extends TypeDistribution {
 		throw new UnsupportedOperationException("not yet implemented");
 	}
 	
-	public static TypeDistributionWeibull getInstance()
+	public static TypeDistributionErlang getInstance()
 	{
 		return singleton;
 	}
@@ -66,7 +66,7 @@ public class TypeDistributionWeibull extends TypeDistribution {
 		if (!(firstType instanceof TypeDouble || firstType instanceof TypeInt)) { // if first type NOK then report bad first type
 			return 1;
 		}
-		if (!(secondType instanceof TypeDouble || secondType instanceof TypeInt)) { // if second type NOK then report bad second type
+		if (!(secondType instanceof TypeInt)) { // if second type NOK then report bad second type
 			return 2;
 		}
 		return 0; // else all OK
@@ -80,10 +80,10 @@ public class TypeDistributionWeibull extends TypeDistribution {
 	@Override
 	public boolean parameterValueCheck(Expression firstParameter, Expression secondParameter, Values constantValues) throws PrismLangException{
 		if ((double)firstParameter.evaluateDouble(constantValues) <= 0) {
-			throw new PrismLangException(getTypeString() + " must have two parameters of values >0", firstParameter);
+			throw new PrismLangException("First parameter of " + getTypeString() + " must be of value >0", firstParameter);
 		}
-		if ((double)secondParameter.evaluateDouble(constantValues) <= 0) {
-			throw new PrismLangException(getTypeString() + " must have two parameters of values >0", secondParameter);
+		if ((int)secondParameter.evaluateInt(constantValues) <= 0) {
+			throw new PrismLangException("Second parameter of " + getTypeString() + " must be an integer of value >0", secondParameter);
 		}
 		return true;
 	}

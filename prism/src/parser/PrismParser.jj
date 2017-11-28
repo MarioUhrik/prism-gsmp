@@ -441,6 +441,7 @@ TOKEN :
 |	< ENDMODULE:		"endmodule" >
 |	< ENDREWARDS:		"endrewards" >
 |	< ENDSYSTEM:		"endsystem" >
+|	< ERLANG:			"erlang" >
 |	< EVENT:			"event" >
 |	< EXPONENTIAL:		"exponential" >
 |	< FALSE:			"false" >
@@ -475,12 +476,12 @@ TOKEN :
 |	< RMIN:				"Rmin" >
 |	< R:				"R" >
 |	< S:				"S" >
+|	< SLAVE:			"slave" >
 |	< STOCHASTIC:		"stochastic" >
 |	< SYSTEM:			"system" >
 |	< TRUE:				"true" >
 |	< U:				"U" >
 |	< UNIFORM:			"uniform" >
-|	< VOID:				"void" >
 |	< W:				"W" >
 |	< WEIBULL:			"weibull" >
 	// Punctuation, etc.
@@ -770,7 +771,8 @@ ExpressionIdent DistributionDef(DistributionList distributionList, ExpressionIde
 		 ( (<EXPONENTIAL> { type=TypeDistributionExponential.getInstance(); } <LPARENTH> firstParameter = Expression(false, false))
 		 | (<DIRAC> { type=TypeDistributionDirac.getInstance(); } <LPARENTH> firstParameter = Expression(false, false))
 		 | (<WEIBULL> { type=TypeDistributionWeibull.getInstance(); } <LPARENTH> firstParameter = Expression(false, false) <COMMA> secondParameter = Expression(false, false))
-		 | (<UNIFORM> { type=TypeDistributionUniform.getInstance(); } <LPARENTH> firstParameter = Expression(false, false) <COMMA> secondParameter = Expression(false, false)) )
+		 | (<UNIFORM> { type=TypeDistributionUniform.getInstance(); } <LPARENTH> firstParameter = Expression(false, false) <COMMA> secondParameter = Expression(false, false))
+		 | (<ERLANG>  { type=TypeDistributionErlang.getInstance();  } <LPARENTH> firstParameter = Expression(false, false) <COMMA> secondParameter = Expression(false, false)) )
 	<RPARENTH>
 	{ distributionList.addDistribution(name, firstParameter, secondParameter, type); return name;}
 }
@@ -897,7 +899,7 @@ Command Command() :
 	// Guard/updates
 	guard = Expression(false, false) { comm.setGuard(guard); }
 	( <DMINUS>
-		( <VOID> { comm.setSlave(true); }
+		( <SLAVE> { comm.setSlave(true); }
 		| eventIdent = IdentifierExpression() { comm.setEventIdent(eventIdent); }
 		)
 	)?

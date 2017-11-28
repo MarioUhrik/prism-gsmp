@@ -158,6 +158,7 @@ public class ConstructModel extends PrismComponent
 		ModelSimple modelSimple = null;
 		DTMCSimple dtmc = null;
 		CTMCSimple ctmc = null;
+		GSMPSimple gsmp = null;
 		MDPSimple mdp = null;
 		CTMDPSimple ctmdp = null;
 		ModelExplicit model = null;
@@ -192,6 +193,10 @@ public class ConstructModel extends PrismComponent
 			case CTMC:
 				modelSimple = ctmc = new CTMCSimple();
 				ctmc.setVarList(varList);
+				break;
+			case GSMP:
+				modelSimple = gsmp = new GSMPSimple();
+				gsmp.setVarList(varList);
 				break;
 			case MDP:
 				modelSimple = mdp = new MDPSimple();
@@ -337,6 +342,9 @@ public class ConstructModel extends PrismComponent
 			case CTMC:
 				model = sort ? new CTMCSimple(ctmc, permut) : (CTMCSimple) ctmc;
 				break;
+			case GSMP:
+				model = sort ? new GSMPSimple(gsmp, permut) : (GSMPSimple) gsmp;
+				break;
 			case MDP:
 				if (buildSparse) {
 					model = sort ? new MDPSparse(mdp, true, permut) : new MDPSparse(mdp);
@@ -353,7 +361,7 @@ public class ConstructModel extends PrismComponent
 			case LTS:
 				throw new PrismNotSupportedException("Model construction not supported for " + modelType + "s");
 			}
-			model.setStatesList(statesList);
+			model.setStatesList(statesList); 
 			model.setConstantValues(new Values(modelGen.getConstantValues()));
 			//mainLog.println("Model: " + model);
 		}
