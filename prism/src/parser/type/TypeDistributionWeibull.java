@@ -58,7 +58,6 @@ public class TypeDistributionWeibull extends TypeDistribution {
 	public Object defaultValue()
 	{
 		throw new UnsupportedOperationException("not yet implemented");
-		//return new ExponentialDistr(1.0); // TODO MAJO
 	}
 	
 	public static TypeDistributionWeibull getInstance()
@@ -86,25 +85,13 @@ public class TypeDistributionWeibull extends TypeDistribution {
 	@Override
 	public boolean parameterValueCheck(Expression firstParameter, Expression secondParameter, Values constantValues) throws PrismLangException{
 		if ((double)firstParameter.evaluateDouble(constantValues) <= 0) {
-			throw new PrismLangException("Weibull distribution must have two parameters of values >0", firstParameter);
+			throw new PrismLangException(getTypeString() + " must have two parameters of values >0", firstParameter);
 		}
 		if ((double)secondParameter.evaluateDouble(constantValues) <= 0) {
-			throw new PrismLangException("Weibull distribution must have two parameters of values >0", secondParameter);
+			throw new PrismLangException(getTypeString() + " must have two parameters of values >0", secondParameter);
 		}
 		return true;
 	}
 	
-	@Override
-	public Double castValueTo(Object value) throws PrismLangException
-	{
-		throw new UnsupportedOperationException("not yet implemented");
-		
-		/* TODO MAJO
-		if (value instanceof Distribution)
-			return (Distribution) value;
-		else
-			throw new PrismLangException("Can't convert " + value.getClass() + " to type " + getTypeString());
-			*/
-	}
 
 }

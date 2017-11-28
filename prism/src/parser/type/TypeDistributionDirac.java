@@ -58,7 +58,6 @@ public class TypeDistributionDirac extends TypeDistribution {
 	public Object defaultValue()
 	{
 		throw new UnsupportedOperationException("not yet implemented");
-		//return new ExponentialDistr(1.0); // TODO MAJO
 	}
 	
 	public static TypeDistributionDirac getInstance()
@@ -86,22 +85,10 @@ public class TypeDistributionDirac extends TypeDistribution {
 	@Override
 	public boolean parameterValueCheck(Expression firstParameter, Expression secondParameter, Values constantValues) throws PrismLangException{
 		if ((double)firstParameter.evaluateDouble(constantValues) <= 0) {
-			throw new PrismLangException("Dirac distribution must have one parameter of value >0", firstParameter);
+			throw new PrismLangException(getTypeString() + " must have one parameter of value >0", firstParameter);
 		}
 		return true;
 	}
 	
-	@Override
-	public Double castValueTo(Object value) throws PrismLangException
-	{
-		throw new UnsupportedOperationException("not yet implemented");
-		
-		/* TODO MAJO
-		if (value instanceof Distribution)
-			return (Distribution) value;
-		else
-			throw new PrismLangException("Can't convert " + value.getClass() + " to type " + getTypeString());
-			*/
-	}
 
 }

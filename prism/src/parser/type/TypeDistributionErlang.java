@@ -58,7 +58,6 @@ public class TypeDistributionErlang extends TypeDistribution {
 	public Object defaultValue()
 	{
 		throw new UnsupportedOperationException("not yet implemented");
-		//return new ExponentialDistr(1.0); // TODO MAJO
 	}
 	
 	public static TypeDistributionErlang getInstance()
@@ -94,17 +93,5 @@ public class TypeDistributionErlang extends TypeDistribution {
 		return true;
 	}
 	
-	@Override
-	public Double castValueTo(Object value) throws PrismLangException
-	{
-		throw new UnsupportedOperationException("not yet implemented");
-		
-		/* TODO MAJO
-		if (value instanceof Distribution)
-			return (Distribution) value;
-		else
-			throw new PrismLangException("Can't convert " + value.getClass() + " to type " + getTypeString());
-			*/
-	}
 
 }

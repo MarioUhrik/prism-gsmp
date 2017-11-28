@@ -58,7 +58,6 @@ public class TypeDistributionUniform extends TypeDistribution {
 	public Object defaultValue()
 	{
 		throw new UnsupportedOperationException("not yet implemented");
-		//return new ExponentialDistr(1.0); // TODO MAJO
 	}
 	
 	public static TypeDistributionUniform getInstance()
@@ -86,28 +85,16 @@ public class TypeDistributionUniform extends TypeDistribution {
 	@Override
 	public boolean parameterValueCheck(Expression firstParameter, Expression secondParameter, Values constantValues) throws PrismLangException{
 		if ((double)firstParameter.evaluateDouble(constantValues) < 0) {
-			throw new PrismLangException("Uniform distribution must have two parameters of values 0<=a<b", firstParameter);
+			throw new PrismLangException(getTypeString() + " must have two parameters of values 0<=a<b", firstParameter);
 		}
 		if ((double)secondParameter.evaluateDouble(constantValues) <= 0) {
-			throw new PrismLangException("Uniform distribution must have two parameters of values 0<=a<b", secondParameter);
+			throw new PrismLangException(getTypeString() + " must have two parameters of values 0<=a<b", secondParameter);
 		}
 		if ((double)firstParameter.evaluateDouble(constantValues) >= (double)secondParameter.evaluateDouble(constantValues)) {
-			throw new PrismLangException("Uniform distribution must have two parameters of values 0<=a<b", firstParameter);
+			throw new PrismLangException(getTypeString() + " must have two parameters of values 0<=a<b", firstParameter);
 		}
 		return true;
 	}
 	
-	@Override
-	public Double castValueTo(Object value) throws PrismLangException
-	{
-		throw new UnsupportedOperationException("not yet implemented");
-		
-		/* TODO MAJO
-		if (value instanceof Distribution)
-			return (Distribution) value;
-		else
-			throw new PrismLangException("Can't convert " + value.getClass() + " to type " + getTypeString());
-			*/
-	}
 
 }
