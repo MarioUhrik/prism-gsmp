@@ -27,14 +27,11 @@
 package explicit;
 
 import java.util.List;
-import java.util.Map;
-
-import prism.PrismException;
 
 /**
- * Interface for classes that provide (read) access to an explicit-state GSMP.
+ * Interface for classes that represent an explicit-state GSMP.
  */
-public interface GSMP extends CTMC // TODO MAJO - incomplete
+public interface GSMP extends ModelSimple // TODO MAJO - incomplete
 {
 	/**
 	 * Get list of all events.
@@ -43,33 +40,14 @@ public interface GSMP extends CTMC // TODO MAJO - incomplete
 
 
 	/**
-	 * Check if event {@code fdEvent} is active in state {@code state}.
+	 * Check if event {@code event} is active in state {@code state}.
 	 */
-	public boolean isEventActive(GSMPEvent fdEvent, int state);
+	public boolean isEventActive(GSMPEvent event, int state);
 	
-	//TODO MAJO - the following was taken from FDPRISM and does not make sense yet
-	
-	// TODO MAJO - this one is weird
 	/**
-	 * Adds information about sychronization labels in case
-	 * there is need to pair with transition rewards.
-	 * @param fixedD index of fixed-delay transition,
-	 * @param src source state of transition,
-	 * @param dest destination state of transition,
-	 * @param label synchronization label.
+	 * Adds an event into the GSMP.
+	 * @param event to add
 	 */
-	public void addSynchLabel(int fixedD, int src, int dest, String label) throws PrismException;
-
-	/**
-	 * Clears information about sychronization labels.
-	 * Use after reward structures are built.
-	 */	
-	public void clearSynchLabels();
-	
-	// TODO MAJO - this one is weird
-	/**
-	 * Returns map of synch labels of transitions from {@code state} and FD {@code fixedD}.
-	 */	
-	public Map<Integer, String> getSychLabelsForState(int fixedD, int state);
+	public void addEvent(GSMPEvent event);
 
 }

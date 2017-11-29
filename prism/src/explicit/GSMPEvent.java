@@ -31,6 +31,8 @@ import prism.PrismException;
 
 /**
  * Explicit engine class representing a GSMP event.
+ * This class holds all information associated with the event,
+ * including the distribution and the entire command.
  */
 public class GSMPEvent extends DTMCSimple 
 {

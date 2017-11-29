@@ -26,123 +26,99 @@
 
 package explicit;
 
-import java.util.Map;
-import java.util.Map.Entry;
+import parser.State;
+
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.List;
-import java.util.HashMap;
 
 import prism.ModelType;
 import prism.PrismException;
 import prism.PrismLog;
 
 /**
- * Simple explicit-state representation of a CTMC.
+ * Simple explicit-state representation of a GSMP.
  */
-public class GSMPSimple extends CTMCSimple implements GSMP // TODO MAJO - copied from FDPRISM, unfinished
+public class GSMPSimple extends ModelExplicit implements GSMP
 {
-	protected List<GSMPEvent> events;
-	protected Map<Integer,Map<Integer,Map<Integer,String>>> transToSynchLabel;
-
-	// Constructors
-
+	
+	protected List<GSMPEvent> events = new ArrayList<GSMPEvent>();
+	
 	/**
-	 * Constructor: empty GSMP.
+	 * Default constructor without a predefined number of states.
 	 */
 	public GSMPSimple() throws PrismException {
 		super();
-		initialise();
+		initialise(0);
 	}
 
 	/**
-	 * Constructor: new GSMP with fixed number of states.
+	 * Default constructor with a predefined number of states.
 	 */
 	public GSMPSimple(int numStates) throws PrismException {
-		super(numStates);
-		initialise();
+		super();
+		initialise(numStates);
 	}
 
 	/**
 	 * Copy constructor.
 	 */
 	public GSMPSimple(GSMPSimple gsmp) {
-		super(gsmp);
+		super();
+		copyFrom(gsmp);
 		this.events = new ArrayList<GSMPEvent>(gsmp.getNumEvents());
 		for (int i = 0; i < gsmp.getNumEvents(); ++i) {
 			this.events.add(new GSMPEvent(gsmp.getEvent(i)));
 		}
-		this.transToSynchLabel = gsmp.transToSynchLabel; //TODO perform deep copy if needed
 	}
 
 	/**
-	 * TODO: implement properly Construct a GSMP from an existing one and a
-	 * state in permutation, i.e. in which state index i becomes index
-	 * permut[i]. Note: have to build new Distributions from scratch anyway to
-	 * do this, so may as well provide this functionality as a constructor.
+	 * Permut copy constructor.
 	 */
-	public GSMPSimple(GSMPSimple gsmp, int permut[]) 
-	{
-		super(gsmp, permut);
+	public GSMPSimple(GSMPSimple gsmp, int permut[]) {
+		super();
+		copyFrom(gsmp, permut);
 		this.events = new ArrayList<GSMPEvent>(gsmp.getNumEvents());
 		for (int i = 0; i < gsmp.getNumEvents(); ++i) {
 			this.events.add(new GSMPEvent(gsmp.getEvent(i), permut));
 		}
-		
-		transToSynchLabel = new HashMap<Integer,Map<Integer,Map<Integer,String>>> (gsmp.getNumEvents()+1);
-		if(gsmp.transToSynchLabel == null) return; 
-		
-		for(int i : gsmp.transToSynchLabel.keySet()) {
-			Map<Integer,Map<Integer,String>> sources = new HashMap<Integer,Map<Integer,String>>();
-			for(int src: gsmp.transToSynchLabel.get(i).keySet()) {
-				Map<Integer,String> destinations = new HashMap<Integer,String>(gsmp.transToSynchLabel.get(i).get(src).size());
-				for(Entry<Integer,String> dest: gsmp.transToSynchLabel.get(i).get(src).entrySet())
-					destinations.put(permut[dest.getKey()],dest.getValue());
-				sources.put(permut[src], destinations);
-			}
-			transToSynchLabel.put(i, sources);
-		}
 	}
 
-	private void initialise() throws PrismException {
+	public void initialise(int numStates){
+		super.initialise(numStates);
 		this.events = new ArrayList<GSMPEvent>();
-		transToSynchLabel = new HashMap<Integer,Map<Integer,Map<Integer,String>>> (getNumEvents()+1);
-		transToSynchLabel.put(-1, new HashMap<Integer, Map<Integer,String>>());
-		for (int i= 0; i <getNumEvents();++i) {
-			transToSynchLabel.put(i, new HashMap<Integer, Map<Integer,String>>());
-		}
 	}
 
 	@Override
 	public int addState() {
-		return super.addState();
+		numStates += 1;
+		//TODO MAJO - initialise the new state somehow!
+		statesList.add(new State(statesList.get(0).varValues.length));
+
+		for (GSMPEvent event : events)
+			event.addState();
+		return numStates - 1;
 	}
 
 	@Override
 	public void addStates(int numToAdd) {
-		super.addStates(numToAdd);
-
-		for (GSMPEvent event : events)
-			event.addStates(numToAdd);
-	}
-
-	/**
-	 * Add to the probability for a transition.
-	 */
-	public void addToProbability(int i, int j, double prob, double delay,
-			int module, int fdIndex, String label) {
-		if (fdIndex < 0)
-			addToProbability(i, j, prob);
-		else {
-			GSMPEvent event = getEvent(module, fdIndex);
-			if (event == null) {
-				event = new GSMPEvent(label, numStates, delay, module, fdIndex);
-				addEvent(event);
-			}
-			event.addToProbability(i, j, prob);
+		for (int i = 0 ; i < numToAdd ; ++i) {
+			addState();
 		}
 	}
 
-	// Accessors (for ModelSimple, overrides CTMCSimple)
+	/**
+	 * Change the update probabilities of event under index {@code eventIndex}
+	 * @return true if successfully done, false if event was not found
+	 */
+	public boolean addToProbability(int i, int j, double prob, int eventIndex) {
+		GSMPEvent event = getEvent(eventIndex);
+		if (event == null) {
+			return false;
+		}
+		event.addToProbability(i, j, prob);
+		return true;
+	}
 
 	@Override
 	public ModelType getModelType() {
@@ -163,8 +139,6 @@ public class GSMPSimple extends CTMCSimple implements GSMP // TODO MAJO - copied
 	}
 
 	public int getNumEvents() {
-		if (events == null) // TODO MAJO - wtf? why not make it an empty list instead?
-			return 0;
 		return events.size();
 	}
 
@@ -176,73 +150,65 @@ public class GSMPSimple extends CTMCSimple implements GSMP // TODO MAJO - copied
 		return events.get(i);
 	}
 
-	public GSMPEvent getEvent(int module, int index) {
-		for (GSMPEvent event : events) {
-			if (event.getModule() == module && event.getIndex() == index)
-				return event;
-		}
-		return null;
-	}
-
 	@Override
 	public boolean isEventActive(GSMPEvent event, int state) {
+		//TODO MAJO
 		throw new UnsupportedOperationException("Not implemented");
 	}
 
 	@Override
 	public void exportToPrismExplicitTra(PrismLog out) {
-		super.exportToPrismExplicitTra(out);
-
-
+		//TODO MAJO - is this enough?
 		out.println(this);
-		out.println("Events: " + getNumEvents());
 	}
-
-
 
 	@Override
 	public String toString() {
- 		return "GSMPSimple [events=" + events + ", transToSynchLabel="
-				+ transToSynchLabel + ", trans=" + trans + ", initialStates="
+		//TODO MAJO - is this enough?
+ 		return "GSMPSimple [events=" + events + ", initialStates="
 				+ initialStates + "]";
 	}
 
-	// TODO MAJO - this one is weird
 	@Override
-	public void addSynchLabel(int fixedD, int src, int dest, String label) throws PrismException {
-		if(transToSynchLabel.get(fixedD) == null)
-			transToSynchLabel.put(fixedD, new HashMap<Integer, Map<Integer,String>>());
-		
-		Map<Integer, String> map;
-		if(transToSynchLabel.get(fixedD).get(src) == null) {
-			map = new HashMap<Integer, String>(1);
-			map.put(dest, label);
-			transToSynchLabel.get(fixedD).put(src, map);
-			return;
-		}
-		
-		map = transToSynchLabel.get(fixedD).get(src);
-		
-		if(map.get(dest) == null){
-			map.put(dest,label);
-			return;
-		}
-		
-		if(map.get(dest) != label)
-			throw new PrismException("Multiple synchronization labels from state " + src + " to state " + dest + "!");
-
+	public void buildFromPrismExplicit(String filename) throws PrismException {
+		//TODO MAJO - implement
+		throw new UnsupportedOperationException("Not yet implemented!");
 	}
 
 	@Override
-	public void clearSynchLabels() {
-		transToSynchLabel.clear();
+	public void clearState(int i) {
+		//TODO MAJO - implement
+		throw new UnsupportedOperationException("Not yet implemented!");
 	}
 
-	// TODO MAJO - this one is weird
 	@Override
-	public Map<Integer, String> getSychLabelsForState(int fixedD, int state) {
-		if(transToSynchLabel.get(fixedD) == null)
-			return null;
-		return transToSynchLabel.get(fixedD).get(state);
+	public SuccessorsIterator getSuccessors(int s) {
+		//TODO MAJO - implement
+		throw new UnsupportedOperationException("Not yet implemented!");
 	}
+
+	@Override
+	public void findDeadlocks(boolean fix) throws PrismException {
+		//TODO MAJO - implement
+		throw new UnsupportedOperationException("Not yet implemented!");
+	}
+
+	@Override
+	public int getNumTransitions() {
+		//TODO MAJO - implement, although possibly it may be enough to return events.size?
+		throw new UnsupportedOperationException("Not yet implemented!");
+	}
+
+	@Override
+	public void checkForDeadlocks(BitSet except) throws PrismException {
+		//TODO MAJO - implement
+		throw new UnsupportedOperationException("Not yet implemented!");
+	}
+
+	@Override
+	public void exportToPrismLanguage(String filename) throws PrismException {
+		//TODO MAJO - implement
+		throw new UnsupportedOperationException("Not yet implemented!");
+	}
+
 }
