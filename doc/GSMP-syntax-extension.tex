@@ -3,13 +3,14 @@
 \usepackage[a4paper, total={6in, 8in}]{geometry}
 
 \usepackage{amsmath}
+\usepackage{amsthm}
 \usepackage{amsfonts}
 \usepackage{todonotes}
 \usepackage{url}
 \usepackage{hyperref}
 
-\newtheorem{theorem}{Theorem}[section]
-\newtheorem{definition}[theorem]{Definition}
+%\newtheorem{theorem}{Theorem}[section]
+\newtheorem*{definition*}{Definition}
 
 \newcommand{\eqdef}{\ensuremath{\stackrel{\text{\tiny def}}{=}}}
 
@@ -76,20 +77,20 @@ This document extends the above mentioned materials and the reader is expected t
 
 Our goal is to provide an extension of the PRISM language syntax and semantics such that it will be able to represent GSMP in the most comprehensive way for current PRISM users. 
 We first provide a definition of GSMP.
-\begin{definition}[\cite{Haas:book}] 
+\begin{definition*}[\cite{Haas:book}] 
 	A generalized semi-Markov process (GSMP) is a~tuple $%\calG = 
 	(S,\events,\act,F,\suc,\initstate)$ where
 	\begin{itemize}
 		\item $S$ is a~finite set of states,
 		\item $\events$ is a~finite set of \emph{events},
 		%Each event $e$ holds its CDF $F_e: \Rset \to [0,1]$ such that $F_e(0) = 0$,
-		\item $\act \colon S \rightarrow 2^{\events}$ assigns to each state $s$ a~nonempty set of active events $\act(s) \not = \emptyset$ in $s$,
-		\item $\suc : \events \rightarrow \transmats(S)$ is a \emph{successor function} that assigns to an event $e$ a~probability matrix %$\suc(e)$
-		specifying probability of a successor state of a state $s$ when an event $e$ occurs in $s$,	
-		\item $F\colon \events \times \Rset \rightarrow [0,1]$ provides, for each event $e \in \events$, a cumulative distribution function (CDF) $F(e,\cdot)$ such that $F(e,0)=0$, and 
+		\item $\act \colon S \to 2^{\events}$ assigns to each state $s$ a~nonempty set of active events $\act(s) \not = \emptyset$ in $s$,\\ moreover, we use $St(e)$ to denote states where $e$ is active, i.e. $St(e)=\{s \mid e \in \act(s)\}$,
+		\item $\suc : \events \to \transmats(S)$ is a \emph{successor function} that assigns to an event $e$ a~probability transition matrix $St(e)\times S$ 
+		specifying for each state $s\in St(e)$ probability distribution over its successors,	
+		\item $F\colon \events \times \Rset \to [0,1]$ provides, for each event $e \in \events$, a cumulative distribution function (CDF) $F(e,\cdot)$ such that $F(e,0)=0$, and 
 		\item $\initstate \in S$ is an \emph{initial state}.
 	\end{itemize}
-\end{definition}
+\end{definition*}
 
 \section*{Syntax of GSMP in PRISM}
 The syntax of GSMP extends the syntax for CTMC.
@@ -119,13 +120,13 @@ The value of an argument can be given by an arithmetic expression of numbers and
 			\code{weibull(a,b)} & $F(\tau) = 1-e^{-(\tau/\code{a})^\code{b}}$ & $\code{a},\code{b} \in \Rsetp$ \\
 			\code{erlang(a,b)} & $F(\tau) = 1- \sum_{n=0}^{\code{b}-1} \frac{1}{n!} \cdot (\code{a}\tau)^{n} \cdot e^{-\code{a}\tau}$ & $\code{a} \in \Rsetp$, $\code{b} \in \Nset$ \\			
 			\code{dirac(a)} & $F(\tau) = \begin{cases}
-			0 & \text{if } \tau < \code{a}\\
-			1 & \text{if } \tau \geq \code{a}
+			0 & \text{for } \tau < \code{a}\\
+			1 & \text{for } \tau \geq \code{a}
 			\end{cases}$ & $\code{a} \in \Rsetp$ \\
 			\code{uniform(a,b)} & $F(\tau) = \begin{cases}
-			0  & \text{if } \tau < \code{a}\\
-			\frac{\tau-\code{a}}{\code{b}-\code{a}} & \text{if } \code{a} \leq \tau \leq \code{b}\\
-			1 & \text{if } \code{b} < \tau 
+			0  & \text{for } \tau < \code{a}\\
+			\frac{\tau-\code{a}}{\code{b}-\code{a}} & \text{for } \tau \in [\code{a}, \code{b})\\
+			1 & \text{for } \tau \geq \code{b}
 			\end{cases}$
 			 & $\code{a},\code{b} \in \Rsetpo, \code{a}<\code{b}$\\
 			\hline
@@ -144,13 +145,13 @@ There are two possibilities of declaring an event:
 	\item \code{event f = dist1;} and
 	\item \code{event f = dirac(3.0);}
 \end{itemize}
-Both such declarations define an event $f$ with a Dirac distributed delay set to the value $3.0$.
-For the event $f$, we specify its set of active states (i.e. $\act^{-1}(f)$) and successor function (i.e. $\suc(f)(\cdot,\cdot)$) by PRISM commands where the event identifier $f$ is in the arrow. 
+Both such declarations define an event \code{f} with a Dirac distributed delay set to the value $3.0$.
+For the event \code{f}, we specify its set of active states (i.e. $St(\code{f})$) and successor function (i.e. $\suc(\code{f})(\cdot,\cdot)$) by PRISM commands where the event identifier \code{f} is in the arrow. 
 E.g., 
 \begin{center}
 	\code{[L] s=1 {-}{-}f-> 0.3:(s'=0) + 0.7:(s'=2);}
 \end{center}
-specifies that the event $f$ is active in all states where \code{s=1} and whenever it occurs, the next state is derived from the original one by changing variable \code{s} to \code{0} with probability $0.3$ and to \code{2} with probability $0.7$. 
+specifies that the event \code{f} is active in all states where \code{s=1} and whenever it occurs, the next state is derived from the original one by changing variable \code{s} to \code{0} with probability $0.3$ and to \code{2} with probability $0.7$. 
 The probabilities in each command have to sum to one (similarly to DTMC commands in PRISM). 
 The labels (e.g., \code{L}) are used for synchronization and to impose impulse rewards as for CTMC.
 %E.g., 
@@ -160,8 +161,8 @@ The labels (e.g., \code{L}) are used for synchronization and to impose impulse r
 %The rate rewards are specified the same way as for CTMC in PRISM. 
 %The PRISM source code for the fdCTMC of Example~\ref{fig:dpmsleep} is in~\cite{KRF:ifm2016arxiv}. 
 
-Moreover, we allow ``slave'' commands for the synchronization purposes. 
-The slave command is denoted by \code{{-}{-}slave->} that indicates that it has no delay and obtains a delay of a (``master'') command that it synchronizes with.
+Moreover, we allow \emph{slave} commands for the synchronization purposes. 
+The slave command is denoted by \code{{-}{-}slave->} that indicates that it has no delay and obtains a delay of a (\emph{master}) command that it synchronizes with.
 E.g., 
 \begin{center}
 	\code{[L] t=1 {-}{-}slave-> 0.3:(t'=0) + 0.7:(t'=2);}
@@ -172,12 +173,12 @@ synchronizes with commands with label \code{L} of other modules.
 \section*{Semantics}
 
 First, we translate all (old-fashion) CTMC commands (one by one) into GSMP commands.
-For each CTMC command \code{[a] g -> r\_1:u\_1 + $\cdots$ + r\_n:u\_n} (where $a$ is a synchronization label or an empty string), we add 
+For each CTMC command \code{[a] g -> p\_1:u\_1 + $\cdots$ + p\_n:u\_n} (where $a$ is a synchronization label or an empty string), we add 
 new events 
 \begin{center}
-	\code{event e\_1 = exponential(r\_1);} \\
+	\code{event e\_1 = exponential(p\_1);} \\
 	$\vdots$ \\
-	\code{event e\_n = exponential(r\_n);}
+	\code{event e\_n = exponential(p\_n);}
 \end{center}
 and exchange the command for the following list of commands
 \begin{center}
@@ -188,7 +189,7 @@ and exchange the command for the following list of commands
 
 An important observation is that we do not define the semantics in a compositional manner, i.e., by first giving the semantics of each module in the system and then combining these results. 
 The reason for this is that guards (and updates) of one module are allowed to refer to the variables of other modules (and indeed global variables). 
-Instead, we define the semantics of a system by translating its set of modules into a single "system module" (in a compositional manner) and then defining the semantics for the system through this single system module.
+Instead, we define the semantics of a system by translating its set of modules into a single \emph{system module} (in a compositional manner) and then defining the semantics for the system through this single system module.
 
 
 \subsection*{Constructing the system module}
@@ -204,42 +205,42 @@ The commands of the module $M = M_1|[A]|M_2$ are constructed according to the fo
 
 \begin{enumerate}
 %	\setcounter{enumi}{5}
-	\item for each command \code{[] g \arci{e} r\_1:u\_1 + $\cdots$ + r\_n:u\_n;} of $M_1$, \\ 
+	\item for each command \code{[] g \arci{e} p\_1:u\_1 + $\cdots$ + p\_n:u\_n;} of $M_1$, \\ 
 	\textbf{copy} the command to the commands of $M$;
 	
-	\item for each command \code{[] g \arci{e} r\_1:u\_1 + $\cdots$ + r\_n:u\_n;} of $M_2$, \\ 
+	\item for each command \code{[] g \arci{e} p\_1:u\_1 + $\cdots$ + p\_n:u\_n;} of $M_2$, \\ 
 	\textbf{copy} the command to the commands of $M$;
 
-	\item for each $\code{a} \not\in A$ and command \code{[a] g \arci{e}  r\_1:u\_1 + $\cdots$ + r\_n:u\_n;} of $M_1$, \\ 
+	\item for each $\code{a} \not\in A$ and command \code{[a] g \arci{e}  p\_1:u\_1 + $\cdots$ + p\_n:u\_n;} of $M_1$, \\ 
 	\textbf{copy} the command to the commands of $M$;
 
-	\item for each $\code{a} \not\in A$ and command \code{[a] g \arci{e}  r\_1:u\_1 + $\cdots$ + r\_n:u\_n;} of $M_2$, \\ 
+	\item for each $\code{a} \not\in A$ and command \code{[a] g \arci{e}  p\_1:u\_1 + $\cdots$ + p\_n:u\_n;} of $M_2$, \\ 
 	\textbf{copy} the command to the commands of $M$;
 
 
-	\item for each $\code{a} \in A$, command \code{[a] g \arci{e} r\_1:u\_1 + $\cdots$ + r\_n:u\_n'} of $M_1$ and \\command \code{[a]  h \arci{f} s\_1:v\_1 + $\cdots$ + s\_m:v\_m;} of $M_2$ 
+	\item for each $\code{a} \in A$, command \code{[a] g \arci{e} p\_1:u\_1 + $\cdots$ + p\_n:u\_n;} of $M_1$ and \\command \code{[a]  h \arci{f} r\_1:v\_1 + $\cdots$ + r\_m:v\_m;} of $M_2$ 
 	\begin{itemize}
 		
 		\item if $\code{e} = \code{slave}$ or  $\code{f} = \code{slave}$, \textbf{add} to the commands of $M$ 
 		\begin{align*}
-			\code{[a] g \&  h \arci{eve}} 
-			  & \code{ r\_1*s\_1\ :\ u\_1 \& v\_1 ~+~ $\cdots$ ~+~ r\_n*s\_1\ :\ u\_n \& v\_1 }\\
-			+ & \code{ r\_1*s\_2\ :\ u\_1 \& v\_2 ~+~ $\cdots$ ~+~ r\_n*s\_2\ :\ u\_n \& v\_2 }\\
+			\code{[a] g \&  h \arci{ef}} 
+			  & \code{ p\_1*r\_1\ :\ u\_1 \& v\_1 ~+~ $\cdots$ ~+~ p\_n*r\_1\ :\ u\_n \& v\_1 ~+}\\
+			  & \code{ p\_1*r\_2\ :\ u\_1 \& v\_2 ~+~ $\cdots$ ~+~ p\_n*r\_2\ :\ u\_n \& v\_2 ~+}\\
               & ~~~~~~~ \vdots ~~~~~~~~~~~~~~~~ \vdots ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ \vdots ~~~~~~~~~~~~~~~~ \vdots \\
-			+ & \code{ r\_1*s\_m\ :\ u\_1 \& v\_m ~+~ $\cdots$ ~+~ r\_n*s\_m\ :\ u\_n \& v\_m;}\\
+			  & \code{ p\_1*r\_m\ :\ u\_1 \& v\_m ~+~ $\cdots$ ~+~ p\_n*r\_m\ :\ u\_n \& v\_m ~;}\\
 		\end{align*}
-		where \code{eve} is the non-slave event of \code{e} and \code{f}, or it is \code{slave} if both \code{e} and \code{f} are $\code{slave}$.
+		where \code{ef} is the non-slave event of \code{e} and \code{f}, or it is \code{slave} if both \code{e} and \code{f} are $\code{slave}$.
 		\item if $\code{e} \neq \code{slave}$ and $\code{f} \neq \code{slave}$, 
 		\begin{itemize}
 			\item if the setting flag \code{ExpSyncBackwardCompatible} is set to true and both \code{e} and \code{f} are exponentially distributed, we \textbf{add} to the commands of $M$ 
 			\begin{align*}
-			   \code{[a] g \&  h \arci{eve}} 
-			     & \code{ r\_1*s\_1\ :\ u\_1 \& v\_1 ~+~ $\cdots$ ~+~ r\_n*s\_1\ :\ u\_n \& v\_1 }\\
-			   + & \code{ r\_1*s\_2\ :\ u\_1 \& v\_2 ~+~ $\cdots$ ~+~ r\_n*s\_2\ :\ u\_n \& v\_2 }\\
+			   \code{[a] g \&  h \arci{ef}} 
+			     & \code{ p\_1*r\_1\ :\ u\_1 \& v\_1 ~+~ $\cdots$ ~+~ p\_n*r\_1\ :\ u\_n \& v\_1 ~+}\\
+			     & \code{ p\_1*r\_2\ :\ u\_1 \& v\_2 ~+~ $\cdots$ ~+~ p\_n*r\_2\ :\ u\_n \& v\_2 ~+}\\
 			     & ~~~~~~~ \vdots ~~~~~~~~~~~~~~~~ \vdots ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ \vdots ~~~~~~~~~~~~~~~~ \vdots \\
-			   + & \code{ r\_1*s\_m\ :\ u\_1 \& v\_m ~+~ $\cdots$ ~+~ r\_n*s\_m\ :\ u\_n \& v\_m;}\\
+			     & \code{ p\_1*r\_m\ :\ u\_1 \& v\_m ~+~ $\cdots$ ~+~ p\_n*r\_m\ :\ u\_n \& v\_m ~;}\\
 			\end{align*}
-			where \code{eve} is a newly created exponentially distributed event with the rate equal to the multiplication of the rates of \code{e} and \code{f}.
+			where \code{ef} is a newly created exponentially distributed event with the rate equal to the multiplication of the rates of \code{e} and \code{f}.
 			
 			
 			\item otherwise, return an \textbf{error} saying that synchronization between two non-slave events is not allowed (unless \code{ExpSyncBackwardCompatible} is set and both the events are exponentially distributed).
@@ -254,16 +255,16 @@ The commands of $M = M'/A$ are constructed according to the following rules:
 \begin{enumerate}
 %	\setcounter{enumi}{3}
 	
-	\item for each command \code{[] g \arci{e} r\_1:u\_1 + $\cdots$ + r\_n:u\_n;} of $M'$, \\ 
+	\item for each command \code{[] g \arci{e} p\_1:u\_1 + $\cdots$ + p\_n:u\_n;} of $M'$, \\ 
 	\textbf{copy} the command to the commands of $M$;
 	
-    \item for each $\code{a} \not\in A$ and command \code{[a] g \arci{e}  r\_1:u\_1 + $\cdots$ + r\_n:u\_n;} of $M_1$, \\ 
+    \item for each $\code{a} \not\in A$ and command \code{[a] g \arci{e}  p\_1:u\_1 + $\cdots$ + p\_n:u\_n;} of $M_1$, \\ 
 	\textbf{copy} the command to the commands of $M$;
 	
-	\item for each $\code{a} \in A$ and command \code{[a] g \arci{e}  r\_1:u\_1 + $\cdots$ + r\_n:u\_n;} of $M'$ where $\code{e} \neq \code{slave}$ (i.e., \code{e} is a master event), \\
-\textbf{add} \code{[] g \arci{e}  r\_1:u\_1 + $\cdots$ + r\_n:u\_n;} to the commands of $M$;
+	\item for each $\code{a} \in A$ and command \code{[a] g \arci{e}  p\_1:u\_1 + $\cdots$ + p\_n:u\_n;} of $M'$ where $\code{e} \neq \code{slave}$ (i.e., \code{e} is a master event), \\
+\textbf{add} \code{[] g \arci{e}  p\_1:u\_1 + $\cdots$ + p\_n:u\_n;} to the commands of $M$;
 
-    \item\label{it:non-mastered-slave} for each $\code{a} \in A$ and command \code{[a] g \arci{slave}  r\_1:u\_1 + $\cdots$ + r\_n:u\_n;} of $M'$, \\ print a \textbf{warning} stating that a non-mastered slave event was ignored.
+    \item\label{it:non-mastered-slave} for each $\code{a} \in A$ and command \code{[a] g \arci{slave}  p\_1:u\_1 + $\cdots$ + p\_n:u\_n;} of $M'$, \\ print a \textbf{warning} stating that a non-mastered slave event was ignored.
 \end{enumerate}
 
 \subsubsection*{Action renaming}
@@ -273,16 +274,16 @@ The commands of $M= M'\{a_1 \leftarrow b_1, \ldots, a_m \leftarrow b_m \}$ are c
 \begin{enumerate}
 %	\setcounter{enumi}{3}
 	
-    \item for each command \code{[] g \arci{e} r\_1:u\_1 + $\cdots$ + r\_n:u\_n;} of $M'$, \\ 
+    \item for each command \code{[] g \arci{e} p\_1:u\_1 + $\cdots$ + p\_n:u\_n;} of $M'$, \\ 
     \textbf{copy} the command to the commands of $M$;
 
-    \item for each $\code{a} \not\in \{a_1,\ldots,a_m\}$ and command \code{[a] g \arci{e}  r\_1:u\_1 + $\cdots$ + r\_n:u\_n;} of $M'$, \\ 
+    \item for each $\code{a} \not\in \{a_1,\ldots,a_m\}$ and command \code{[a] g \arci{e}  p\_1:u\_1 + $\cdots$ + p\_n:u\_n;} of $M'$, \\ 
     \textbf{copy} the command to the commands of $M$;
 
-    \item for each $\code{a} \in \{a_1,\ldots,a_m\}$ and command \code{[a] g \arci{e}  r\_1:u\_1 + $\cdots$ + r\_n:u\_n;} of $M'$, \\
-    \textbf{add} \code{[b] g \arci{e}  r\_1:u\_1 + $\cdots$ + r\_n:u\_n;} to the commands of $M$ where $\code{b}$ is the event of $\{b_1,\ldots,b_m\}$ corresponding to \code{a};
+    \item for each $\code{a} \in \{a_1,\ldots,a_m\}$ and command \code{[a] g \arci{e}  p\_1:u\_1 + $\cdots$ + p\_n:u\_n;} of $M'$, \\
+    \textbf{add} \code{[b] g \arci{e}  p\_1:u\_1 + $\cdots$ + p\_n:u\_n;} to the commands of $M$ where $\code{b}$ is the event of $\{b_1,\ldots,b_m\}$ corresponding to \code{a};
 
-\end{enumerate}\todo{collect all event declarations in the beginning of a module (same as for states)}
+\end{enumerate}%\todo{collect all event declarations in the beginning of a module (same as for states)}
 
 \subsection*{The Semantics of the System Module}
 In this section, we give the semantics of a system module, constructed according to the rules described in the previous section.
@@ -305,14 +306,14 @@ We now consider the semantics for a single command of the system module.
 From this point, we ignore any action-labels assigned to commands in $C$; these were required only for the process-algebraic construction and can now be safely discarded.
 Moreover, for the same reason we ignore also slave commands, i.e., commands that use $\code{\arci{slave}}$. Similarly to action hiding item \ref{it:non-mastered-slave}, we can here print a \textbf{warning} stating that a non-mastered slave event was ignored.
 Hence, each command $c$ of $C$ is of the form:
-$$\code{[] g \arci{e} r\_1:u\_1 + $\cdots$ + r\_n:u\_n;}.$$
+$$\code{[] g \arci{e} p\_1:u\_1 + $\cdots$ + p\_n:u\_n;}.$$
 %
 Since the guard $\code{g}$ is a predicate over the variables in $V$ and each state of the system is a valuation of these variables, $\code{g}$ defines a subset of the global state space $S$ where the command $c$ is applicable. 
 We denote this set of states $S_c = \{s \in S \mid s \models \code{g}\}$.
 
 Each update $\code{u\_j}$ of $c$ corresponds to a transition that the system can make when it is in a state $s \in S_c$. 
-The transition is defined by giving the new value of each variable as an expression (possibly using the current values).
-Hence, we can think of $\code{u\_j}$ as a function $u_j\colon S_c \rightarrow S$.
+The transition is defined by giving the new value of each variable as an expression (possibly using the values of the current state $s$).
+Hence, we can think of $\code{u\_j}$ as a function $u_j\colon S_c \to S$.
 If $\code{u\_j}$ is $(v_1' = expr_1)\wedge \cdots \wedge (v_m'
 = expr_m)$, then for each state $s \in S_c$:
 $$
@@ -320,24 +321,26 @@ u_j(s) = (expr_1(s), \ldots, expr_m(s))
 $$
 where $expr_i(s)$ is the expression $expr_i$ evaluated in the state $s$, for each $i=1,\dots,m$.
 %
-%Using the value $r\_j$ associated with each update $u_j$, the command $c$ defines, for each $s \in S_c$, a function $\mu_{c,s} \colon S \to \Rsetpo$ where for each $t \in S$:
+%Using the value $p\_j$ associated with each update $u_j$, the command $c$ defines, for each $s \in S_c$, a function $\mu_{c,s} \colon S \to \Rsetpo$ where for each $t \in S$:
 
-Let $\mathcal{E}\colon C \to \events$ be a function that assigns to each event command the associated event. 
+%Let $\mathcal{E}v \colon C \to \events$ be a function that assigns to each command the associated event. 
 %assigns the associated event to each event command
-For each event $e \in E$, command $c \in C$, and state $s \in S_c$ we define a function $\mu_{e,c,s} \colon S \to \mathbb{R}_{\geq0}$ where for each $t\in S$ 
-\[ \mu_{e,c,s}(t) \eqdef \sum_{\substack{
+For each command $c \in C$ and state $s \in S_c$, we define a function $\mu_{c,s} \colon S \to \mathbb{R}_{\geq0}$ where for each $t\in S$ and the command $c$ of the form \code{[] g \arci{e} p\_1:u\_1 + $\cdots$ + p\_n:u\_n;}
+\[ \mu_{c,s}(t) \eqdef \sum_{\substack{
 		1 \leq j \leq n \\
-		\wedge u_j(s) = i \\
-		\wedge \mathcal{E}(c)=e}} r\_j. \]
-Note that, for GSMPs, the syntactic constraints placed on the constants $r\_j$ mean
-that the function $\mu_{e,c,s}$ is actually a probability distribution over $S$.
+		\wedge~ u_j(s) = t }}             \code{p\_j} ~.
+\]
+For all $s\not\in S_c$ and $t \in S$, we set $\mu_{c,s}(t)=0$.
+Note that, for GSMPs, the syntactic constraints placed on the constants 
+\code{p\_j} mean that the function $\mu_{c,s}$ is actually a probability distribution over $S$.
 
 %Finally, we can now define the probabilistic model itself, i.e. the successor function $\suc$.
 
 \subsection*{GSMP Semantics}
 We define the successor function $\suc$ as follows.
-For all states $s,t\in S$, event $e \in \mathcal{E}$ we define
-\[\suc(s,e)(t) \eqdef \frac{\sum_{c \in C} \mu_{e,c,s}(t)}{\sum_{c \in C \\ \wedge t'\in S} \mu_{e,c,s}(t')}. \]
+For each event $e \in \mathcal{E}$, we define the probability transition matrix $\suc(e)$ by
+\[\suc(e)[s,t] \eqdef \frac{\sum_{c \in C(e)} \mu_{c,s}(t)}{\sum_{c \in C(e) \\ \wedge t'\in S} \mu_{c,s}(t')} \]
+where $s\in St(e)$, $t \in S$, and $C(e)$ is the set of all commands activated by the event $e$.
 The normalisation is required since $\sum_{c \in C \\ \wedge t'\in S} \mu_{e,c,s}(t')$ can sum to more than one, through either the nondeterminism introduced through the parallel composition of modules or local nondeterminism in a module (i.e., overlapping guards). 
 This normalisation can be considered as replacing any nondeterministic choice between a set of transitions with a uniform (probabilistic) choice between the transitions.
 
@@ -354,9 +357,9 @@ This normalisation can be considered as replacing any nondeterministic choice be
 %\[ \mu_{e,c,s}(t) \eqdef \sum_{\substack{
 %	1 \leq J \leq n \\
 %	\wedge u_j(s) = i \\
-%	\wedge \mathcal{E}(c)=e}} r\_j. \]
+%	\wedge \mathcal{E}(c)=e}} p\_j. \]
 %
-j%For each $e \in \mathcal{E}$ such that $e \neq 0$ we define a transition probability matrix $\mathbf{P}_e \colon S \times S \to [0,1]$ to be the matrix $\overline{\mathbf{P}_e}$ after its rows have been normalised where for any $s,t \in S$:
+%For each $e \in \mathcal{E}$ such that $e \neq 0$ we define a transition probability matrix $\mathbf{P}_e \colon S \times S \to [0,1]$ to be the matrix $\overline{\mathbf{P}_e}$ after its rows have been normalised where for any $s,t \in S$:
 %
 %\[\overline{\mathbf{P}_e}(s,t) \eqdef \sum_{c \in C} \mu_{e,c,s}(t). \]
 %%
