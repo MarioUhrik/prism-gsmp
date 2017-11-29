@@ -81,7 +81,7 @@ We first provide a definition of a GSMP.
 
 \begin{definition*}[\cite{Haas:book}] 
 	A generalized semi-Markov process (GSMP) is a~tuple $%\calG = 
-	(S,\events,\act,F,\suc,\initstate)$ where
+	(S,\events,\act,F,\suc,\initstates)$ where
 	\begin{itemize}
 		\item $S$ is a~finite set of states,
 		\item $\events$ is a~finite set of \emph{events},
@@ -90,7 +90,7 @@ We first provide a definition of a GSMP.
 		\item $\suc : \events \to \transmats(S)$ is a \emph{successor function} that assigns to an event $e$ a~probability transition matrix $St(e)\times S$ 
 		specifying for each state $s\in St(e)$ probability distribution over its successors,	
 		\item $F\colon \events \times \Rset \to [0,1]$ provides, for each event $e \in \events$, a cumulative distribution function (CDF) $F(e,\cdot)$ such that $F(e,0)=0$, and 
-		\item $\initstates \subseteq S$ is a subset of \emph{initial states}.
+		\item $\initstates \subseteq S$ is a set of \emph{initial states}.
 %		\item $\initstate \in S$ is an \emph{initial state}.
 	\end{itemize}
 \end{definition*}
