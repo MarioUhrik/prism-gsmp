@@ -258,7 +258,7 @@ The commands of $M = M'/A$ are constructed according to the following rules:
 	\item for each command \code{[] g \arci{e} p\_1:u\_1 + $\cdots$ + p\_n:u\_n;} of $M'$, \\ 
 	\textbf{copy} the command to the commands of $M$;
 	
-    \item for each $\code{a} \not\in A$ and command \code{[a] g \arci{e}  p\_1:u\_1 + $\cdots$ + p\_n:u\_n;} of $M_1$, \\ 
+    \item for each $\code{a} \not\in A$ and command \code{[a] g \arci{e}  p\_1:u\_1 + $\cdots$ + p\_n:u\_n;} of $M'$, \\ 
 	\textbf{copy} the command to the commands of $M$;
 	
 	\item for each $\code{a} \in A$ and command \code{[a] g \arci{e}  p\_1:u\_1 + $\cdots$ + p\_n:u\_n;} of $M'$ where $\code{e} \neq \code{slave}$ (i.e., \code{e} is a master event), \\
@@ -281,7 +281,7 @@ The commands of $M= M'\{a_1 \leftarrow b_1, \ldots, a_m \leftarrow b_m \}$ are c
     \textbf{copy} the command to the commands of $M$;
 
     \item for each $\code{a} \in \{a_1,\ldots,a_m\}$ and command \code{[a] g \arci{e}  p\_1:u\_1 + $\cdots$ + p\_n:u\_n;} of $M'$, \\
-    \textbf{add} \code{[b] g \arci{e}  p\_1:u\_1 + $\cdots$ + p\_n:u\_n;} to the commands of $M$ where $\code{b}$ is the event of $\{b_1,\ldots,b_m\}$ corresponding to \code{a};
+    \textbf{add} \code{[b] g \arci{e}  p\_1:u\_1 + $\cdots$ + p\_n:u\_n;} to the commands of $M$ where $\code{b}$ is the label of $\{b_1,\ldots,b_m\}$ corresponding to \code{a}.
 
 \end{enumerate}%\todo{collect all event declarations in the beginning of a module (same as for states)}
 
