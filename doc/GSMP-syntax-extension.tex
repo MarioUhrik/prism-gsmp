@@ -49,6 +49,7 @@
 \newcommand{\events}{{\calE}}
 \newcommand{\suc}{Succ}
 \newcommand{\initstate}{s_\mathrm{in}}
+\newcommand{\initstates}{S_\mathrm{in}}
 \newcommand{\act}{Act}
 \newcommand{\dist}{\mathcal{D}}
 \newcommand{\transmats}{\calM}
@@ -75,8 +76,9 @@ For semantics of the PRISM language for CTMC, DTMC, and MDP, see:
 \end{itemize}
 This document extends the above mentioned materials and the reader is expected to be familiar with them.
 
-Our goal is to provide an extension of the PRISM language syntax and semantics such that it will be able to represent GSMP in the most comprehensive way for current PRISM users. 
-We first provide a definition of GSMP.
+Our goal is to provide an extension of the PRISM language syntax and semantics such that it will be able to represent a GSMP in the most comprehensive way for current PRISM users. 
+We first provide a definition of a GSMP.
+
 \begin{definition*}[\cite{Haas:book}] 
 	A generalized semi-Markov process (GSMP) is a~tuple $%\calG = 
 	(S,\events,\act,F,\suc,\initstate)$ where
@@ -84,16 +86,32 @@ We first provide a definition of GSMP.
 		\item $S$ is a~finite set of states,
 		\item $\events$ is a~finite set of \emph{events},
 		%Each event $e$ holds its CDF $F_e: \Rset \to [0,1]$ such that $F_e(0) = 0$,
-		\item $\act \colon S \to 2^{\events}$ assigns to each state $s$ a~nonempty set of active events $\act(s) \not = \emptyset$ in $s$,\\ moreover, we use $St(e)$ to denote states where $e$ is active, i.e. $St(e)=\{s \mid e \in \act(s)\}$,
+		\item $\act \colon S \to 2^{\events}$ assigns to each state $s$ a~nonempty set of active events $\act(s) \not = \emptyset$ in $s$,\\ moreover, we use $St(e)$ to denote states where $e$ is active, i.e., $St(e)=\{s \mid e \in \act(s)\}$,
 		\item $\suc : \events \to \transmats(S)$ is a \emph{successor function} that assigns to an event $e$ a~probability transition matrix $St(e)\times S$ 
 		specifying for each state $s\in St(e)$ probability distribution over its successors,	
 		\item $F\colon \events \times \Rset \to [0,1]$ provides, for each event $e \in \events$, a cumulative distribution function (CDF) $F(e,\cdot)$ such that $F(e,0)=0$, and 
-		\item $\initstate \in S$ is an \emph{initial state}.
+		\item $\initstates \subseteq S$ is a subset of \emph{initial states}.
+%		\item $\initstate \in S$ is an \emph{initial state}.
 	\end{itemize}
 \end{definition*}
 
-\section*{Syntax of GSMP in PRISM}
-The syntax of GSMP extends the syntax for CTMC.
+\paragraph{GSMP Semantics}
+%The execution of a~GSMP starts in the initial state $\initstate$. 
+The execution of a~GSMP starts in a randomly chosen initial state $\initstate$ of $\initstates$ (each state of $\initstates$ has the same probability to be chosen??). 
+In every state each active event keeps one timer.
+In $\initstate$ all active events (given by $\act(\initstate)$) do not have a timer yet, thus we set a timer for each event $e$ in $\act(\initstate)$ to a random value according to CDF $F(e,\cdot)$.
+%In every state each active event keeps one timer, thus we provide timers to events in $\act(\initstate)$.
+%We set the timer of $e$ in $\act(\initstate)$ to a random value according to CDF $F(e,\cdot)$.
+The the event $e$, which has the minimal timer value, first waits until its timer goes off then it occurs and causes a change of state.\footnote{If there are multiple events with the minimal timer value, one of them is randomly chosen- each with the same probability.}  
+The next state $s'$ is chosen randomly with probability $\suc(e)[\initstate,s']$.
+%according to the probability distribution $\suc(e)[\initstate,\cdot]$.
+In the new sate $s'$, the active events that either just occurred $\act(s') \cap \{e\}$ or are newly active $\act(s') \setminus \act(\initstate)$ do not have a valid timer value, thus their timer is set the same way as above.
+%In the new sate $s'$, the newly active events $\act(s') \setminus \act(\initstate)$ and the just occurred event $e$ if it is active do not have a valid timer value, thus their timer is set the same way as above.
+The inherited events $\act(s') \cap \act(\initstate) \setminus \{e\}$ keep their old timer value, that is decreased by the time spent in $\initstate$. 
+Then the execution proceeds in the same manner. 
+
+\section*{Syntax of GSMPs in PRISM}
+The syntax of GSMPs extends the CTMC syntax.
 Hence, we specify only the syntax that was added to the CTMC syntax. 
 Each GSMP model file must begin with the keyword \code{gsmp}. 
 %For the purpose of our synthesis and expected reward implementation, the set of target states has to be specified by label \code{"target"},~e.g.
@@ -146,7 +164,7 @@ There are two possibilities of declaring an event:
 	\item \code{event f = dirac(3.0);}
 \end{itemize}
 Both such declarations define an event \code{f} with a Dirac distributed delay set to the value $3.0$.
-For the event \code{f}, we specify its set of active states (i.e. $St(\code{f})$) and successor function (i.e. $\suc(\code{f})(\cdot,\cdot)$) by PRISM commands where the event identifier \code{f} is in the arrow. 
+For the event \code{f}, we specify its set of active states (i.e., $St(\code{f})$) and successor function (i.e., $\suc(\code{f})[\cdot,\cdot]$) by PRISM commands where the event identifier \code{f} is in the arrow. 
 E.g., 
 \begin{center}
 	\code{[L] s=1 {-}{-}f-> 0.3:(s'=0) + 0.7:(s'=2);}
@@ -169,23 +187,23 @@ E.g.,
 \end{center}
 synchronizes with commands with label \code{L} of other modules.
 
-\newpage
+%\newpage
 \section*{Semantics}
 
 First, we translate all (old-fashion) CTMC commands (one by one) into GSMP commands.
 For each CTMC command \code{[a] g -> p\_1:u\_1 + $\cdots$ + p\_n:u\_n} (where $a$ is a synchronization label or an empty string), we add 
 new events 
-\begin{center}
-	\code{event e\_1 = exponential(p\_1);} \\
-	$\vdots$ \\
-	\code{event e\_n = exponential(p\_n);}
-\end{center}
+\begin{align*}
+	\code{event e\_1 } &\code{= exponential(p\_1);} \\
+	&\hspace*{0.47mm}\vdots \\
+	\code{event e\_n } &\code{= exponential(p\_n);}
+\end{align*}
 and exchange the command for the following list of commands
-\begin{center}
-	\code{[a] g {-}{-}e\_1-> 1:u\_1;} \\
-	$\vdots$ \\
-	\code{[a] g {-}{-}e\_n-> 1:u\_n;} 
-\end{center}
+\begin{align*}
+	\code{[a] g } &\code{{-}{-}e\_1-> 1:u\_1;} \\
+	&\hspace*{6.06mm}\vdots \\
+	\code{[a] g } &\code{{-}{-}e\_n-> 1:u\_n;} 
+\end{align*}
 
 An important observation is that we do not define the semantics in a compositional manner, i.e., by first giving the semantics of each module in the system and then combining these results. 
 The reason for this is that guards (and updates) of one module are allowed to refer to the variables of other modules (and indeed global variables). 
@@ -243,7 +261,9 @@ The commands of the module $M = M_1|[A]|M_2$ are constructed according to the fo
 			where \code{ef} is a newly created exponentially distributed event with the rate equal to the multiplication of the rates of \code{e} and \code{f}.
 			
 			
-			\item otherwise, return an \textbf{error} saying that synchronization between two non-slave events is not allowed (unless \code{ExpSyncBackwardCompatible} is set and both the events are exponentially distributed).
+			\item otherwise, return an \textbf{error} stating that synchronization between two non-slave events is not allowed 
+			(note that this case is not possible if \code{ExpSyncBackwardCompatible} is set to true and both the events are exponentially distributed).
+%			(unless \code{ExpSyncBackwardCompatible} is set to true and both the events are exponentially distributed).
 		\end{itemize} 
 	\end{itemize}
 \end{enumerate}
@@ -304,12 +324,12 @@ predicate specified in the \code{init...endinit} construct.
 
 We now consider the semantics for a single command of the system module. 
 From this point, we ignore any action-labels assigned to commands in $C$; these were required only for the process-algebraic construction and can now be safely discarded.
-Moreover, for the same reason we ignore also slave commands, i.e., commands that use $\code{\arci{slave}}$. Similarly to action hiding item \ref{it:non-mastered-slave}, we can here print a \textbf{warning} stating that a non-mastered slave event was ignored.
+Moreover, for the same reason we ignore also slave commands, i.e., commands that use $\code{\arci{slave}}$. Similarly to the item \ref{it:non-mastered-slave} of action hiding, we can print a \textbf{warning} stating that a non-mastered slave event was ignored.
 Hence, each command $c$ of $C$ is of the form:
 $$\code{[] g \arci{e} p\_1:u\_1 + $\cdots$ + p\_n:u\_n;}.$$
 %
 Since the guard $\code{g}$ is a predicate over the variables in $V$ and each state of the system is a valuation of these variables, $\code{g}$ defines a subset of the global state space $S$ where the command $c$ is applicable. 
-We denote this set of states $S_c = \{s \in S \mid s \models \code{g}\}$.
+We denote this set of states as $S_c = \{s \in S \mid s \models \code{g}\}$.
 
 Each update $\code{u\_j}$ of $c$ corresponds to a transition that the system can make when it is in a state $s \in S_c$. 
 The transition is defined by giving the new value of each variable as an expression (possibly using the values of the current state $s$).
@@ -337,11 +357,24 @@ Note that, for GSMPs, the syntactic constraints placed on the constants
 %Finally, we can now define the probabilistic model itself, i.e. the successor function $\suc$.
 
 \subsection*{GSMP Semantics}
-We define the successor function $\suc$ as follows.
-For each event $e \in \mathcal{E}$, we define the probability transition matrix $\suc(e)$ by
-\[\suc(e)[s,t] \eqdef \frac{\sum_{c \in C(e)} \mu_{c,s}(t)}{\sum_{c \in C(e) \\ \wedge t'\in S} \mu_{c,s}(t')} \]
-where $s\in St(e)$, $t \in S$, and $C(e)$ is the set of all commands activated by the event $e$.
-The normalisation is required since $\sum_{c \in C \\ \wedge t'\in S} \mu_{e,c,s}(t')$ can sum to more than one, through either the nondeterminism introduced through the parallel composition of modules or local nondeterminism in a module (i.e., overlapping guards). 
+We already defined the state space $S$, set of events $\events$ and the initial states $\initstates$. 
+We will define the remaining structures $\act$, $\suc$, and $F$ separately for each event.
+
+Let us fix an event $e \in \events$. 
+Let $C_e$ be the set of all commands activated by the event $e$.
+We define the function $St$ as $St(e) \eqdef \sum_{c \in C_e}$.
+Then for each $s \in S$ we set $\act(s) \eqdef \{e \in \events | s \in St(e) \}$.
+The CDF $F(e,\cdot)$ is determined by the distribution associated during the event declaration. 
+Finally, we define the probability transition matrix  $\suc(e)$ of event $e$ as follows. 
+For each state $s\in St(e)$ and state $t \in S$ we set
+\[\suc(e)[s,t] \eqdef \frac{\sum_{c \in C_e} \mu_{c,s}(t)}{\sum_{c \in C_e \\ \wedge t'\in S} \mu_{c,s}(t')}. \]
+%
+%
+%We define the successor function $\suc$ as follows.
+%For each event $e \in \mathcal{E}$, we define the probability transition matrix $\suc(e)$ by
+%\[\suc(e)[s,t] \eqdef \frac{\sum_{c \in C_e} \mu_{c,s}(t)}{\sum_{c \in C_e \\ \wedge t'\in S} \mu_{c,s}(t')} \]
+%where $s\in St(e)$, $t \in S$, and $C(e)$ is the set of all commands activated by the event $e$.
+The normalisation is required since $\sum_{c \in C_e \\ \wedge t'\in S} \mu_{c,s}(t')$ can sum to more than one, through either the nondeterminism introduced through the parallel composition of modules or local nondeterminism in a module (i.e., overlapping guards). 
 This normalisation can be considered as replacing any nondeterministic choice between a set of transitions with a uniform (probabilistic) choice between the transitions.
 
 
