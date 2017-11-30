@@ -88,5 +88,10 @@ public class TypeDistributionErlang extends TypeDistribution {
 		return true;
 	}
 	
+	@Override
+	public int getNumParams() {
+		return 2;
+	}
+	
 
 }

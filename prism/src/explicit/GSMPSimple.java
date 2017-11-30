@@ -86,6 +86,7 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 
 	public void initialise(int numStates){
 		super.initialise(numStates);
+		this.statesList = new ArrayList<State>();
 		this.events = new ArrayList<GSMPEvent>();
 	}
 
@@ -93,10 +94,11 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 	public int addState() {
 		numStates += 1;
 		//TODO MAJO - initialise the new state somehow!
-		statesList.add(new State(statesList.get(0).varValues.length));
+		statesList.add(new State(0));
 
-		for (GSMPEvent event : events)
-			event.addState();
+		for (int i = 0; i < events.size() ; ++i) {
+			events.get(i).addState();
+		}
 		return numStates - 1;
 	}
 
@@ -164,9 +166,8 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 
 	@Override
 	public String toString() {
-		//TODO MAJO - is this enough?
  		return "GSMPSimple [events=" + events + ", initialStates="
-				+ initialStates + "]";
+				+ initialStates + ", states=" + statesList + "]";
 	}
 
 	@Override

@@ -82,5 +82,13 @@ public class TypeDistribution extends Type {
 		throw new UnsupportedOperationException("not yet implemented");
 	}
 	
+	/**
+	 * @return The number of parameters used by this distribution.
+	 */
+	public int getNumParams() {
+		 // TODO MAJO - this should be overriden by children classes for now
+		throw new UnsupportedOperationException("not yet implemented");
+	}
+	
 
 }

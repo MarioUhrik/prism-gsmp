@@ -88,5 +88,9 @@ public class TypeDistributionWeibull extends TypeDistribution {
 		return true;
 	}
 	
+	@Override
+	public int getNumParams() {
+		return 2;
+	}
 
 }

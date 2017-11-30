@@ -27,6 +27,8 @@
 package explicit;
 
 import java.util.*;
+
+import parser.type.TypeDistribution;
 import prism.PrismException;
 
 /**
@@ -36,92 +38,79 @@ import prism.PrismException;
  */
 public class GSMPEvent extends DTMCSimple 
 {
-	// TODO MAJO - the following was taken from fdPRISM and does not make sense yet
-	private String label;
-	private double delay;
-	private double weight;
+	private TypeDistribution distributionType;
+	private double firstParameter;
+	private double secondParameter;
+	
 	private BitSet active;
-	private int module;
 	private int index;
 
 	// Constructors
 
 	/**
-	 * Constructor: empty FDEvent.
+	 * Constructor: new Event with an unspecified number of states.
 	 */
-	public GSMPEvent() {
+	public GSMPEvent(TypeDistribution distributionType, double firstParameter, double secondParameter) {
 		super();
-		label = "";
-		delay = 0;
-		module = 0;
+		this.distributionType = distributionType;
+		this.firstParameter = firstParameter;
+		this.secondParameter = secondParameter;
 		index = 0;
-		weight = 1;
 		clearActive();
 	}
 
 	/**
 	 * Constructor: new Event with fixed number of states.
 	 */
-	public GSMPEvent(int numStates) {
+	public GSMPEvent(int numStates, TypeDistribution distributionType, double firstParameter, double secondParameter) {
 		super(numStates);
-		label = "";
-		delay = 0;
-		module = 0;
+		this.distributionType = distributionType;
+		this.firstParameter = firstParameter;
+		this.secondParameter = secondParameter;
 		index = 0;
-		weight = 1;
-		clearActive();
-	}
-
-	public GSMPEvent(String label, int numStates, double delay, int module, int index) {
-		super(numStates);
-		this.label = label;
-		this.delay = delay;
-		this.module = module;
-		this.index = index;
-		weight = 1;
 		clearActive();
 	}
 
 	/**
 	 * Copy constructor.
 	 */
-	public GSMPEvent(GSMPEvent fdEvent) {
-		super(fdEvent);
-		this.label = fdEvent.label;
-		this.delay = fdEvent.delay;
-		this.weight = fdEvent.weight;
-		this.module = fdEvent.module;
-		this.index = fdEvent.index;
+	public GSMPEvent(GSMPEvent event) {
+		super(event);
+		this.distributionType = event.distributionType;
+		this.firstParameter = event.firstParameter;
+		this.secondParameter = event.secondParameter;
+		this.index = event.index;
 		clearActive();
-		this.active.or(fdEvent.active);
+		this.active.or(event.active);
 	}
 
 	/**
 	 * Copy constructor.
 	 */
-	public GSMPEvent(GSMPEvent fdEvent, int permut[]) {
-		super(fdEvent, permut);
-		this.label = fdEvent.label;
-		this.delay = fdEvent.delay;
-		this.weight = fdEvent.weight;
-		this.module = fdEvent.module;
-		this.index = fdEvent.index;
+	public GSMPEvent(GSMPEvent event, int permut[]) {
+		super(event, permut);
+		this.distributionType = event.distributionType;
+		this.firstParameter = event.firstParameter;
+		this.secondParameter = event.secondParameter;
+		this.index = event.index;
 		clearActive();
 		int min = (numStates < permut.length ? numStates : permut.length);
 		for (int i = 0; i < min; i++) {
-			if (fdEvent.isActive(i))
+			if (event.isActive(i))
 				active.set(permut[i]);
 		}
-		// this.active.or(fdEvent.active);
+		// this.active.or(event.active);
 	}
 
+	// TODO MAJO - I think this is supposed to be some distribution parameter check.
+	// TODO MAJO - get rid of it, or update it
 	public int getNumberOfSteps(double interval) throws PrismException {
-		System.out.println("Delay: " + delay + " interval: " + interval
+		System.out.println("Delay: " + firstParameter + " interval: " + interval
 				+ " res: "
-				+ (new Double(Math.floor(delay / interval))).intValue());
-        if(delay < interval)
-        	throw new PrismException("Delay(" + delay + " is smaller than discretization step(" + interval + " ).");
-		return (int) Math.round(delay / interval);
+				+ (new Double(Math.floor(firstParameter / interval))).intValue());
+        if(firstParameter < interval)
+        	throw new PrismException("Delay(" + firstParameter + " is smaller than discretization step(" + interval + " ).");
+		return (int) Math.round(firstParameter / interval);
 	}
 
 	/**
@@ -145,46 +134,57 @@ public class GSMPEvent extends DTMCSimple
 		clearState(state);
 	}
 	
-	public void setWeight(double weight) {
-		this.weight = weight;
+	public void setFirstParameter(double firstParam) {
+		this.firstParameter = firstParam;
 	}
-
-	public void setDelay(double delay) {
-		this.delay = delay;
+	
+	public void setSecondParameter(double secondParam) {
+		this.secondParameter = secondParam;
+	}
+	
+	public void setDistributionType(TypeDistribution distributionType) {
+		this.distributionType = distributionType;
 	}
 
 	public boolean isActive(int state) {
 		return active.get(state);
 	}
 
-	public String getLabel() {
-		return label;
-	}
-	
 	public BitSet getActive() {
 		return active;
-	}
-
-	public double getWeight() {
-		return weight;
-	}
-
-	public int getModule() {
-		return module;
 	}
 
 	public int getIndex() {
 		return index;
 	}
 
-	public double getDelayTime() {
-		return delay;
+	public double getFirstParameter() {
+		return firstParameter;
+	}
+	
+	public double getSecondParameter() {
+		return secondParameter;
+	}
+	
+	public TypeDistribution getDistributionType() {
+		return distributionType;
 	}
 
 	@Override
 	public String toString() {
-		return "Event{" + "label=" + label + ", delay=" + delay + ", weight=" + weight
-				+ ", active=" + active + ", module=" + module + ", index="
-				+ index + ", super=" + super.toString() + '}';
+		String str = "Event[" + distributionType.getTypeString();
+		switch (distributionType.getNumParams()) {
+		case 1:
+			str += "(" + firstParameter + ") ";
+			break;
+		case 2:
+			str += "(" + firstParameter + "," + secondParameter + ") ";
+			break;
+		default:
+			str += "(Unusual number of parameters) ";
+		}
+		str += ", active=" + active + ", index="
+				+ index + ", probabilities=" + super.toString() + ']';
+		return str;
 	}
 }

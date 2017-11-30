@@ -91,5 +91,9 @@ public class TypeDistributionUniform extends TypeDistribution {
 		return true;
 	}
 	
+	@Override
+	public int getNumParams() {
+		return 2;
+	}
 
 }
