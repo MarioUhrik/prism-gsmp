@@ -50,6 +50,7 @@
 \newcommand{\suc}{Succ}
 \newcommand{\initstate}{s_\mathrm{in}}
 \newcommand{\initstates}{S_\mathrm{in}}
+%\newcommand{\initstates}{\overline{S}} % old prism formating of initial states
 \newcommand{\act}{Act}
 \newcommand{\dist}{\mathcal{D}}
 \newcommand{\transmats}{\calM}
@@ -90,14 +91,17 @@ We first provide a definition of a GSMP.
 		\item $\suc : \events \to \transmats(S)$ is a \emph{successor function} that assigns to an event $e$ a~probability transition matrix $St(e)\times S$ 
 		specifying for each state $s\in St(e)$ probability distribution over its successors,	
 		\item $F\colon \events \times \Rset \to [0,1]$ provides, for each event $e \in \events$, a cumulative distribution function (CDF) $F(e,\cdot)$ such that $F(e,0)=0$, and 
-		\item $\initstates \subseteq S$ is a set of \emph{initial states}.
+		\item $\initstates \subseteq S$ is a nonempty set of \emph{initial states}.
 %		\item $\initstate \in S$ is an \emph{initial state}.
 	\end{itemize}
 \end{definition*}
 
 \paragraph{GSMP Semantics}
 %The execution of a~GSMP starts in the initial state $\initstate$. 
-The execution of a~GSMP starts in a randomly chosen initial state $\initstate$ of $\initstates$ (each state of $\initstates$ has the same probability to be chosen??). 
+The execution of a~GSMP starts in one of the initial states $\initstate \in \initstates$ (if $|\initstates|>1$ PRISM checks the model for an arbitrary choice of the initial state).\footnote{
+  There is also an option to specify an initial distribution on states in the command line version of PRISM.
+  We do not elaborate this option in this document for the sake of readability and since the corresponding semantics is clear.
+} 
 In every state each active event keeps one timer.
 In $\initstate$ all active events (given by $\act(\initstate)$) do not have a timer yet, thus we set a timer for each event $e$ in $\act(\initstate)$ to a random value according to CDF $F(e,\cdot)$.
 %In every state each active event keeps one timer, thus we provide timers to events in $\act(\initstate)$.
@@ -318,8 +322,8 @@ We construct the state space of the system as follows.
 A state is a tuple $(x_1, \ldots , x_m)$ where $x_i$ is a value for the variable $v_i$. 
 The set of all states $S$ is therefore the set of all possible valuations of the variables in $V$. 
 The set of initial states can be specified in one of the following two ways: either by giving an initial value for each variable, or by giving a predicate over variables (using the \code{init...endinit} construct). 
-In the former case, $\overline{S} = \overline{s}$ where $\overline{s} = (\overline{x}_1, \ldots , \overline{x}_m)$ and $\overline{x}_i$ is a the initial value of the variable $v_i$ (recall that, if the initial value of a variable is left unspecified, it is taken to be the minimum value of the variable’s range). 
-In the latter case, $\overline{S}$ is the subset of states $S$ which satisfy the
+In the former case, $\initstates \eqdef \{s\}$ where $s = (x_1, \ldots , x_m)$ and $x_i$ is a the initial value of the variable $v_i$ (recall that, if the initial value of a variable is left unspecified, it is taken to be the minimum value of the variable’s range). 
+In the latter case, $\initstates$ is the subset of states $S$ which satisfy the
 predicate specified in the \code{init...endinit} construct.
 
 We now consider the semantics for a single command of the system module. 
@@ -357,7 +361,7 @@ Note that, for GSMPs, the syntactic constraints placed on the constants
 %Finally, we can now define the probabilistic model itself, i.e. the successor function $\suc$.
 
 \subsection*{GSMP Semantics}
-We already defined the state space $S$, set of events $\events$ and the initial states $\initstates$. 
+We already defined the state space $S$, the set of events $\events$ and the initial states $\initstates$. 
 We will define the remaining structures $\act$, $\suc$, and $F$ separately for each event.
 
 Let us fix an event $e \in \events$. 
