@@ -110,7 +110,7 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 	}
 
 	/**
-	 * Change the update probabilities of event under index {@code eventIndex}
+	 * Change the probabilities of event under index {@code eventIndex}
 	 * @return true if successfully done, false if event was not found
 	 */
 	public boolean addToProbability(int i, int j, double prob, int eventIndex) {

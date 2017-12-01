@@ -3,9 +3,11 @@ package simulator;
 import java.util.ArrayList;
 import java.util.List;
 
+import explicit.GSMPEvent;
 import parser.State;
 import parser.Values;
 import parser.VarList;
+import parser.ast.Event;
 import parser.ast.Expression;
 import parser.ast.LabelList;
 import parser.ast.ModulesFile;
@@ -420,4 +422,51 @@ public class ModulesFileModelGenerator extends DefaultModelGenerator
 	{
 		return modulesFile.rewardStructHasTransitionRewards(i);
 	}
+	
+	// GSMP methods
+	
+	/**
+	 * 1) Transforms the modulesFile so that it becomes suitable for GSMP construction.
+	 *    For example, all CTMC commands are translated into equivalent GSMP events.
+	 * 2) Then various semantic checks are performed to ensure the would-be 
+	 *    constructed GSMP complies with all the rules.
+	 * @return list of all GSMP events
+	 */
+	public List<GSMPEvent> setupGSMP() throws PrismException{
+		translateCTMCTransitionsIntoGSMPEvents();
+		semanticsCheckGSMP();
+		return getGSMPEvents();
+	}
+	
+	private void translateCTMCTransitionsIntoGSMPEvents(){
+		// TODO MAJO
+	}
+	
+	/**
+	 * Assumes that all CTMC commands have been translated into events via
+	 * translateCTMCTransitionsIntoGSMPEvents() already!
+	 * Otherwise, the CTMC commands are not included.
+	 * @return list of all GSMP events
+	 */
+	private List<GSMPEvent> getGSMPEvents(){
+		List<GSMPEvent> events = new ArrayList<GSMPEvent>();
+		// traverse all modules and get all the ASTevents from them
+		for (int i = 0; i < modulesFile.getNumModules() ; ++i) {
+			for (int j = 0 ; j < modulesFile.getModule(i).getNumEvents() ; ++j) {
+				// turn the ASTevent into a GSMPEvent and put it in the list
+				events.add(generateGSMPEvent(modulesFile.getModule(i).getEvent(i)));
+			}
+		}
+		return events;
+	}
+	
+	private GSMPEvent generateGSMPEvent(Event astEvent) {
+		// TODO MAJO
+		return null;
+	}
+	
+	private void semanticsCheckGSMP() throws PrismException{
+		// TODO MAJO
+	}
+	
 }
