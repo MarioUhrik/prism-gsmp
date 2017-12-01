@@ -54,7 +54,7 @@ public class DistributionList extends ASTElement
 		this.parent = parent;
 	}
 
-	/** Constructor from a Values object, i.e., a list of name=value tuples */
+	///** Constructor from a Values object, i.e., a list of name=value tuples */
 	/*
 	public DistributionList(Values constValues) throws PrismLangException
 	{

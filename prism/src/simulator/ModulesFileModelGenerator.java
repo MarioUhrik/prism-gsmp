@@ -7,12 +7,20 @@ import explicit.GSMPEvent;
 import parser.State;
 import parser.Values;
 import parser.VarList;
+import parser.ast.Command;
+import parser.ast.DistributionList;
 import parser.ast.Event;
 import parser.ast.Expression;
+import parser.ast.ExpressionIdent;
+import parser.ast.ExpressionLiteral;
 import parser.ast.LabelList;
 import parser.ast.ModulesFile;
 import parser.ast.RewardStruct;
+import parser.ast.Updates;
 import parser.type.Type;
+import parser.type.TypeDistribution;
+import parser.type.TypeDistributionExponential;
+import parser.type.TypeDouble;
 import prism.DefaultModelGenerator;
 import prism.ModelType;
 import prism.PrismComponent;
@@ -430,16 +438,61 @@ public class ModulesFileModelGenerator extends DefaultModelGenerator
 	 *    For example, all CTMC commands are translated into equivalent GSMP events.
 	 * 2) Then various semantic checks are performed to ensure the would-be 
 	 *    constructed GSMP complies with all the rules.
-	 * @return list of all GSMP events
+	 * 3) Lastly, constructs a list of GSMP events that can be assigned to GSMP models.
+	 * @return List of all GSMP events
 	 */
 	public List<GSMPEvent> setupGSMP() throws PrismException{
-		translateCTMCTransitionsIntoGSMPEvents();
+		translateCTMCCommandsIntoGSMPCommands();
 		semanticsCheckGSMP();
 		return getGSMPEvents();
 	}
 	
-	private void translateCTMCTransitionsIntoGSMPEvents(){
-		// TODO MAJO
+	/**
+	 * Traverses the commands of each module and replace CTMC commands with GSMP event commands.
+	 * The list of commands for each module is replaced by equivalent list of GSMP-only commands.
+	 */
+	private void translateCTMCCommandsIntoGSMPCommands(){
+		//traverse all modules and get all commands
+		for (int i = 0; i < modulesFile.getNumModules() ; ++i) {
+			List<Command> newCommandList = new ArrayList<Command>();
+			for (int j = 0; j < modulesFile.getModule(i).getNumCommands() ; ++j) {
+				Command comm = modulesFile.getModule(i).getCommand(j);
+				//if it is already a valid GSMP command, just move on
+				if (comm.isGSMPCommand()) {
+					newCommandList.add(comm);
+					continue;
+				}
+				//for all updates of this CTMC command:
+				Updates updates = comm.getUpdates();
+				for (int k = 0; k < comm.getUpdates().getNumUpdates() ; ++k) {
+					//create a new exponential distribution,
+					ExpressionIdent distrIdent = new ExpressionIdent(
+							"autogenDistr_" + comm + "_" + updates.getUpdate(k));
+					modulesFile.getDistributionList().addDistribution(
+							distrIdent,
+							updates.getProbability(k),
+							null,
+							TypeDistributionExponential.getInstance());
+					//create a new astEvent using the new exponential distribution
+					ExpressionIdent eventIdent = new ExpressionIdent(
+							"autogenEvent_" + comm + "_" + updates.getUpdate(k));
+					Event astEvent = new Event(distrIdent, eventIdent);
+					modulesFile.getModule(i).addEvent(astEvent);
+					//create a new GSMP command using the new astEvent
+					Command commGSMP = new Command(comm);
+					commGSMP.setEventIdent(eventIdent);
+					commGSMP.setSlave(false); // it should already be true anyway though
+					Updates updatesGSMP = new Updates();
+					updatesGSMP.setParent(commGSMP);
+					updatesGSMP.addUpdate(
+							new ExpressionLiteral(TypeDouble.getInstance(), 1.0),
+							updates.getUpdate(k));
+					commGSMP.setUpdates(updatesGSMP);
+					newCommandList.add(commGSMP);
+				}
+			}
+			modulesFile.getModule(i).setCommands(newCommandList);
+		}
 	}
 	
 	/**
@@ -447,10 +500,11 @@ public class ModulesFileModelGenerator extends DefaultModelGenerator
 	 * translateCTMCTransitionsIntoGSMPEvents() already!
 	 * Otherwise, the CTMC commands are not included.
 	 * @return list of all GSMP events
+	 * @throws PrismLangException The distribution parameters could not be evaluated. This should never happen at this point.
 	 */
-	private List<GSMPEvent> getGSMPEvents(){
+	private List<GSMPEvent> getGSMPEvents() throws PrismLangException{
 		List<GSMPEvent> events = new ArrayList<GSMPEvent>();
-		// traverse all modules and get all the ASTevents from them
+		// traverse all modules and get all the ASTevents
 		for (int i = 0; i < modulesFile.getNumModules() ; ++i) {
 			for (int j = 0 ; j < modulesFile.getModule(i).getNumEvents() ; ++j) {
 				// turn the ASTevent into a GSMPEvent and put it in the list
@@ -460,9 +514,15 @@ public class ModulesFileModelGenerator extends DefaultModelGenerator
 		return events;
 	}
 	
-	private GSMPEvent generateGSMPEvent(Event astEvent) {
-		// TODO MAJO
-		return null;
+	private GSMPEvent generateGSMPEvent(Event astEvent) throws PrismLangException {
+		//find the distribution assigned to the astEvent;
+		DistributionList distributions = astEvent.getParent().getParent().getDistributionList();
+		int distrIndex = distributions.getDistributionIndex(astEvent.getDistributionName());
+		//obtain the distribution parameters
+		TypeDistribution distributionType = distributions.getDistributionType(distrIndex);
+		double firstParameter = distributions.getFirstParameter(distrIndex).evaluateDouble(distributions.getParent().getConstantValues());
+		double secondParameter = distributions.getSecondParameter(distrIndex).evaluateDouble(distributions.getParent().getConstantValues());
+		return (new GSMPEvent(distributionType, firstParameter, secondParameter));
 	}
 	
 	private void semanticsCheckGSMP() throws PrismException{
