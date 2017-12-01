@@ -128,7 +128,7 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 	}
 
 	@Override
-	public List<GSMPEvent> getAllEvents() {
+	public List<GSMPEvent> getEventList() {
 		return events;
 	}
         
@@ -150,6 +150,10 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 
 	public GSMPEvent getEvent(int i) {
 		return events.get(i);
+	}
+	
+	public void setEventList(List<GSMPEvent> events) {
+		this.events = events;
 	}
 
 	@Override

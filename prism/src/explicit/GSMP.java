@@ -36,7 +36,7 @@ public interface GSMP extends ModelSimple // TODO MAJO - incomplete
 	/**
 	 * Get list of all events.
 	 */
-	public List<GSMPEvent> getAllEvents();
+	public List<GSMPEvent> getEventList();
 
 
 	/**

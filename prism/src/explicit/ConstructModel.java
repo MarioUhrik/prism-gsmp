@@ -46,6 +46,7 @@ import prism.PrismNotSupportedException;
 import prism.PrismPrintStreamLog;
 import prism.ProgressDisplay;
 import prism.UndefinedConstants;
+import simulator.ModulesFileModelGenerator;
 
 /**
  * Class to perform explicit-state reachability and model construction.
@@ -197,6 +198,11 @@ public class ConstructModel extends PrismComponent
 			case GSMP:
 				modelSimple = gsmp = new GSMPSimple();
 				gsmp.setVarList(varList);
+				if (!(modelGen instanceof ModulesFileModelGenerator)) {
+					//TODO MAJO
+					throw new PrismNotSupportedException("GSMP must be constructed from a ModulesFile!");
+				}
+				gsmp.setEventList(((ModulesFileModelGenerator)modelGen).setupGSMP());
 				break;
 			case MDP:
 				modelSimple = mdp = new MDPSimple();

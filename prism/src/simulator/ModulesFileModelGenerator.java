@@ -468,15 +468,19 @@ public class ModulesFileModelGenerator extends DefaultModelGenerator
 					//create a new exponential distribution,
 					ExpressionIdent distrIdent = new ExpressionIdent(
 							"autogenDistr_" + comm + "_" + updates.getUpdate(k));
+					Expression rate = updates.getProbability(k);
+					if (rate == null) {
+						rate = new ExpressionLiteral(TypeDouble.getInstance(), 1.0);
+					}
 					modulesFile.getDistributionList().addDistribution(
 							distrIdent,
-							updates.getProbability(k),
+							rate,
 							null,
 							TypeDistributionExponential.getInstance());
 					//create a new astEvent using the new exponential distribution
 					ExpressionIdent eventIdent = new ExpressionIdent(
 							"autogenEvent_" + comm + "_" + updates.getUpdate(k));
-					Event astEvent = new Event(distrIdent, eventIdent);
+					Event astEvent = new Event(eventIdent, distrIdent);
 					modulesFile.getModule(i).addEvent(astEvent);
 					//create a new GSMP command using the new astEvent
 					Command commGSMP = new Command(comm);
@@ -508,20 +512,32 @@ public class ModulesFileModelGenerator extends DefaultModelGenerator
 		for (int i = 0; i < modulesFile.getNumModules() ; ++i) {
 			for (int j = 0 ; j < modulesFile.getModule(i).getNumEvents() ; ++j) {
 				// turn the ASTevent into a GSMPEvent and put it in the list
-				events.add(generateGSMPEvent(modulesFile.getModule(i).getEvent(i)));
+				events.add(generateGSMPEvent(modulesFile.getModule(i).getEvent(j)));
 			}
 		}
 		return events;
 	}
 	
+	/**
+	 * Creates a new GSMP event from an astEvent of a modulesFile.
+	 * @param astEvent
+	 * @return GSMPEvent
+	 * @throws PrismLangException The distribution parameters could not be evaluated. This should never happen at this point.
+	 */
 	private GSMPEvent generateGSMPEvent(Event astEvent) throws PrismLangException {
 		//find the distribution assigned to the astEvent;
 		DistributionList distributions = astEvent.getParent().getParent().getDistributionList();
 		int distrIndex = distributions.getDistributionIndex(astEvent.getDistributionName());
 		//obtain the distribution parameters
 		TypeDistribution distributionType = distributions.getDistributionType(distrIndex);
-		double firstParameter = distributions.getFirstParameter(distrIndex).evaluateDouble(distributions.getParent().getConstantValues());
-		double secondParameter = distributions.getSecondParameter(distrIndex).evaluateDouble(distributions.getParent().getConstantValues());
+		double firstParameter = 0;
+		if (distributionType.getNumParams() >= 1) {
+			firstParameter = distributions.getFirstParameter(distrIndex).evaluateDouble(distributions.getParent().getConstantValues());
+		}
+		double secondParameter = 0;
+		if (distributionType.getNumParams() >= 2) {
+			secondParameter = distributions.getSecondParameter(distrIndex).evaluateDouble(distributions.getParent().getConstantValues());
+		}
 		return (new GSMPEvent(distributionType, firstParameter, secondParameter));
 	}
 	

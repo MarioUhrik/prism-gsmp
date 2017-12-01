@@ -78,6 +78,7 @@ public class Command extends ASTElement
 		this.updates = tmp.getUpdates();
 		this.isSlave = tmp.isSlave();
 		this.eventIdent = tmp.getEventIdent();
+		this.parent = tmp.getParent();
 	}
 	
 	// Set methods
