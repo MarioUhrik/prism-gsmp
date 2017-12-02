@@ -200,9 +200,9 @@ public class ConstructModel extends PrismComponent
 				gsmp.setVarList(varList);
 				if (!(modelGen instanceof ModulesFileModelGenerator)) {
 					//TODO MAJO
-					throw new PrismNotSupportedException("GSMP must be constructed from a ModulesFile!");
+					throw new PrismNotSupportedException("GSMP must be constructed from a ModulesFile using the explicit engine!");
 				}
-				gsmp.setEventList(((ModulesFileModelGenerator)modelGen).setupGSMP());
+				gsmp.setEvents(((ModulesFileModelGenerator)modelGen).setupGSMP());
 				break;
 			case MDP:
 				modelSimple = mdp = new MDPSimple();

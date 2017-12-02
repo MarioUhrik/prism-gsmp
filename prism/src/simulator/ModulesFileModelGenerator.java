@@ -538,7 +538,7 @@ public class ModulesFileModelGenerator extends DefaultModelGenerator
 		if (distributionType.getNumParams() >= 2) {
 			secondParameter = distributions.getSecondParameter(distrIndex).evaluateDouble(distributions.getParent().getConstantValues());
 		}
-		return (new GSMPEvent(distributionType, firstParameter, secondParameter));
+		return (new GSMPEvent(distributionType, firstParameter, secondParameter, astEvent.getEventName()));
 	}
 	
 	private void semanticsCheckGSMP() throws PrismException{

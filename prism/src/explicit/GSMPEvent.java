@@ -41,33 +41,35 @@ public class GSMPEvent extends DTMCSimple
 	private TypeDistribution distributionType;
 	private double firstParameter;
 	private double secondParameter;
-	
 	private BitSet active;
-	private int index;
+	/**
+	 * Unique identifier String passed over when generated from ast/Event class
+	 */
+	private String identifier;
 
 	// Constructors
 
 	/**
 	 * Constructor: new Event with an unspecified number of states.
 	 */
-	public GSMPEvent(TypeDistribution distributionType, double firstParameter, double secondParameter) {
+	public GSMPEvent(TypeDistribution distributionType, double firstParameter, double secondParameter, String identifier) {
 		super();
 		this.distributionType = distributionType;
 		this.firstParameter = firstParameter;
 		this.secondParameter = secondParameter;
-		index = 0;
+		this.identifier = identifier;
 		clearActive();
 	}
 
 	/**
 	 * Constructor: new Event with fixed number of states.
 	 */
-	public GSMPEvent(int numStates, TypeDistribution distributionType, double firstParameter, double secondParameter) {
+	public GSMPEvent(int numStates, TypeDistribution distributionType, double firstParameter, double secondParameter, String identifier) {
 		super(numStates);
 		this.distributionType = distributionType;
 		this.firstParameter = firstParameter;
 		this.secondParameter = secondParameter;
-		index = 0;
+		this.identifier = identifier;
 		clearActive();
 	}
 
@@ -79,7 +81,7 @@ public class GSMPEvent extends DTMCSimple
 		this.distributionType = event.distributionType;
 		this.firstParameter = event.firstParameter;
 		this.secondParameter = event.secondParameter;
-		this.index = event.index;
+		this.identifier = event.getIdentifier();
 		clearActive();
 		this.active.or(event.active);
 	}
@@ -92,7 +94,7 @@ public class GSMPEvent extends DTMCSimple
 		this.distributionType = event.distributionType;
 		this.firstParameter = event.firstParameter;
 		this.secondParameter = event.secondParameter;
-		this.index = event.index;
+		this.identifier =  event.getIdentifier();
 		clearActive();
 		int min = (numStates < permut.length ? numStates : permut.length);
 		for (int i = 0; i < min; i++) {
@@ -154,8 +156,8 @@ public class GSMPEvent extends DTMCSimple
 		return active;
 	}
 
-	public int getIndex() {
-		return index;
+	public String getIdentifier() {
+		return identifier;
 	}
 
 	public double getFirstParameter() {
@@ -172,7 +174,7 @@ public class GSMPEvent extends DTMCSimple
 
 	@Override
 	public String toString() {
-		String str = "Event[" + distributionType.getTypeString();
+		String str = "Event[" + getIdentifier() + ", " + distributionType.getTypeString();
 		switch (distributionType.getNumParams()) {
 		case 1:
 			str += "(" + firstParameter + ") ";
@@ -183,8 +185,7 @@ public class GSMPEvent extends DTMCSimple
 		default:
 			str += "(Unusual number of parameters) ";
 		}
-		str += ", active=" + active + ", index="
-				+ index + ", probabilities=" + super.toString() + ']';
+		str += ", active=" + active + ", probabilities=" + super.toString() + ']';
 		return str;
 	}
 }

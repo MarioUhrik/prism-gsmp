@@ -34,7 +34,7 @@ import java.util.List;
 public interface GSMP extends ModelSimple // TODO MAJO - incomplete
 {
 	/**
-	 * Get list of all events.
+	 * Get all events.
 	 */
 	public List<GSMPEvent> getEventList();
 

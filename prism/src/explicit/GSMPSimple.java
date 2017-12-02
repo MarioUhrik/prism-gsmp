@@ -30,7 +30,9 @@ import parser.State;
 
 import java.util.ArrayList;
 import java.util.BitSet;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import prism.ModelType;
 import prism.PrismException;
@@ -41,8 +43,10 @@ import prism.PrismLog;
  */
 public class GSMPSimple extends ModelExplicit implements GSMP
 {
-	
-	protected List<GSMPEvent> events = new ArrayList<GSMPEvent>();
+	/**
+	 * Events are mapped onto their unique identifiers to provide faster access.
+	 */
+	protected Map<String, GSMPEvent> events = new HashMap<String, GSMPEvent>();
 	
 	/**
 	 * Default constructor without a predefined number of states.
@@ -66,9 +70,10 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 	public GSMPSimple(GSMPSimple gsmp) {
 		super();
 		copyFrom(gsmp);
-		this.events = new ArrayList<GSMPEvent>(gsmp.getNumEvents());
-		for (int i = 0; i < gsmp.getNumEvents(); ++i) {
-			this.events.add(new GSMPEvent(gsmp.getEvent(i)));
+		this.events = new HashMap<String, GSMPEvent>(gsmp.getNumEvents());
+		List<GSMPEvent> tmp = gsmp.getEventList();
+		for (int i = 0; i < tmp.size(); ++i) {
+			this.events.put(tmp.get(i).getIdentifier(), new GSMPEvent(tmp.get(i)));
 		}
 	}
 
@@ -78,16 +83,17 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 	public GSMPSimple(GSMPSimple gsmp, int permut[]) {
 		super();
 		copyFrom(gsmp, permut);
-		this.events = new ArrayList<GSMPEvent>(gsmp.getNumEvents());
-		for (int i = 0; i < gsmp.getNumEvents(); ++i) {
-			this.events.add(new GSMPEvent(gsmp.getEvent(i), permut));
+		this.events = new HashMap<String, GSMPEvent>(gsmp.getNumEvents());
+		List<GSMPEvent> tmp = gsmp.getEventList();
+		for (int i = 0; i < tmp.size(); ++i) {
+			this.events.put(tmp.get(i).getIdentifier(), new GSMPEvent(tmp.get(i), permut));
 		}
 	}
 
 	public void initialise(int numStates){
 		super.initialise(numStates);
 		this.statesList = new ArrayList<State>();
-		this.events = new ArrayList<GSMPEvent>();
+		this.events = new HashMap<String, GSMPEvent>();
 	}
 
 	@Override
@@ -96,8 +102,9 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 		//TODO MAJO - initialise the new state somehow!
 		statesList.add(new State(0));
 
-		for (int i = 0; i < events.size() ; ++i) {
-			events.get(i).addState();
+		List<GSMPEvent> tmp = getEventList();
+		for (int i = 0; i < tmp.size() ; ++i) {
+			tmp.get(i).addState();
 		}
 		return numStates - 1;
 	}
@@ -113,8 +120,8 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 	 * Change the probabilities of event under index {@code eventIndex}
 	 * @return true if successfully done, false if event was not found
 	 */
-	public boolean addToProbability(int i, int j, double prob, int eventIndex) {
-		GSMPEvent event = getEvent(eventIndex);
+	public boolean addToProbability(int i, int j, double prob, String eventIdent) {
+		GSMPEvent event = getEvent(eventIdent);
 		if (event == null) {
 			return false;
 		}
@@ -127,14 +134,18 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 		return ModelType.GSMP;
 	}
 
+	public Map<String, GSMPEvent> getEventMap() {
+		return events;
+	}
+	
 	@Override
 	public List<GSMPEvent> getEventList() {
-		return events;
+		return (new ArrayList<GSMPEvent>(events.values()));
 	}
         
 	public List<Integer> getAllEventIndices() {
-		List<Integer> result = new ArrayList<>(events.size());
-		for(int i = 0; i < events.size(); ++i) {
+		List<Integer> result = new ArrayList<Integer>(getEventList().size());
+		for(int i = 0; i < result.size(); ++i) {
 			result.add(i);
 		}
 		return result;
@@ -145,15 +156,18 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 	}
 
 	public void addEvent(GSMPEvent event) {
-		events.add(event);
+		events.put(event.getIdentifier(), event);
 	}
 
-	public GSMPEvent getEvent(int i) {
-		return events.get(i);
+	public GSMPEvent getEvent(String identifier) {
+		return events.get(identifier);
 	}
 	
-	public void setEventList(List<GSMPEvent> events) {
-		this.events = events;
+	public void setEvents(List<GSMPEvent> events) {
+		this.events = new HashMap<String, GSMPEvent>();
+		for ( int i = 0; i < events.size() ; ++i) {
+			this.events.put(events.get(i).getIdentifier(), events.get(i));
+		}
 	}
 
 	@Override
