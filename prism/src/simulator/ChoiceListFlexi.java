@@ -104,7 +104,9 @@ public class ChoiceListFlexi implements Choice
 	public void add(double probability, List<Update> ups)
 	{
 		// TODO MAJO - assumes all the added updates are from the same command
-		this.eventIdents.add(ups.get(0).getParent().getParent().getEventIdent().getName());
+		if (ups.get(0).getParent().getParent().getEventIdent() != null) {
+			this.eventIdents.add(ups.get(0).getParent().getParent().getEventIdent().getName());
+		}
 		this.updates.add(ups);
 		this.probability.add(probability);
 	}

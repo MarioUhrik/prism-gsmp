@@ -439,7 +439,7 @@ public abstract class ModelExplicit implements Model
 	public String infoStringTable()
 	{
 		String s = "";
-		s += "States:      " + numStates + " (" + getNumInitialStates() + " initial)\n";
+		s += "States:      " + getNumStates() + " (" + getNumInitialStates() + " initial)\n";
 		s += "Transitions: " + getNumTransitions() + "\n";
 		return s;
 	}

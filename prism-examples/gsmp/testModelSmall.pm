@@ -24,18 +24,20 @@ module Module
 
 	// states
 	s : [0..7] init 0;
+	d : [0..1] init 0;
 
 	[lol] s=0 --expEventUsedMultipleTimes-> (s'=1); 
 
-	[lol3] s=1 --testEventDirectUsed-> (s'=2);
+	[lol3] s=1 --testEventDirectUsed-> 0.5:(s'=2) + 0.5: (d'=1);
 
 	//[lonelySlave] s=5 --slave-> (s'=1); // slave without a master - error
 
 	//[] s=5 --slave-> (s'=1); // slave without a label - error
 	
 	//nonsensical CTMC commands
-	[] s=0 -> 0.5 : (s'=1) + 0.5 : (s'=2);
-	[] s=1 -> (s'=2);
-	[] s=2 -> 0.5 : (s'=0) + 0.5 : (s'=1);
+	[] s=0 -> 2.5 : (s'=1) + 0.5 : (s'=2) & (d'=1);
+	[] s=1 -> 4: (s'=2);
+	[] s=2 -> 2.8 : (s'=0) + 9.5 : (s'=1);
+	[] d=1 -> 1: (d'=0);
 	
 endmodule

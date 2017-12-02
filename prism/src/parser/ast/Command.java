@@ -214,7 +214,7 @@ public class Command extends ASTElement
 		
 		ExpressionIdent eventIdent = (getEventIdent() == null) ? null : (ExpressionIdent)getEventIdent().deepCopy();
 		ret.setEventIdent(eventIdent);
-		
+		ret.setParent(this.getParent());
 		ret.setSlave(isSlave());
 		ret.setPosition(this);
 		return ret;

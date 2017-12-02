@@ -78,6 +78,7 @@ public class GSMPEvent extends DTMCSimple
 	 */
 	public GSMPEvent(GSMPEvent event) {
 		super(event);
+		this.statesList = event.getStatesList();
 		this.distributionType = event.distributionType;
 		this.firstParameter = event.firstParameter;
 		this.secondParameter = event.secondParameter;
@@ -91,6 +92,7 @@ public class GSMPEvent extends DTMCSimple
 	 */
 	public GSMPEvent(GSMPEvent event, int permut[]) {
 		super(event, permut);
+		this.statesList = event.getStatesList();
 		this.distributionType = event.distributionType;
 		this.firstParameter = event.firstParameter;
 		this.secondParameter = event.secondParameter;
@@ -174,7 +176,7 @@ public class GSMPEvent extends DTMCSimple
 
 	@Override
 	public String toString() {
-		String str = "Event[" + getIdentifier() + ", " + distributionType.getTypeString();
+		String str = "Event[name=\"" + getIdentifier() + "\", " + distributionType.getTypeString();
 		switch (distributionType.getNumParams()) {
 		case 1:
 			str += "(" + firstParameter + ") ";
@@ -185,7 +187,7 @@ public class GSMPEvent extends DTMCSimple
 		default:
 			str += "(Unusual number of parameters) ";
 		}
-		str += ", active=" + active + ", probabilities=" + super.toString() + ']';
+		str += ", active=" + active + ", probabilities_" + super.toString() + ']';
 		return str;
 	}
 }

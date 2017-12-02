@@ -348,6 +348,7 @@ public class Update extends ASTElement
 			ret.setType(i, getType(i));
 			ret.setVarIndex(i, getVarIndex(i));
 		}
+		ret.setParent(this.getParent());
 		ret.setPosition(this);
 		return ret;
 	}

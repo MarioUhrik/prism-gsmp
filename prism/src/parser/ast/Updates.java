@@ -190,6 +190,7 @@ public class Updates extends ASTElement
 			ret.addUpdate(p, (Update) getUpdate(i).deepCopy());
 		}
 		ret.setPosition(this);
+		ret.setParent(this.parent);
 		return ret;
 	}
 }

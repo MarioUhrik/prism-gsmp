@@ -75,6 +75,7 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 		super();
 		initialise(gsmp.getNumStates());
 		copyFrom(gsmp);
+		this.statesList = gsmp.getStatesList();
 		this.events = new HashMap<String, GSMPEvent>(gsmp.getNumEvents());
 		List<GSMPEvent> tmp = gsmp.getEventList();
 		for (int i = 0; i < tmp.size(); ++i) {
@@ -89,6 +90,7 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 		super();
 		initialise(gsmp.getNumStates());
 		copyFrom(gsmp, permut);
+		this.statesList = gsmp.getStatesList();
 		this.events = new HashMap<String, GSMPEvent>(gsmp.getNumEvents());
 		List<GSMPEvent> tmp = gsmp.getEventList();
 		for (int i = 0; i < tmp.size(); ++i) {
@@ -191,8 +193,12 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 
 	@Override
 	public String toString() {
- 		return "GSMPSimple [events=" + events + ", initialStates="
-				+ initialStates + ", states=" + statesList + "]";
+ 		String str =  "GSMP Events:";
+ 		List<GSMPEvent> events = getEventList();
+		for (int i = 0; i < events.size(); i++) {
+			str += "\n" + events.get(i);
+		}
+ 		return str;
 	}
 
 	@Override
@@ -260,7 +266,7 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 		List<GSMPEvent> events = getEventList();
 		int numTransitions = 0;
 		for ( int i = 0 ; i < events.size() ; ++i) {
-			numTransitions += events.get(i).trans.size();
+			numTransitions += events.get(i).getNumTransitions();
 		}
 		return numTransitions;
 	}
@@ -281,6 +287,15 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 	public void exportToPrismLanguage(String filename) throws PrismException {
 		//TODO MAJO - implement
 		throw new UnsupportedOperationException("Not yet implemented!");
+	}
+	
+	@Override
+	public void setStatesList(List<State> statesList){
+		List<GSMPEvent> events = getEventList();
+		for (int i = 0; i < events.size(); i++) {
+			events.get(i).setStatesList(statesList);
+		}
+		this.statesList = statesList;
 	}
 
 }
