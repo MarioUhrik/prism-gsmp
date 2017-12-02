@@ -41,6 +41,9 @@ public class ChoiceListFlexi implements Choice
 	// where i is the 1-indexed module index.
 	// For a synchronous choice, this is the 1-indexed action index.
 	protected int moduleOrActionIndex;
+	
+	//GSMP event identifiers
+	protected List<String> eventIdents;
 
 	// List of multiple updates and associated probabilities/rates
 	// Size of list is stored implicitly in target.length
@@ -56,6 +59,7 @@ public class ChoiceListFlexi implements Choice
 	{
 		updates = new ArrayList<List<Update>>();
 		probability = new ArrayList<Double>();
+		eventIdents = new ArrayList<String>();
 	}
 
 	/**
@@ -66,6 +70,7 @@ public class ChoiceListFlexi implements Choice
 	{
 		moduleOrActionIndex = ch.moduleOrActionIndex;
 		updates = new ArrayList<List<Update>>(ch.updates.size());
+		eventIdents = ch.getEventIdents();
 		for (List<Update> list : ch.updates) {
 			List<Update> listNew = new ArrayList<Update>(list.size()); 
 			updates.add(listNew);
@@ -98,6 +103,8 @@ public class ChoiceListFlexi implements Choice
 	 */
 	public void add(double probability, List<Update> ups)
 	{
+		// TODO MAJO - assumes all the added updates are from the same command
+		this.eventIdents.add(ups.get(0).getParent().getParent().getEventIdent().getName());
 		this.updates.add(ups);
 		this.probability.add(probability);
 	}
@@ -150,6 +157,14 @@ public class ChoiceListFlexi implements Choice
 	}
 
 	// Get methods
+	
+	public String getEventIdent(int i) {
+		return eventIdents.get(i);
+	}
+	
+	public List<String> getEventIdents() {
+		return eventIdents;
+	}
 
 	@Override
 	public int getModuleOrActionIndex()

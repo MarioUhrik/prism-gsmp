@@ -27,12 +27,16 @@
 package explicit;
 
 import parser.State;
+import parser.type.TypeDistributionExponential;
 
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import prism.ModelType;
 import prism.PrismException;
@@ -69,6 +73,7 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 	 */
 	public GSMPSimple(GSMPSimple gsmp) {
 		super();
+		initialise(gsmp.getNumStates());
 		copyFrom(gsmp);
 		this.events = new HashMap<String, GSMPEvent>(gsmp.getNumEvents());
 		List<GSMPEvent> tmp = gsmp.getEventList();
@@ -82,6 +87,7 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 	 */
 	public GSMPSimple(GSMPSimple gsmp, int permut[]) {
 		super();
+		initialise(gsmp.getNumStates());
 		copyFrom(gsmp, permut);
 		this.events = new HashMap<String, GSMPEvent>(gsmp.getNumEvents());
 		List<GSMPEvent> tmp = gsmp.getEventList();
@@ -123,6 +129,7 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 	public boolean addToProbability(int i, int j, double prob, String eventIdent) {
 		GSMPEvent event = getEvent(eventIdent);
 		if (event == null) {
+			// this should never happen !
 			return false;
 		}
 		event.addToProbability(i, j, prob);
@@ -196,32 +203,78 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 
 	@Override
 	public void clearState(int i) {
-		//TODO MAJO - implement
-		throw new UnsupportedOperationException("Not yet implemented!");
+		// Do nothing if state i does not exist
+		if (i >= numStates || i < 0)
+			return;
+		List<GSMPEvent> events = getEventList();
+		for (int j = 0; j < events.size() ; ++j) {
+			events.get(j).clearState(i);
+		}
+	}
+	
+	/** Get an iterator over the successors of state s */
+	@Override
+	public Iterator<Integer> getSuccessorsIterator(final int s)
+	{
+		List<GSMPEvent> events = getEventList();
+		Set<Integer> successors = new HashSet<Integer>();
+		for (int j = 0; j < events.size() ; ++j) {
+			successors.addAll(events.get(j).trans.get(s).getSupport());
+		}
+		return successors.iterator();
 	}
 
 	@Override
 	public SuccessorsIterator getSuccessors(int s) {
-		//TODO MAJO - implement
-		throw new UnsupportedOperationException("Not yet implemented!");
+		return SuccessorsIterator.from(getSuccessorsIterator(s), true);
 	}
 
 	@Override
 	public void findDeadlocks(boolean fix) throws PrismException {
-		//TODO MAJO - implement
-		throw new UnsupportedOperationException("Not yet implemented!");
+		List<GSMPEvent> events = getEventList();
+		for (int s = 0; s < getNumStates(); s++) {
+			for ( int e = 0; e < events.size() ; ++e) {
+				if (!events.get(e).trans.get(s).isEmpty()) {
+					break;
+				}
+			}
+			addDeadlockState(s);
+		}
+		if (fix) {
+			//fix all the deadlocks by creating a new exponential event looping over them
+			String selfLoopEventIdent = "autogen_special_deadlock_fixing_exp_event(" + getFirstDeadlockState() + ")";
+			GSMPEvent selfLoop = new GSMPEvent(getNumStates()
+					,TypeDistributionExponential.getInstance(),
+					1.0,
+					0.0,
+					selfLoopEventIdent);
+			this.addEvent(selfLoop);
+			for (Integer deadlockState : getDeadlockStates()) {
+				this.addToProbability(deadlockState, deadlockState, 1.0, selfLoopEventIdent);
+			}
+		}
 	}
 
 	@Override
 	public int getNumTransitions() {
-		//TODO MAJO - implement, although possibly it may be enough to return events.size?
-		throw new UnsupportedOperationException("Not yet implemented!");
+		List<GSMPEvent> events = getEventList();
+		int numTransitions = 0;
+		for ( int i = 0 ; i < events.size() ; ++i) {
+			numTransitions += events.get(i).trans.size();
+		}
+		return numTransitions;
 	}
 
 	@Override
 	public void checkForDeadlocks(BitSet except) throws PrismException {
-		//TODO MAJO - implement
-		throw new UnsupportedOperationException("Not yet implemented!");
+		List<GSMPEvent> events = getEventList();
+		for (int i = 0; i < getNumStates(); i++) {
+			for ( int e = 0; e < events.size() ; ++e) {
+				if (events.get(e).trans.get(i).isEmpty() && (except == null || !except.get(i))) {
+					throw new PrismException("GSMP has a deadlock in state " + i);
+				}
+			}
+		}
 	}
 
 	@Override

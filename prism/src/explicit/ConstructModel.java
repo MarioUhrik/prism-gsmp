@@ -272,6 +272,14 @@ public class ConstructModel extends PrismComponent
 						case CTMC:
 							ctmc.addToProbability(src, dest, modelGen.getTransitionProbability(i, j));
 							break;
+						case GSMP:
+							if (!(modelGen instanceof ModulesFileModelGenerator)) {
+								//TODO MAJO
+								throw new PrismNotSupportedException("GSMP must be constructed from a ModulesFile using the explicit engine!");
+							}
+							String eventIdent = ((ModulesFileModelGenerator)modelGen).getEventIdentOfChoice(i, j);
+							gsmp.addToProbability(src, dest, modelGen.getTransitionProbability(i, j), eventIdent);
+							break;
 						case MDP:
 						case CTMDP:
 							distr.add(dest, modelGen.getTransitionProbability(i, j));

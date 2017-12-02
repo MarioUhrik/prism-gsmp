@@ -433,6 +433,10 @@ public class ModulesFileModelGenerator extends DefaultModelGenerator
 	
 	// GSMP methods
 	
+	public String getEventIdentOfChoice(int from, int to) {
+		return ((ChoiceListFlexi)transitionList.getChoice(from)).getEventIdent(to);
+	}
+	
 	/**
 	 * 1) Transforms the modulesFile so that it becomes suitable for GSMP construction.
 	 *    For example, all CTMC commands are translated into equivalent GSMP events.
