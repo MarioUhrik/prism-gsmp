@@ -202,7 +202,7 @@ public class ConstructModel extends PrismComponent
 					//TODO MAJO
 					throw new PrismNotSupportedException("GSMP must be constructed from a ModulesFile using the explicit engine!");
 				}
-				gsmp.setEvents(((ModulesFileModelGenerator)modelGen).setupGSMP());
+				gsmp.setEventMap(((ModulesFileModelGenerator)modelGen).setupGSMP());
 				break;
 			case MDP:
 				modelSimple = mdp = new MDPSimple();
@@ -357,6 +357,7 @@ public class ConstructModel extends PrismComponent
 				model = sort ? new CTMCSimple(ctmc, permut) : (CTMCSimple) ctmc;
 				break;
 			case GSMP:
+				gsmp.removeEmptyEvents();
 				model = sort ? new GSMPSimple(gsmp, permut) : (GSMPSimple) gsmp;
 				break;
 			case MDP:

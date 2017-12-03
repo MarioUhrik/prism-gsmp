@@ -1,7 +1,9 @@
 package simulator;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import explicit.GSMPEvent;
 import parser.State;
@@ -443,9 +445,9 @@ public class ModulesFileModelGenerator extends DefaultModelGenerator
 	 * 2) Then various semantic checks are performed to ensure the would-be 
 	 *    constructed GSMP complies with all the rules.
 	 * 3) Lastly, constructs a list of GSMP events that can be assigned to GSMP models.
-	 * @return List of all GSMP events
+	 * @return Map of all GSMP events onto their unique identifiers
 	 */
-	public List<GSMPEvent> setupGSMP() throws PrismException{
+	public Map<String, GSMPEvent> setupGSMP() throws PrismException{
 		translateCTMCCommandsIntoGSMPCommands();
 		semanticsCheckGSMP();
 		return getGSMPEvents();
@@ -507,19 +509,30 @@ public class ModulesFileModelGenerator extends DefaultModelGenerator
 	 * Assumes that all CTMC commands have been translated into events via
 	 * translateCTMCTransitionsIntoGSMPEvents() already!
 	 * Otherwise, the CTMC commands are not included.
-	 * @return list of all GSMP events
+	 * @return list of all GSMP events excluding the product events
 	 * @throws PrismLangException The distribution parameters could not be evaluated. This should never happen at this point.
 	 */
-	private List<GSMPEvent> getGSMPEvents() throws PrismLangException{
-		List<GSMPEvent> events = new ArrayList<GSMPEvent>();
+	private Map<String, GSMPEvent> getGSMPEvents() throws PrismLangException{
+		Map<String, GSMPEvent> events = new HashMap<String, GSMPEvent>();
 		// traverse all modules and get all the ASTevents
 		for (int i = 0; i < modulesFile.getNumModules() ; ++i) {
 			for (int j = 0 ; j < modulesFile.getModule(i).getNumEvents() ; ++j) {
-				// turn the ASTevent into a GSMPEvent and put it in the list
-				events.add(generateGSMPEvent(modulesFile.getModule(i).getEvent(j)));
+				// turn the ASTevent into a GSMPEvent and put it in the map
+				GSMPEvent ev = generateGSMPEvent(modulesFile.getModule(i).getEvent(j));
+				events.put(ev.getIdentifier(), ev);
 			}
 		}
+		updater.setAllGSMPEvents(events);
 		return events;
+	}
+	
+	/**
+	 * Assumes that methods setupGSMP() and then updater.calculateTransitions()
+	 * have already been called!
+	 * @return Complete, final list of all GMSP events, including translate CTMC events and GSMP event products
+	 */
+	public Map<String, GSMPEvent> getAllGSMPEventsAfterProducts(){
+		return updater.getAllGSMPEvents();
 	}
 	
 	/**

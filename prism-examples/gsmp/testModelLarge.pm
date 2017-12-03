@@ -14,7 +14,7 @@ const undefConstant;
 
 const double undefConstant2;
 
-const double timeout = 178.7;
+const double timeout = 5.7;
 
 const distribution expDistr = exponential((defConstant*defConstant*timeout) - defConstant); // constant arithmetics test
 

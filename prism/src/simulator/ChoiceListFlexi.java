@@ -28,8 +28,10 @@ package simulator;
 
 import java.util.*;
 
+import explicit.GSMPEvent;
 import parser.*;
 import parser.ast.*;
+import parser.type.TypeDistributionExponential;
 import prism.ModelType;
 import prism.PrismException;
 import prism.PrismLangException;
@@ -44,6 +46,8 @@ public class ChoiceListFlexi implements Choice
 	
 	//GSMP event identifiers
 	protected List<String> eventIdents;
+	
+	protected Map<String, GSMPEvent> allGSMPEvents;
 
 	// List of multiple updates and associated probabilities/rates
 	// Size of list is stored implicitly in target.length
@@ -60,6 +64,7 @@ public class ChoiceListFlexi implements Choice
 		updates = new ArrayList<List<Update>>();
 		probability = new ArrayList<Double>();
 		eventIdents = new ArrayList<String>();
+		allGSMPEvents = new HashMap<String, GSMPEvent>();
 	}
 
 	/**
@@ -71,6 +76,7 @@ public class ChoiceListFlexi implements Choice
 		moduleOrActionIndex = ch.moduleOrActionIndex;
 		updates = new ArrayList<List<Update>>(ch.updates.size());
 		eventIdents = ch.getEventIdents();
+		allGSMPEvents = ch.getAllGSMPEvents();
 		for (List<Update> list : ch.updates) {
 			List<Update> listNew = new ArrayList<Update>(list.size()); 
 			updates.add(listNew);
@@ -126,11 +132,16 @@ public class ChoiceListFlexi implements Choice
 	public void setEventIdent(int i, String eventIdent) {
 		eventIdents.set(i, eventIdent);
 	}
+	
+	public void setAllGSMPEvents(Map<String, GSMPEvent> allGSMPEvents) {
+		this.allGSMPEvents = allGSMPEvents;
+	}
 
 	/**
 	 * Modify this choice, constructing product of it with another.
+	 * @throws PrismException When in a GSMP a product is made from two events at least one of which is not exponential
 	 */
-	public void productWith(ChoiceListFlexi ch)
+	public void productWith(ChoiceListFlexi ch) throws PrismException
 	{
 		List<Update> list;
 		int i, j, n, n2;
@@ -138,6 +149,9 @@ public class ChoiceListFlexi implements Choice
 
 		n = ch.size();
 		n2 = size();
+		
+		eventProduct(ch);
+		
 		// Loop through each (ith) element of new choice (skipping first)
 		for (i = 1; i < n; i++) {
 			pi = ch.getProbability(i);
@@ -172,6 +186,10 @@ public class ChoiceListFlexi implements Choice
 	
 	public List<String> getEventIdents() {
 		return eventIdents;
+	}
+	
+	public Map<String, GSMPEvent> getAllGSMPEvents(){
+		return allGSMPEvents;
 	}
 
 	@Override
@@ -311,5 +329,59 @@ public class ChoiceListFlexi implements Choice
 			s += getProbability(i) + ":" + updates.get(i);
 		}
 		return s;
+	}
+	
+	private void eventProduct(ChoiceListFlexi ch) throws PrismException {
+		for ( int i = 0; i < ch.size() ; ++i) {
+			for (int j = 0; j < size()  ; ++j) {
+				if (getEventIdent(j) == null ) { // the first one is a slave
+					setEventIdent(j, ch.getEventIdent(i));
+				} else {
+					if (ch.getEventIdent(i) == null) { // the second one is a slave
+						// TODO MAJO - So, I guess, do nothing?
+					} else { // both are the masters (not slaves)
+						if (isExponential(getEventIdent(j)) && isExponential(ch.getEventIdent(i))) { // both are exponentially distributed - make their product
+							String productEventName = getEventIdent(j) + "_PRODUCTWITH_" + ch.getEventIdent(i);
+							if (!isExponential(productEventName)) { 
+								// if their product does not exist, create it 
+								GSMPEvent product = new GSMPEvent(
+										getAllGSMPEvents().get(getEventIdent(j)).getNumStates()
+										,TypeDistributionExponential.getInstance()
+										,getRate(getEventIdent(j)) * getRate(ch.getEventIdent(i))
+										,0.0
+										,productEventName);
+								getAllGSMPEvents().put(productEventName, product);
+							} 
+							// their product now definitely exists, so assign it
+							setEventIdent(j, productEventName);
+						} else { // at least one of them is not exponential - ERROR
+							throw new PrismException("Synchronizing events \"" + getEventIdent(i) + "\" and \"" + ch.getEventIdent(j) + "\"  at least one of which is not exponentially distributed!");
+						}
+						
+					}
+				}
+			}
+		}
+	}
+	
+	// returns true if this event is exponentially distributed and exists, else false
+	private boolean isExponential(String eventName) {
+			GSMPEvent ev = getAllGSMPEvents().get(eventName);
+			if (ev == null) {
+				return false;
+			}
+			if (ev.getDistributionType() instanceof TypeDistributionExponential) {
+				return true;
+			}
+		return false;
+	}
+	
+	// returns the first parameter of event with name eventName. if not found, returns 0;
+	private double getRate(String eventName) {
+		GSMPEvent ev = getAllGSMPEvents().get(eventName);
+		if (ev == null) {
+			return 0;
+		}
+		return ev.getFirstParameter();
 	}
 }

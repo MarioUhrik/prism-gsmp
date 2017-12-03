@@ -37,6 +37,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Predicate;
 
 import prism.ModelType;
 import prism.PrismException;
@@ -172,6 +173,10 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 		}
 	}
 	
+	public void setEventMap(Map<String, GSMPEvent> eventsMap) {
+		this.events = eventsMap;
+	}
+	
 	@Override
 	public List<GSMPEvent> getActiveEvents(int state){
 		List<GSMPEvent> actEvents = new ArrayList<GSMPEvent>();
@@ -249,7 +254,7 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 				addDeadlockState(s);
 			}
 		}
-		if (fix) {
+		if (fix && getDeadlockStates().iterator().hasNext() ) {
 			//fix all the deadlocks by creating a new exponential event looping over them
 			String selfLoopEventIdent = "autogen_special_deadlock_fixing_exp_event(" + getFirstDeadlockState() + ")";
 			GSMPEvent selfLoop = new GSMPEvent(getNumStates()
@@ -290,6 +295,16 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 	public void exportToPrismLanguage(String filename) throws PrismException {
 		//TODO MAJO - implement
 		throw new UnsupportedOperationException("Not yet implemented!");
+	}
+	
+	/**
+	 * Removes all events that have no probability in any state.
+	 */
+	public void removeEmptyEvents() {
+		List<GSMPEvent> events = getEventList();
+        Predicate<GSMPEvent> eventIsEmpty = e -> e.getActive().isEmpty();
+        events.removeIf(eventIsEmpty);
+        setEvents(events);
 	}
 	
 	@Override

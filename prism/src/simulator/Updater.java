@@ -30,8 +30,10 @@ import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Vector;
 
+import explicit.GSMPEvent;
 import parser.State;
 import parser.VarList;
 import parser.ast.Command;
@@ -59,6 +61,7 @@ public class Updater extends PrismComponent
 	protected ModelType modelType;
 	protected int numModules;
 	protected VarList varList;
+	protected Map<String, GSMPEvent> allGSMPEvents;
 	// Synchronising action info
 	protected Vector<String> synchs;
 	protected int numSynchs;
@@ -224,9 +227,13 @@ public class Updater extends PrismComponent
 					else {
 						// Duplicate (count-1 copies of) current Choice list
 						n = chs.size();
-						for (k = 0; k < count - 1; k++)
-							for (l = 0; l < n; l++)
-								chs.add(new ChoiceListFlexi(chs.get(l)));
+						for (k = 0; k < count - 1; k++) {
+							for (l = 0; l < n; l++) {
+								ChoiceListFlexi tmp = new ChoiceListFlexi(chs.get(l));
+								tmp.setAllGSMPEvents(getAllGSMPEvents());
+								chs.add(tmp);
+							}
+						}
 						// Products with existing choices
 						for (k = 0; k < count; k++) {
 							Updates ups = updateLists.get(j).get(i).get(k);
@@ -353,6 +360,7 @@ public class Updater extends PrismComponent
 
 		// Create choice and add all info
 		ch = new ChoiceListFlexi();
+		ch.setAllGSMPEvents(getAllGSMPEvents());
 		ch.setModuleOrActionIndex(moduleOrActionIndex);
 		n = ups.getNumUpdates();
 		sum = 0;
@@ -397,12 +405,23 @@ public class Updater extends PrismComponent
 	 * @param ups The Updates object 
 	 * @param state Global state
 	 * @param ch The existing Choices object
+	 * @throws PrismException When in a GSMP a product is made from two events at least one of which is not exponential
 	 */
-	private void processUpdatesAndAddToProduct(Updates ups, State state, ChoiceListFlexi ch) throws PrismLangException
+	private void processUpdatesAndAddToProduct(Updates ups, State state, ChoiceListFlexi ch) throws PrismException
 	{
 		// Create new choice (action index is 0 - not needed)
 		ChoiceListFlexi chNew = processUpdatesAndCreateNewChoice(0, ups, state);
 		// Build product with existing
 		ch.productWith(chNew);
 	}
+	
+	public Map<String, GSMPEvent> getAllGSMPEvents(){
+		return allGSMPEvents;
+	}
+	
+	public void setAllGSMPEvents(Map<String, GSMPEvent> allGSMPEvents) {
+		this.allGSMPEvents = allGSMPEvents;
+	}
+	
+	
 }

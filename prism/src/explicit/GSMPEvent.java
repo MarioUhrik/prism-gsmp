@@ -65,7 +65,7 @@ public class GSMPEvent extends DTMCSimple
 	}
 
 	/**
-	 * Constructor: new Event with fixed number of states.
+	 * Constructor: new Event with {@code numstates} number of pre-allocated states.
 	 */
 	public GSMPEvent(int numStates, TypeDistribution distributionType, double firstParameter, double secondParameter, String identifier) {
 		super(numStates);
@@ -138,6 +138,10 @@ public class GSMPEvent extends DTMCSimple
 	public void setPassive(int state){
 		active.clear(state);
 		clearState(state);
+	}
+	
+	public void setIdentifier(String identifier) {
+		this.identifier = identifier;
 	}
 	
 	public void setFirstParameter(double firstParam) {
