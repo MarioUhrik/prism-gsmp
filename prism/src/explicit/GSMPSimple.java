@@ -239,12 +239,16 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 	public void findDeadlocks(boolean fix) throws PrismException {
 		List<GSMPEvent> events = getEventList();
 		for (int s = 0; s < getNumStates(); s++) {
+			boolean isDeadlock = true;
 			for ( int e = 0; e < events.size() ; ++e) {
 				if (!events.get(e).trans.get(s).isEmpty()) {
+					isDeadlock = false;
 					break;
 				}
 			}
-			addDeadlockState(s);
+			if (isDeadlock) {
+				addDeadlockState(s);
+			}
 		}
 		if (fix) {
 			//fix all the deadlocks by creating a new exponential event looping over them
@@ -274,10 +278,10 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 	@Override
 	public void checkForDeadlocks(BitSet except) throws PrismException {
 		List<GSMPEvent> events = getEventList();
-		for (int i = 0; i < getNumStates(); i++) {
+		for (int s = 0; s < getNumStates(); s++) {
 			for ( int e = 0; e < events.size() ; ++e) {
-				if (events.get(e).trans.get(i).isEmpty() && (except == null || !except.get(i))) {
-					throw new PrismException("GSMP has a deadlock in state " + i);
+				if (events.get(e).trans.get(s).isEmpty() && (except == null || !except.get(s))) {
+					throw new PrismException("GSMP has a deadlock in state " + s);
 				}
 			}
 		}

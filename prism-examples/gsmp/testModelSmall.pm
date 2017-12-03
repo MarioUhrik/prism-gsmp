@@ -18,7 +18,9 @@ module Module
 
 	event testEventDirectUsed = dirac(defConstant);
 
-	event testEventDirectUnused = erlangTest;
+	event testEventIndirectUnused = erlangTest;
+
+	event testEventErlang = erlangTest;
 
 	event expEventUsedMultipleTimes = expDistr;
 
@@ -26,9 +28,11 @@ module Module
 	s : [0..7] init 0;
 	d : [0..1] init 0;
 
-	[lol] s=0 --expEventUsedMultipleTimes-> (s'=1); 
+	[lbl] s=0 --expEventUsedMultipleTimes-> (s'=1); 
 
-	[lol3] s=1 --testEventDirectUsed-> 0.5:(s'=2) + 0.5: (d'=1);
+	[lbl2] s=1 --testEventDirectUsed-> 0.5:(s'=2) + 0.5: (d'=1);
+
+	[deadLockTran] s=2 --testEventErlang-> (s'=7); // s=7 is a deadlock state and should be detected and fixed !
 
 	//[lonelySlave] s=5 --slave-> (s'=1); // slave without a master - error
 
