@@ -33,14 +33,17 @@ import prism.PrismException;
 
 /**
  * Explicit engine class representing a GSMP event.
- * This class holds all information associated with the event,
- * including the distribution and the entire command.
+ * 
+ * GSMP events hold a time distribution type and parameters,
+ * and a distribution on states for each state (hence extends DTMCSimple).
  */
 public class GSMPEvent extends DTMCSimple 
 {
 	private TypeDistribution distributionType;
 	private double firstParameter;
 	private double secondParameter;
+	//BitSet of states where this event is active. However, it is redundant.
+	//This information is already stored in the state distribution matrix anyway.
 	private BitSet active;
 	/**
 	 * Unique identifier String passed over when generated from ast/Event class
@@ -103,10 +106,9 @@ public class GSMPEvent extends DTMCSimple
 			if (event.isActive(i))
 				active.set(permut[i]);
 		}
-		// this.active.or(event.active);
 	}
 
-	// TODO MAJO - I think this is supposed to be some distribution parameter check.
+	// TODO MAJO - I think this is supposed to be some distribution parameter check leftover from fdPRISM.
 	// TODO MAJO - get rid of it, or update it
 	public int getNumberOfSteps(double interval) throws PrismException {
 		System.out.println("Delay: " + firstParameter + " interval: " + interval

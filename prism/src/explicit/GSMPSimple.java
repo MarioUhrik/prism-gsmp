@@ -44,11 +44,15 @@ import prism.PrismLog;
 
 /**
  * Simple explicit-state representation of a GSMP.
+ * 
+ * This implementation only consists of a backbone provided by ModelExplicit.java
+ * and a collection of all events. The events are organized into a map for faster access.
+ * See GSMPEvent.java for implementation details of the events.
  */
 public class GSMPSimple extends ModelExplicit implements GSMP
 {
 	/**
-	 * Events are mapped onto their unique identifiers to provide faster access.
+	 * Mapping of events onto their unique identifiers.
 	 */
 	protected Map<String, GSMPEvent> events = new HashMap<String, GSMPEvent>();
 	
@@ -107,9 +111,6 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 	@Override
 	public int addState() {
 		numStates += 1;
-		//TODO MAJO - initialise the new state somehow!
-		statesList.add(new State(0));
-
 		List<GSMPEvent> tmp = getEventList();
 		for (int i = 0; i < tmp.size() ; ++i) {
 			tmp.get(i).addState();
@@ -151,14 +152,6 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 	public List<GSMPEvent> getEventList() {
 		return (new ArrayList<GSMPEvent>(events.values()));
 	}
-        
-	public List<Integer> getAllEventIndices() {
-		List<Integer> result = new ArrayList<Integer>(getEventList().size());
-		for(int i = 0; i < result.size(); ++i) {
-			result.add(i);
-		}
-		return result;
-	}
 
 	public int getNumEvents() {
 		return events.size();
@@ -178,11 +171,17 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 			this.events.put(events.get(i).getIdentifier(), events.get(i));
 		}
 	}
-
+	
 	@Override
-	public boolean isEventActive(GSMPEvent event, int state) {
-		//TODO MAJO
-		throw new UnsupportedOperationException("Not implemented");
+	public List<GSMPEvent> getActiveEvents(int state){
+		List<GSMPEvent> actEvents = new ArrayList<GSMPEvent>();
+		List<GSMPEvent> allEvents = getEventList();
+		for (int e = 0; e < allEvents.size() ; ++e) {
+			if (allEvents.get(e).isActive(state)) {
+				actEvents.add(allEvents.get(e));
+			}
+		}
+		return actEvents;
 	}
 
 	@Override

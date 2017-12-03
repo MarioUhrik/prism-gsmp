@@ -30,6 +30,11 @@ import java.util.List;
 
 /**
  * Interface for classes that represent an explicit-state GSMP.
+ * 
+ * GSMP is a model driven by events with general time distributions.
+ * GSMP may have any number of events, and any number of events can be active at any given time.
+ * Out of the active states, only one "wins" by occuring the soonest.
+ * Each event has a distribution on states for each state, determining the next state.
  */
 public interface GSMP extends ModelSimple // TODO MAJO - incomplete
 {
@@ -40,9 +45,9 @@ public interface GSMP extends ModelSimple // TODO MAJO - incomplete
 
 
 	/**
-	 * Check if event {@code event} is active in state {@code state}.
+	 * Returns a list of events active in state {@code state}.
 	 */
-	public boolean isEventActive(GSMPEvent event, int state);
+	public List<GSMPEvent> getActiveEvents(int state);
 	
 	/**
 	 * Adds an event into the GSMP.
