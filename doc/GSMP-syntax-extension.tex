@@ -106,10 +106,10 @@ In every state each active event keeps one timer.
 In $\initstate$ all active events (given by $\act(\initstate)$) do not have a timer yet, thus we set a timer for each event $e$ in $\act(\initstate)$ to a random value according to CDF $F(e,\cdot)$.
 %In every state each active event keeps one timer, thus we provide timers to events in $\act(\initstate)$.
 %We set the timer of $e$ in $\act(\initstate)$ to a random value according to CDF $F(e,\cdot)$.
-The the event $e$, which has the minimal timer value, first waits until its timer goes off then it occurs and causes a change of state.\footnote{If there are multiple events with the minimal timer value, one of them is randomly chosen- each with the same probability.}  
+The event $e$, which has the minimal timer value, first waits until its timer goes off then it occurs and causes a change of state.\footnote{ If there are multiple events with the minimal timer value, one of them is randomly chosen- each with the same probability.}  
 The next state $s'$ is chosen randomly with probability $\suc(e)[\initstate,s']$.
 %according to the probability distribution $\suc(e)[\initstate,\cdot]$.
-In the new sate $s'$, the active events that either just occurred $\act(s') \cap \{e\}$ or are newly active $\act(s') \setminus \act(\initstate)$ do not have a valid timer value, thus their timer is set the same way as above.
+In the new state $s'$, the active events that either just occurred $\act(s') \cap \{e\}$ or are newly active $\act(s') \setminus \act(\initstate)$ do not have a valid timer value, thus their timer is set the same way as above.
 %In the new sate $s'$, the newly active events $\act(s') \setminus \act(\initstate)$ and the just occurred event $e$ if it is active do not have a valid timer value, thus their timer is set the same way as above.
 The inherited events $\act(s') \cap \act(\initstate) \setminus \{e\}$ keep their old timer value, that is decreased by the time spent in $\initstate$. 
 Then the execution proceeds in the same manner. 
