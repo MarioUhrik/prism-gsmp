@@ -59,14 +59,14 @@
 % formating
 \newcommand{\code}[1]{\texttt{#1}}
 
-\title{The PRISM GSMP Language - Syntax and Semantics}
+\title{The PRISM GSMP and Property Language - Syntax and Semantics}
 
 \begin{document}
 
 \maketitle
 
 \noindent
-This document provides the syntax and semantics for the \emph{generalized semi-Markov process} (GSMP) extension of the PRISM language.
+This document provides the syntax and semantics for the \emph{generalized semi-Markov process} (GSMP) extension of the PRISM language. It also specifies property language extension that allows for distribution-parameter synthesis in a GSMP.
 For syntax of the PRISM language, i.e., for CTMC, DTMC, PTA, and MDP, see the manual:
 \begin{itemize}
 	\item \url{http://www.cs.bham.ac.uk/~dxp/prism/manual/ThePRISMLanguage}
@@ -354,7 +354,8 @@ Note that, for GSMPs, the syntactic constraints placed on the constants
 
 %Finally, we can now define the probabilistic model itself, i.e. the successor function $\suc$.
 
-\subsection*{GSMP Semantics}
+\subsection*{
+	GSMP Semantics}
 We already defined the state space $S$, the set of events $\events$ and the initial states $\initstates$. 
 We will define the remaining structures $\act$, $\suc$, and $F$ separately for each event.
 
@@ -401,6 +402,14 @@ This normalisation can be considered as replacing any nondeterministic choice be
 %For the CTMC transitions, the transition rate matrix $\mathbf{P}_e \colon S \times S \to \mathbb{R}_{\geq 0}$ is such that for any $s,t \in S$:
 %
 %\[\mathbf{R} (s,t) \eqdef \sum_{c \in C} \mu_{\bot,c,s}(t). \]
+
+\section*{Properties for Distribution-Parameter Synthesis}
+
+We extend the PRISM properties working with rewards by specification of parameters to be a subject of optimization. Currently we support two objectives: a reachability reward and a steady-state reward. We express them as follows:
+$$\code{R\{"reward\_name"\}max=? [F (prop) : (event1,1); (event2,1); (event3,2)]}$$ 
+states that we are looking for optimal values for the first distribution parameters of events \code{event1} and \code{event2}, and the second parameter of distribution of \code{event3} in order to  maximize the reward \code{reward\_name} before reaching a state satisfying \code{prop}. Similarly,
+$$\code{R\{"reward\_name"\}min=? [S : (event1,1); (event2,1); (event3,2)]}$$ 
+expresses that we would like to find parameters (as described above) minimizing the steady-state (i.e. long-run average) reward named by \code{reward\_name}.
 
 \bibliographystyle{plain}
 \begin{thebibliography}{1}
