@@ -194,20 +194,14 @@ synchronizes with commands with label \code{L} of other modules.
 %\newpage
 \section*{Semantics}
 
-First, we translate all (old-fashion) CTMC commands (one by one) into GSMP commands.
-For each CTMC command \code{[a] g -> p\_1:u\_1 + $\cdots$ + p\_n:u\_n} (where $a$ is a synchronization label or an empty string), we add 
-new events 
+First, we translate all (old-fashioned) CTMC commands (one by one) into GSMP commands.
+For each CTMC command \code{[a] g -> r\_1:u\_1 + $\cdots$ + r\_n:u\_n} (where \code{a} is a synchronization label or an empty string), we exchange the command for
 \begin{align*}
-	\code{event e\_1 } &\code{= exponential(p\_1);} \\
-	&\hspace*{0.47mm}\vdots \\
-	\code{event e\_n } &\code{= exponential(p\_n);}
+    &\code{const double r\_new\_sum = r\_1 + $\cdots$ + r\_n;} \\
+	&\code{event e\_new } \code{= exponential(r\_new\_sum);} \\
+	&\code{[a] g } \code{{-}{-}e\_new-> (r\_1/r\_new\_sum):u\_1 + $\cdots$ + (r\_n/r\_new\_sum):u\_n;} 
 \end{align*}
-and exchange the command for the following list of commands
-\begin{align*}
-	\code{[a] g } &\code{{-}{-}e\_1-> 1:u\_1;} \\
-	&\hspace*{6.06mm}\vdots \\
-	\code{[a] g } &\code{{-}{-}e\_n-> 1:u\_n;} 
-\end{align*}
+where \code{r\_new\_sum} and \code{e\_new} are fresh identifiers for each CTMC command.
 
 An important observation is that we do not define the semantics in a compositional manner, i.e., by first giving the semantics of each module in the system and then combining these results. 
 The reason for this is that guards (and updates) of one module are allowed to refer to the variables of other modules (and indeed global variables). 
