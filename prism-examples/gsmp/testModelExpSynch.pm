@@ -16,13 +16,13 @@ module firstModule
 
 	event firstModEvent = expDistr;
 
-	event firstTimeout = diracDistr;
+	event timeoutEvent = diracDistr;
 
 	first : [0..1] init 0;
 
 	[lol] first=0 --firstModEvent-> (first'=1); 
 
-	[] first=1 --firstTimeout-> (first'=0);
+	[timeout] first=1 --timeoutEvent-> (first'=0);
 	
 endmodule
 
@@ -30,24 +30,20 @@ module secondModule
 
 	event secondModEvent = exponential(5);
 
-	event secondTimeout = diracDistr;
-
 	second : [0..6] init 0;
 
 	[lol] second=0 --secondModEvent-> (second'=1);
 
-	[] second=1 --secondTimeout-> (second'=0);
+	[timeout] second=1 --slave-> (second'=0);
 
 endmodule
 
 module thirdModule
 
-	event thirdTimeout = diracDistr;
-
 	third : [0..1] init 0;
 
 	[lol] third=0 -> 5: (third'=1);
 
-	[] third=1 --thirdTimeout-> (third'=0);
+	[timeout] third=1 --slave-> (third'=0);
 
 endmodule
