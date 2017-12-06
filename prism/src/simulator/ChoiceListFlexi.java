@@ -341,7 +341,7 @@ public class ChoiceListFlexi implements Choice
 						// TODO MAJO - So, I guess, do nothing?
 					} else { // both are the masters (not slaves)
 						if (isExponential(getEventIdent(j)) && isExponential(ch.getEventIdent(i))) { // both are exponentially distributed - make their product
-							String productEventName = getEventIdent(j) + "_PRODUCTWITH_" + ch.getEventIdent(i);
+							String productEventName = "<[" + getEventIdent(j) + "]PRODUCT_WITH[" + ch.getEventIdent(i) + "]>";
 							if (!isExponential(productEventName)) { 
 								// if their product does not exist, create it 
 								GSMPEvent product = new GSMPEvent(

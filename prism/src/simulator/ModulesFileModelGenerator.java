@@ -485,7 +485,7 @@ public class ModulesFileModelGenerator extends DefaultModelGenerator
 							TypeDistributionExponential.getInstance());
 					//create a new astEvent using the new exponential distribution
 					ExpressionIdent eventIdent = new ExpressionIdent(
-							"autogenEvent_" + comm + "_" + updates.getUpdate(k));
+							"<CTMCevent_" + comm + "_" + updates.getUpdate(k) + ">");
 					Event astEvent = new Event(eventIdent, distrIdent);
 					modulesFile.getModule(i).addEvent(astEvent);
 					//create a new GSMP command using the new astEvent
