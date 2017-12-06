@@ -272,19 +272,26 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 	}
 	
 	/**
-	 * @return the highest rate (first parameter) of all exponentially distributed events in this GSMP
+	 * @return The highest rate (first parameter) of all exponentially distributed events in this GSMP
+	 *         If there are no exponentially distributed events, return 1.
 	 */
 	public double getUniformisationRate(){
 		List<GSMPEvent> events = getEventList();
-		double maxExitRate = 1.0;
+		double maxExitRate = Double.MIN_VALUE;
+		boolean expEventVisited = false;
 		for (int i = 0 ; i < events.size() ; ++i) {
 			if (events.get(i).getDistributionType() instanceof TypeDistributionExponential) {
+				expEventVisited = true;
 				if (events.get(i).getFirstParameter() > maxExitRate) {
 					maxExitRate = events.get(i).getFirstParameter();
 				}
 			}
 		}
-		return maxExitRate; 
+		if (expEventVisited) {
+			return maxExitRate;
+		} else {
+			return 1.0;
+		}
 	}
 
 	@Override
