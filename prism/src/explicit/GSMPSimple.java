@@ -222,7 +222,9 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 		}
 	}
 	
-	/** Get an iterator over the successors of state s */
+	/**
+	 *  Get an iterator over the successors of state s
+	 */
 	@Override
 	public Iterator<Integer> getSuccessorsIterator(final int s)
 	{
@@ -259,7 +261,7 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 			String selfLoopEventIdent = "autogen_special_deadlock_fixing_exp_event(" + getFirstDeadlockState() + ")";
 			GSMPEvent selfLoop = new GSMPEvent(getNumStates()
 					,TypeDistributionExponential.getInstance(),
-					1.0,
+					getUniformisationRate(),
 					0.0,
 					selfLoopEventIdent);
 			this.addEvent(selfLoop);
@@ -267,6 +269,22 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 				this.addToProbability(deadlockState, deadlockState, 1.0, selfLoopEventIdent);
 			}
 		}
+	}
+	
+	/**
+	 * @return the highest rate (first parameter) of all exponentially distributed events in this GSMP
+	 */
+	public double getUniformisationRate(){
+		List<GSMPEvent> events = getEventList();
+		double maxExitRate = 1.0;
+		for (int i = 0 ; i < events.size() ; ++i) {
+			if (events.get(i).getDistributionType() instanceof TypeDistributionExponential) {
+				if (events.get(i).getFirstParameter() > maxExitRate) {
+					maxExitRate = events.get(i).getFirstParameter();
+				}
+			}
+		}
+		return maxExitRate; 
 	}
 
 	@Override
