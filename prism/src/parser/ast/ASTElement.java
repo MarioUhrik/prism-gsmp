@@ -433,6 +433,16 @@ public abstract class ASTElement
 		TypeCheck visitor = new TypeCheck();
 		accept(visitor);
 	}
+	
+	/**
+	 * Check for value-correctness of constructs that require it.
+	 * If you are checking a property that might contain references to other properties, use {@link #typeCheck(PropertiesFile)}.
+	 */
+	public void valueCheck() throws PrismLangException
+	{
+		ValueCheck visitor = new ValueCheck();
+		accept(visitor);
+	}
 
 	/**
 	 * Perform any required semantic checks. These are just simple checks on expressions, mostly.

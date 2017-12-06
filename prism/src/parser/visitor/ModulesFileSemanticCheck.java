@@ -28,7 +28,6 @@ package parser.visitor;
 
 import java.util.Vector;
 
-import parser.Values;
 import parser.ast.*;
 import parser.type.*;
 import prism.ModelType;
@@ -133,17 +132,6 @@ public class ModulesFileSemanticCheck extends SemanticCheck
 			}
 		}
 	}
-	
-	public void visitPost(DistributionList e) throws PrismLangException
-	{
-		int i, n;
-		n = e.size();
-		Values constantValues = e.getParent().getConstantList().evaluateSomeConstants(null, null);
-		for (i = 0; i < n ; ++i) {
-			TypeDistribution dType = e.getDistributionType(i);
-			dType.parameterValueCheck(e.getFirstParameter(i), e.getSecondParameter(i), constantValues); 	
-		}
-	}
 
 	public void visitPost(Declaration e) throws PrismLangException
 	{
@@ -205,12 +193,6 @@ public class ModulesFileSemanticCheck extends SemanticCheck
 		if (e.getInvariant() != null)
 			e.getInvariant().accept(this);
 		inInvariant = null;
-		/* TODO MAJO
-		n = e.getNumEvents();
-		for (i = 0; i < n ; ++i) {
-			if (e.getEvent(i) != null) e.getEvent(i).accept(this);
-		}
-		*/
 		n = e.getNumCommands();
 		for (i = 0; i < n; i++) {
 			if (e.getCommand(i) != null) e.getCommand(i).accept(this);
@@ -233,7 +215,6 @@ public class ModulesFileSemanticCheck extends SemanticCheck
 		e.getGuard().accept(this);
 		inGuard = null;
 		e.getUpdates().accept(this);
-		//if (e.getEventIdent() != null) e.getEventIdent().accept(this); // TODO MAJO
 		visitPost(e);
 		return null;
 	}
