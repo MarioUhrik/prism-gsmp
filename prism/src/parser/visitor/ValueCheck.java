@@ -2,7 +2,7 @@
 //	
 //	Copyright (c) 2002-
 //	Authors:
-//	* Dave Parker <david.parker@comlab.ox.ac.uk> (University of Oxford)
+//	* Dave Parker <david.parker@comlab.ox.ac.uk> (University of Oxford, formerly University of Birmingham)
 //	
 //------------------------------------------------------------------------------
 //	
@@ -24,35 +24,33 @@
 //	
 //==============================================================================
 
-package explicit;
+package parser.visitor;
 
-import java.util.List;
+import parser.Values;
+import parser.ast.*;
+import parser.type.*;
+import prism.PrismLangException;
 
 /**
- * Interface for classes that represent an explicit-state GSMP.
- * 
- * GSMP is a model driven by events with general time distributions.
- * GSMP may have any number of events, and any number of events can be active at any given time.
- * Out of the active states, only one "wins" by occuring the soonest.
- * Each event has a distribution on states for each state, determining the next state.
+ * Check for value-correctness.
  */
-public interface GSMP extends ModelSimple // TODO MAJO - incomplete
+public class ValueCheck extends ASTTraverse
 {
-	/**
-	 * Get all events.
-	 */
-	public List<GSMPEvent> getEventList();
-
-
-	/**
-	 * Returns a list of events active in state {@code state}.
-	 */
-	public List<GSMPEvent> getActiveEvents(int state);
 	
-	/**
-	 * Adds an event into the GSMP.
-	 * @param event to add
-	 */
-	public void addEvent(GSMPEvent event);
+	private Values evaluatedConstants = null;
 
+	public ValueCheck(Values evaluatedConstants)
+	{
+		this.evaluatedConstants = evaluatedConstants;
+	}
+	
+	public void visitPost(DistributionList e) throws PrismLangException
+	{
+		int i, n;
+		n = e.size();
+		for (i = 0; i < n ; ++i) {
+			TypeDistribution dType = e.getDistributionType(i);
+			dType.parameterValueCheck(e.getFirstParameter(i), e.getSecondParameter(i), evaluatedConstants); 	
+		}
+	}
 }

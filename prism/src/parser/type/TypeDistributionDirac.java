@@ -85,5 +85,10 @@ public class TypeDistributionDirac extends TypeDistribution {
 		return true;
 	}
 	
+	@Override
+	public int getNumParams() {
+		return 1;
+	}
+	
 
 }

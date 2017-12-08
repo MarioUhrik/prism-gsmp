@@ -160,4 +160,5 @@ public interface ModelGenerator extends ModelInfo
 	 * @param action The outgoing action label 
 	 */
 	public double getStateActionReward(int r, State state, Object action) throws PrismException;
+	
 }

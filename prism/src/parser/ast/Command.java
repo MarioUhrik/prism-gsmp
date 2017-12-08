@@ -39,7 +39,7 @@ public class Command extends ASTElement
 	private int synchIndex;
 	// Guard
 	private Expression guard;
-	// Assigned GSMP Event. If null, then this is a usual exponential command
+	// Assigned GSMP Event. Can be null.
 	private ExpressionIdent eventIdent;
 	// Used for GSMP. If true, this command is a slave to other commands with the same label.
 	// As a slave, this command does not have its own time distribution and relies on other
@@ -65,6 +65,20 @@ public class Command extends ASTElement
 		updates = null;
 		isSlave = false;
 		eventIdent = null;
+	}
+	
+	// Deepcopy constructor
+	
+	public Command(Command comm)
+	{
+		Command tmp = (Command) comm.deepCopy();
+		this.synch = tmp.getSynch();
+		this.synchIndex = tmp.getSynchIndex();
+		this.guard = tmp.getGuard();
+		this.updates = tmp.getUpdates();
+		this.isSlave = tmp.isSlave();
+		this.eventIdent = tmp.getEventIdent();
+		this.parent = tmp.getParent();
 	}
 	
 	// Set methods
@@ -151,6 +165,13 @@ public class Command extends ASTElement
 		return eventIdent;
 	}
 	
+	/**
+	 * @return True iff this is a GSMP command (has an assigned event or is a slave)
+	 */
+	public boolean isGSMPCommand() {
+		return (isSlave() || getEventIdent() != null);
+	}
+	
 	// Methods required for ASTElement:
 	
 	/**
@@ -193,7 +214,7 @@ public class Command extends ASTElement
 		
 		ExpressionIdent eventIdent = (getEventIdent() == null) ? null : (ExpressionIdent)getEventIdent().deepCopy();
 		ret.setEventIdent(eventIdent);
-		
+		ret.setParent(this.getParent());
 		ret.setSlave(isSlave());
 		ret.setPosition(this);
 		return ret;

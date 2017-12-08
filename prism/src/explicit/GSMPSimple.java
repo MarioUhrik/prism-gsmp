@@ -26,223 +26,319 @@
 
 package explicit;
 
-import java.util.Map;
-import java.util.Map.Entry;
+import parser.State;
+import parser.type.TypeDistributionExponential;
+
 import java.util.ArrayList;
-import java.util.List;
+import java.util.BitSet;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Predicate;
 
 import prism.ModelType;
 import prism.PrismException;
 import prism.PrismLog;
 
 /**
- * Simple explicit-state representation of a CTMC.
+ * Simple explicit-state representation of a GSMP.
+ * 
+ * This implementation only consists of a backbone provided by ModelExplicit.java
+ * and a collection of all events. The events are organized into a map for faster access.
+ * See GSMPEvent.java for implementation details of the events.
  */
-public class GSMPSimple extends CTMCSimple implements GSMP // TODO MAJO - copied from FDPRISM, unfinished
+public class GSMPSimple extends ModelExplicit implements GSMP
 {
-	protected List<GSMPEvent> events;
-	protected Map<Integer,Map<Integer,Map<Integer,String>>> transToSynchLabel;
-
-	// Constructors
-
 	/**
-	 * Constructor: empty GSMP.
+	 * Mapping of events onto their unique identifiers.
+	 */
+	protected Map<String, GSMPEvent> events = new HashMap<String, GSMPEvent>();
+	
+	/**
+	 * Default constructor without a predefined number of states.
 	 */
 	public GSMPSimple() throws PrismException {
 		super();
-		initialise();
+		initialise(0);
 	}
 
 	/**
-	 * Constructor: new GSMP with fixed number of states.
+	 * Default constructor with a predefined number of states.
 	 */
 	public GSMPSimple(int numStates) throws PrismException {
-		super(numStates);
-		initialise();
+		super();
+		initialise(numStates);
 	}
 
 	/**
 	 * Copy constructor.
 	 */
 	public GSMPSimple(GSMPSimple gsmp) {
-		super(gsmp);
-		this.events = new ArrayList<GSMPEvent>(gsmp.getNumEvents());
-		for (int i = 0; i < gsmp.getNumEvents(); ++i) {
-			this.events.add(new GSMPEvent(gsmp.getEvent(i)));
+		super();
+		initialise(gsmp.getNumStates());
+		copyFrom(gsmp);
+		this.statesList = gsmp.getStatesList();
+		this.events = new HashMap<String, GSMPEvent>(gsmp.getNumEvents());
+		List<GSMPEvent> tmp = gsmp.getEventList();
+		for (int i = 0; i < tmp.size(); ++i) {
+			this.events.put(tmp.get(i).getIdentifier(), new GSMPEvent(tmp.get(i)));
 		}
-		this.transToSynchLabel = gsmp.transToSynchLabel; //TODO perform deep copy if needed
 	}
 
 	/**
-	 * TODO: implement properly Construct a GSMP from an existing one and a
-	 * state in permutation, i.e. in which state index i becomes index
-	 * permut[i]. Note: have to build new Distributions from scratch anyway to
-	 * do this, so may as well provide this functionality as a constructor.
+	 * Permut copy constructor.
 	 */
-	public GSMPSimple(GSMPSimple gsmp, int permut[]) 
-	{
-		super(gsmp, permut);
-		this.events = new ArrayList<GSMPEvent>(gsmp.getNumEvents());
-		for (int i = 0; i < gsmp.getNumEvents(); ++i) {
-			this.events.add(new GSMPEvent(gsmp.getEvent(i), permut));
-		}
-		
-		transToSynchLabel = new HashMap<Integer,Map<Integer,Map<Integer,String>>> (gsmp.getNumEvents()+1);
-		if(gsmp.transToSynchLabel == null) return; 
-		
-		for(int i : gsmp.transToSynchLabel.keySet()) {
-			Map<Integer,Map<Integer,String>> sources = new HashMap<Integer,Map<Integer,String>>();
-			for(int src: gsmp.transToSynchLabel.get(i).keySet()) {
-				Map<Integer,String> destinations = new HashMap<Integer,String>(gsmp.transToSynchLabel.get(i).get(src).size());
-				for(Entry<Integer,String> dest: gsmp.transToSynchLabel.get(i).get(src).entrySet())
-					destinations.put(permut[dest.getKey()],dest.getValue());
-				sources.put(permut[src], destinations);
-			}
-			transToSynchLabel.put(i, sources);
+	public GSMPSimple(GSMPSimple gsmp, int permut[]) {
+		super();
+		initialise(gsmp.getNumStates());
+		copyFrom(gsmp, permut);
+		this.statesList = gsmp.getStatesList();
+		this.events = new HashMap<String, GSMPEvent>(gsmp.getNumEvents());
+		List<GSMPEvent> tmp = gsmp.getEventList();
+		for (int i = 0; i < tmp.size(); ++i) {
+			this.events.put(tmp.get(i).getIdentifier(), new GSMPEvent(tmp.get(i), permut));
 		}
 	}
 
-	private void initialise() throws PrismException {
-		this.events = new ArrayList<GSMPEvent>();
-		transToSynchLabel = new HashMap<Integer,Map<Integer,Map<Integer,String>>> (getNumEvents()+1);
-		transToSynchLabel.put(-1, new HashMap<Integer, Map<Integer,String>>());
-		for (int i= 0; i <getNumEvents();++i) {
-			transToSynchLabel.put(i, new HashMap<Integer, Map<Integer,String>>());
-		}
+	public void initialise(int numStates){
+		super.initialise(numStates);
+		this.statesList = new ArrayList<State>();
+		this.events = new HashMap<String, GSMPEvent>();
 	}
 
 	@Override
 	public int addState() {
-		return super.addState();
+		numStates += 1;
+		List<GSMPEvent> tmp = getEventList();
+		for (int i = 0; i < tmp.size() ; ++i) {
+			tmp.get(i).addState();
+		}
+		return numStates - 1;
 	}
 
 	@Override
 	public void addStates(int numToAdd) {
-		super.addStates(numToAdd);
-
-		for (GSMPEvent event : events)
-			event.addStates(numToAdd);
-	}
-
-	/**
-	 * Add to the probability for a transition.
-	 */
-	public void addToProbability(int i, int j, double prob, double delay,
-			int module, int fdIndex, String label) {
-		if (fdIndex < 0)
-			addToProbability(i, j, prob);
-		else {
-			GSMPEvent event = getEvent(module, fdIndex);
-			if (event == null) {
-				event = new GSMPEvent(label, numStates, delay, module, fdIndex);
-				addEvent(event);
-			}
-			event.addToProbability(i, j, prob);
+		for (int i = 0 ; i < numToAdd ; ++i) {
+			addState();
 		}
 	}
 
-	// Accessors (for ModelSimple, overrides CTMCSimple)
+	/**
+	 * Change the probabilities of event under index {@code eventIndex}
+	 * @return true if successfully done, false if event was not found
+	 */
+	public boolean addToProbability(int i, int j, double prob, String eventIdent) {
+		GSMPEvent event = getEvent(eventIdent);
+		if (event == null) {
+			// this should never happen !
+			return false;
+		}
+		event.addToProbability(i, j, prob);
+		return true;
+	}
 
 	@Override
 	public ModelType getModelType() {
 		return ModelType.GSMP;
 	}
 
-	@Override
-	public List<GSMPEvent> getAllEvents() {
+	public Map<String, GSMPEvent> getEventMap() {
 		return events;
 	}
-        
-	public List<Integer> getAllEventIndices() {
-		List<Integer> result = new ArrayList<>(events.size());
-		for(int i = 0; i < events.size(); ++i) {
-			result.add(i);
-		}
-		return result;
+	
+	@Override
+	public List<GSMPEvent> getEventList() {
+		return (new ArrayList<GSMPEvent>(events.values()));
 	}
 
 	public int getNumEvents() {
-		if (events == null) // TODO MAJO - wtf? why not make it an empty list instead?
-			return 0;
 		return events.size();
 	}
 
 	public void addEvent(GSMPEvent event) {
-		events.add(event);
+		events.put(event.getIdentifier(), event);
 	}
 
-	public GSMPEvent getEvent(int i) {
-		return events.get(i);
+	public GSMPEvent getEvent(String identifier) {
+		return events.get(identifier);
 	}
-
-	public GSMPEvent getEvent(int module, int index) {
-		for (GSMPEvent event : events) {
-			if (event.getModule() == module && event.getIndex() == index)
-				return event;
+	
+	public void setEvents(List<GSMPEvent> events) {
+		this.events = new HashMap<String, GSMPEvent>();
+		for ( int i = 0; i < events.size() ; ++i) {
+			this.events.put(events.get(i).getIdentifier(), events.get(i));
 		}
-		return null;
 	}
-
+	
+	public void setEventMap(Map<String, GSMPEvent> eventsMap) {
+		this.events = eventsMap;
+	}
+	
 	@Override
-	public boolean isEventActive(GSMPEvent event, int state) {
-		throw new UnsupportedOperationException("Not implemented");
+	public List<GSMPEvent> getActiveEvents(int state){
+		List<GSMPEvent> actEvents = new ArrayList<GSMPEvent>();
+		List<GSMPEvent> allEvents = getEventList();
+		for (int e = 0; e < allEvents.size() ; ++e) {
+			if (allEvents.get(e).isActive(state)) {
+				actEvents.add(allEvents.get(e));
+			}
+		}
+		return actEvents;
 	}
 
 	@Override
 	public void exportToPrismExplicitTra(PrismLog out) {
-		super.exportToPrismExplicitTra(out);
-
-
+		//TODO MAJO - is this enough?
 		out.println(this);
-		out.println("Events: " + getNumEvents());
 	}
-
-
 
 	@Override
 	public String toString() {
- 		return "GSMPSimple [events=" + events + ", transToSynchLabel="
-				+ transToSynchLabel + ", trans=" + trans + ", initialStates="
-				+ initialStates + "]";
-	}
-
-	// TODO MAJO - this one is weird
-	@Override
-	public void addSynchLabel(int fixedD, int src, int dest, String label) throws PrismException {
-		if(transToSynchLabel.get(fixedD) == null)
-			transToSynchLabel.put(fixedD, new HashMap<Integer, Map<Integer,String>>());
-		
-		Map<Integer, String> map;
-		if(transToSynchLabel.get(fixedD).get(src) == null) {
-			map = new HashMap<Integer, String>(1);
-			map.put(dest, label);
-			transToSynchLabel.get(fixedD).put(src, map);
-			return;
+ 		String str =  "GSMP Events:";
+ 		List<GSMPEvent> events = getEventList();
+		for (int i = 0; i < events.size(); i++) {
+			str += "\n" + events.get(i);
 		}
-		
-		map = transToSynchLabel.get(fixedD).get(src);
-		
-		if(map.get(dest) == null){
-			map.put(dest,label);
+ 		return str;
+	}
+
+	@Override
+	public void buildFromPrismExplicit(String filename) throws PrismException {
+		//TODO MAJO - implement
+		throw new UnsupportedOperationException("Not yet implemented!");
+	}
+
+	@Override
+	public void clearState(int i) {
+		// Do nothing if state i does not exist
+		if (i >= numStates || i < 0)
 			return;
+		List<GSMPEvent> events = getEventList();
+		for (int j = 0; j < events.size() ; ++j) {
+			events.get(j).clearState(i);
 		}
-		
-		if(map.get(dest) != label)
-			throw new PrismException("Multiple synchronization labels from state " + src + " to state " + dest + "!");
-
+	}
+	
+	/**
+	 *  Get an iterator over the successors of state s
+	 */
+	@Override
+	public Iterator<Integer> getSuccessorsIterator(final int s)
+	{
+		List<GSMPEvent> events = getEventList();
+		Set<Integer> successors = new HashSet<Integer>();
+		for (int j = 0; j < events.size() ; ++j) {
+			successors.addAll(events.get(j).trans.get(s).getSupport());
+		}
+		return successors.iterator();
 	}
 
 	@Override
-	public void clearSynchLabels() {
-		transToSynchLabel.clear();
+	public SuccessorsIterator getSuccessors(int s) {
+		return SuccessorsIterator.from(getSuccessorsIterator(s), true);
 	}
 
-	// TODO MAJO - this one is weird
 	@Override
-	public Map<Integer, String> getSychLabelsForState(int fixedD, int state) {
-		if(transToSynchLabel.get(fixedD) == null)
-			return null;
-		return transToSynchLabel.get(fixedD).get(state);
+	public void findDeadlocks(boolean fix) throws PrismException {
+		List<GSMPEvent> events = getEventList();
+		for (int s = 0; s < getNumStates(); s++) {
+			boolean isDeadlock = true;
+			for ( int e = 0; e < events.size() ; ++e) {
+				if (!events.get(e).trans.get(s).isEmpty()) {
+					isDeadlock = false;
+					break;
+				}
+			}
+			if (isDeadlock) {
+				addDeadlockState(s);
+			}
+		}
+		if (fix && getDeadlockStates().iterator().hasNext() ) {
+			//fix all the deadlocks by creating a new exponential event looping over them
+			String selfLoopEventIdent = "autogen_special_deadlock_fixing_exp_event(" + getFirstDeadlockState() + ")";
+			GSMPEvent selfLoop = new GSMPEvent(getNumStates()
+					,TypeDistributionExponential.getInstance(),
+					getUniformisationRate(),
+					0.0,
+					selfLoopEventIdent);
+			this.addEvent(selfLoop);
+			for (Integer deadlockState : getDeadlockStates()) {
+				this.addToProbability(deadlockState, deadlockState, 1.0, selfLoopEventIdent);
+			}
+		}
 	}
+	
+	/**
+	 * @return The highest rate (first parameter) of all exponentially distributed events in this GSMP
+	 *         If there are no exponentially distributed events, return 1.
+	 */
+	public double getUniformisationRate(){
+		List<GSMPEvent> events = getEventList();
+		double maxExitRate = Double.MIN_VALUE;
+		boolean expEventVisited = false;
+		for (int i = 0 ; i < events.size() ; ++i) {
+			if (events.get(i).getDistributionType() instanceof TypeDistributionExponential) {
+				expEventVisited = true;
+				if (events.get(i).getFirstParameter() > maxExitRate) {
+					maxExitRate = events.get(i).getFirstParameter();
+				}
+			}
+		}
+		if (expEventVisited) {
+			return maxExitRate;
+		} else {
+			return 1.0;
+		}
+	}
+
+	@Override
+	public int getNumTransitions() {
+		List<GSMPEvent> events = getEventList();
+		int numTransitions = 0;
+		for ( int i = 0 ; i < events.size() ; ++i) {
+			numTransitions += events.get(i).getNumTransitions();
+		}
+		return numTransitions;
+	}
+
+	@Override
+	public void checkForDeadlocks(BitSet except) throws PrismException {
+		List<GSMPEvent> events = getEventList();
+		for (int s = 0; s < getNumStates(); s++) {
+			for ( int e = 0; e < events.size() ; ++e) {
+				if (events.get(e).trans.get(s).isEmpty() && (except == null || !except.get(s))) {
+					throw new PrismException("GSMP has a deadlock in state " + s);
+				}
+			}
+		}
+	}
+
+	@Override
+	public void exportToPrismLanguage(String filename) throws PrismException {
+		//TODO MAJO - implement
+		throw new UnsupportedOperationException("Not yet implemented!");
+	}
+	
+	/**
+	 * Removes all events that have no probability in any state.
+	 */
+	public void removeEmptyEvents() {
+		List<GSMPEvent> events = getEventList();
+        Predicate<GSMPEvent> eventIsEmpty = e -> e.getActive().isEmpty();
+        events.removeIf(eventIsEmpty);
+        setEvents(events);
+	}
+	
+	@Override
+	public void setStatesList(List<State> statesList){
+		List<GSMPEvent> events = getEventList();
+		for (int i = 0; i < events.size(); i++) {
+			events.get(i).setStatesList(statesList);
+		}
+		this.statesList = statesList;
+	}
+
 }

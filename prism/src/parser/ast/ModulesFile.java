@@ -27,7 +27,6 @@
 package parser.ast;
 
 import java.util.*;
-import java.util.function.Predicate;
 
 import parser.*;
 import parser.visitor.*;
@@ -719,17 +718,15 @@ public class ModulesFile extends ASTElement implements ModelInfo
 		// Then identify/check any references to action names
 		findAllActions(synchs);
 		
-		// GSMP command check:
-		/* TODO MAJO - not completely valid, because it only cares about labels.
-		   Such a check should also care about guards, and it should
-		   be done as postprocessing after the GSMP has been built fully.
-		 */
+		// GSMP command parse-time check:
 		checkGSMPCommands();
 
 		// Various semantic checks 
 		doSemanticChecks();
 		// Type checking
 		typeCheck();
+		// Value checking (introduced for GSMP distribution attributes)
+		valueCheck(constantList.evaluateSomeConstants(null, null));
 		
 		// If there are no undefined constants, set up values for constants
 		// (to avoid need for a later call to setUndefinedConstants).
@@ -964,13 +961,11 @@ public class ModulesFile extends ASTElement implements ModelInfo
 	 *	1) Ensure that all GSMP event commands actually have an existing Event assigned to them.
 	 *   1.1) Ensure that the assigned Event is from the same Module.
 	 *	2) Ensure that all GSMP slave commands have a synch label.
-	 *   2.1) Ensure that all GSMP slave commands have at least one master (by label).
-	 *  3) Ensure for all synch labels that if they have multiple masters, they are exponential.
 	 *   
 	 *   Assumes eventIdents and synchs to not be null.
 	 * @throws PrismLangException when the above conditions do not hold
 	 */ 
-	private void checkGSMPCommands() throws PrismLangException // TODO MAJO - potential for nicer code
+	private void checkGSMPCommands() throws PrismLangException
 	{
 		//get all commands from all modules
 		List<Command> commands = new ArrayList<Command>();
@@ -1004,65 +999,13 @@ public class ModulesFile extends ASTElement implements ModelInfo
 			}
 			
 			// if the command is a slave
-			if (comm.isSlave()) { // TODO MAJO - unnecessarily done for all slaves, even of the same label.
+			if (comm.isSlave()) {
 				//2) if the slave and has no label, throw exception
 				if (comm.getSynch() == null || comm.getSynch().equals("")) {
 					throw new PrismLangException("All slave commands must have a label!", comm);
 				}
-				//2.1) if the slave has no masters, throw exception
-				if (getMastersOfLabel(comm.getSynch()).size() <= 0) {
-					throw new PrismLangException("All slave commands must have a master!", comm);
-				}
 			}
 		}
-		
-		//for all synch labels
-		for (int i = 0; i < getSynchs().size() ; ++i) {
-			Vector<Command> masterComms = getMastersOfLabel(getSynch(i));
-			//3) if the label has multiple masters and they are not all exponential, throw exception
-			if (masterComms.size() > 1) {
-				for (int j = 0; j < masterComms.size() ; ++j) {
-					Command master = masterComms.get(j);
-					// if a master is a usual exponential command, continue
-					if (master.getEventIdent() == null) {
-						continue;
-					}
-				
-					// if a master is a GSMP command that is not exponential, throw exception
-					for (int k = 0 ; k < allEvents.size() ; ++k) {
-						Event event = allEvents.get(k);
-						if (event.getEventName().equals(master.getEventIdent().getName())) {
-							int distrIndex = distributionList.getDistributionIndex(event.getDistributionName());
-							TypeDistribution distrType = distributionList.getDistributionType(distrIndex);
-							if (!(distrType instanceof TypeDistributionExponential)) {
-								throw new PrismLangException("Multiple non-exponential master commands detected!", master);
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-	
-	/**
-	 * 
-	 * @param label 
-	 * @return vector of commands from all modules with the given synch label that are not slaves
-	 */
-	private Vector<Command> getMastersOfLabel(String label)
-	{
-		//get all commands from all modules
-		Vector<Command> masters = new Vector<Command>();
-		for (int i = 0; i < modules.size() ; ++i) {
-			Module m = (Module)modules.get(i);
-			masters.addAll(m.getCommands());
-		}
-		
-		//filter out the wrong ones
-		Predicate<Command> filter = c-> (!(c.getSynch().equals(label))) || c.isSlave() == true;
-		masters.removeIf(filter);
-		
-		return masters;
 	}
 
 	// check variable names

@@ -46,6 +46,7 @@ import prism.PrismNotSupportedException;
 import prism.PrismPrintStreamLog;
 import prism.ProgressDisplay;
 import prism.UndefinedConstants;
+import simulator.ModulesFileModelGenerator;
 
 /**
  * Class to perform explicit-state reachability and model construction.
@@ -197,6 +198,11 @@ public class ConstructModel extends PrismComponent
 			case GSMP:
 				modelSimple = gsmp = new GSMPSimple();
 				gsmp.setVarList(varList);
+				if (!(modelGen instanceof ModulesFileModelGenerator)) {
+					//TODO MAJO
+					throw new PrismNotSupportedException("GSMP must be constructed from a ModulesFile using the explicit engine!");
+				}
+				gsmp.setEventMap(((ModulesFileModelGenerator)modelGen).setupGSMP());
 				break;
 			case MDP:
 				modelSimple = mdp = new MDPSimple();
@@ -246,6 +252,11 @@ public class ConstructModel extends PrismComponent
 				nt = modelGen.getNumTransitions(i);
 				for (j = 0; j < nt; j++) {
 					stateNew = modelGen.computeTransitionTarget(i, j);
+					if (modelType == ModelType.GSMP && ((ModulesFileModelGenerator)modelGen).getEventIdentOfChoice(i, j) == null) {
+						// this transition should be ignored, so dont even explore these states
+						mainLog.printWarning("The GSMP contains a slave command transition that was not synchronized with any event! This slave command transition has been ignored.");
+						continue;
+					}
 					// Is this a new state?
 					if (states.add(stateNew)) {
 						// If so, add to the explore list
@@ -265,6 +276,14 @@ public class ConstructModel extends PrismComponent
 							break;
 						case CTMC:
 							ctmc.addToProbability(src, dest, modelGen.getTransitionProbability(i, j));
+							break;
+						case GSMP:
+							if (!(modelGen instanceof ModulesFileModelGenerator)) {
+								//TODO MAJO
+								throw new PrismNotSupportedException("GSMP must be constructed from a ModulesFile using the explicit engine!");
+							}
+							String eventIdent = ((ModulesFileModelGenerator)modelGen).getEventIdentOfChoice(i, j);
+							gsmp.addToProbability(src, dest, modelGen.getTransitionProbability(i, j), eventIdent);
 							break;
 						case MDP:
 						case CTMDP:
@@ -343,6 +362,7 @@ public class ConstructModel extends PrismComponent
 				model = sort ? new CTMCSimple(ctmc, permut) : (CTMCSimple) ctmc;
 				break;
 			case GSMP:
+				gsmp.removeEmptyEvents();
 				model = sort ? new GSMPSimple(gsmp, permut) : (GSMPSimple) gsmp;
 				break;
 			case MDP:

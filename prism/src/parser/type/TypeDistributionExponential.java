@@ -85,5 +85,9 @@ public class TypeDistributionExponential extends TypeDistribution {
 		return true;
 	}
 	
+	@Override
+	public int getNumParams() {
+		return 1;
+	}
 
 }

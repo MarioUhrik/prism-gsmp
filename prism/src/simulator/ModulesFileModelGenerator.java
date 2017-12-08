@@ -1,16 +1,27 @@
 package simulator;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
+import explicit.GSMPEvent;
 import parser.State;
 import parser.Values;
 import parser.VarList;
+import parser.ast.Command;
+import parser.ast.DistributionList;
+import parser.ast.Event;
 import parser.ast.Expression;
+import parser.ast.ExpressionIdent;
+import parser.ast.ExpressionLiteral;
 import parser.ast.LabelList;
 import parser.ast.ModulesFile;
 import parser.ast.RewardStruct;
 import parser.type.Type;
+import parser.type.TypeDistribution;
+import parser.type.TypeDistributionExponential;
+import parser.type.TypeDouble;
 import prism.DefaultModelGenerator;
 import prism.ModelType;
 import prism.PrismComponent;
@@ -420,4 +431,133 @@ public class ModulesFileModelGenerator extends DefaultModelGenerator
 	{
 		return modulesFile.rewardStructHasTransitionRewards(i);
 	}
+	
+	// GSMP methods
+	
+	public String getEventIdentOfChoice(int from, int to) {
+		return ((ChoiceListFlexi)transitionList.getChoice(from)).getEventIdent(to);
+	}
+	
+	/**
+	 * 1) Transforms the modulesFile so that it becomes suitable for GSMP construction.
+	 *    For example, all CTMC commands are translated into equivalent GSMP events.
+	 * 2) Then various semantic checks are performed to ensure the would-be 
+	 *    constructed GSMP complies with all the rules.
+	 * 3) Lastly, constructs a list of GSMP events that can be assigned to GSMP models.
+	 * @return Map of all GSMP events onto their unique identifiers
+	 */
+	public Map<String, GSMPEvent> setupGSMP() throws PrismException{
+		translateCTMCCommandsIntoGSMPCommands();
+		return getGSMPEvents();
+	}
+	
+	/**
+	 * Traverses the commands of each module and replace CTMC commands with GSMP event commands.
+	 * This method is intended to be called at the beginning of building a GSMP.
+	 * @throws PrismLangException Should never happen anyway. Necessary because this method needs to evaluate some expressions.
+	 */
+	private void translateCTMCCommandsIntoGSMPCommands() throws PrismLangException{
+		Values constantList = modulesFile.getConstantList().evaluateSomeConstants(null, null);
+		//traverse all modules and get all commands
+		for (int i = 0; i < modulesFile.getNumModules() ; ++i) {
+			for (int j = 0; j < modulesFile.getModule(i).getNumCommands() ; ++j) {
+				Command comm = modulesFile.getModule(i).getCommand(j);
+				//if it is already a valid GSMP command, just move on
+				if (comm.isGSMPCommand()) {
+					continue;
+				}
+				//create a new exponential distribution,
+				ExpressionIdent distrIdent = new ExpressionIdent(
+						"[autogenDistr_" + comm + "]");
+				double rate = 0.0;
+				//compute its rate - the sum of rates of updates
+				for (int k = 0 ; k < comm.getUpdates().getNumUpdates() ; ++k) {
+					Expression updateRate = comm.getUpdates().getProbability(k);
+					if (updateRate == null) {
+						rate += 1.0; //not sure if this should ever happen though
+					} else {
+						rate += updateRate.evaluateDouble(constantList);
+					}
+				}
+				Expression rateExpr = new ExpressionLiteral(TypeDouble.getInstance(), rate);
+				modulesFile.getDistributionList().addDistribution(
+						distrIdent,
+						rateExpr,
+						null,
+						TypeDistributionExponential.getInstance());
+				//create a new astEvent using the new exponential distribution and assign it to the command
+				ExpressionIdent eventIdent = new ExpressionIdent(
+						"<CTMCevent_" + comm + ">");
+				Event astEvent = new Event(eventIdent, distrIdent);
+				modulesFile.getModule(i).addEvent(astEvent);
+				comm.setEventIdent(eventIdent);
+				//turn the rates of each update into probabilities
+				for (int k = 0 ; k < comm.getUpdates().getNumUpdates() ; ++k) {
+					Expression updateRate = comm.getUpdates().getProbability(k);
+					double prob;
+					if (updateRate == null) {
+						prob = 1.0 / rate;
+					} else {
+						prob = updateRate.evaluateDouble(constantList) / rate;
+					}
+					Expression probExpr = new ExpressionLiteral(TypeDouble.getInstance(), prob);
+					comm.getUpdates().setProbability(k, probExpr);
+				}
+			}
+		}
+	}
+	
+	/**
+	 * Assumes that all CTMC commands have been translated into events via
+	 * translateCTMCTransitionsIntoGSMPEvents() already!
+	 * Otherwise, the CTMC commands are not included.
+	 * @return list of all GSMP events excluding the product events
+	 * @throws PrismLangException The distribution parameters could not be evaluated. This should never happen at this point.
+	 */
+	private Map<String, GSMPEvent> getGSMPEvents() throws PrismLangException{
+		Map<String, GSMPEvent> events = new HashMap<String, GSMPEvent>();
+		// traverse all modules and get all the ASTevents
+		for (int i = 0; i < modulesFile.getNumModules() ; ++i) {
+			for (int j = 0 ; j < modulesFile.getModule(i).getNumEvents() ; ++j) {
+				// turn the ASTevent into a GSMPEvent and put it in the map
+				GSMPEvent ev = generateGSMPEvent(modulesFile.getModule(i).getEvent(j));
+				events.put(ev.getIdentifier(), ev);
+			}
+		}
+		updater.setAllGSMPEvents(events);
+		return events;
+	}
+	
+	/**
+	 * Assumes that methods setupGSMP() and then updater.calculateTransitions()
+	 * have already been called!
+	 * @return Complete, final list of all GMSP events, including translate CTMC events and GSMP event products
+	 */
+	public Map<String, GSMPEvent> getAllGSMPEventsAfterProducts(){
+		return updater.getAllGSMPEvents();
+	}
+	
+	/**
+	 * Creates a new GSMP event from an astEvent of a modulesFile.
+	 * @param astEvent
+	 * @return GSMPEvent
+	 * @throws PrismLangException The distribution parameters could not be evaluated. This should never happen at this point.
+	 */
+	private GSMPEvent generateGSMPEvent(Event astEvent) throws PrismLangException {
+		//find the distribution assigned to the astEvent;
+		DistributionList distributions = astEvent.getParent().getParent().getDistributionList();
+		int distrIndex = distributions.getDistributionIndex(astEvent.getDistributionName());
+		//obtain the distribution parameters
+		TypeDistribution distributionType = distributions.getDistributionType(distrIndex);
+		double firstParameter = 0;
+		if (distributionType.getNumParams() >= 1) {
+			firstParameter = distributions.getFirstParameter(distrIndex).evaluateDouble(distributions.getParent().getConstantValues());
+		}
+		double secondParameter = 0;
+		if (distributionType.getNumParams() >= 2) {
+			secondParameter = distributions.getSecondParameter(distrIndex).evaluateDouble(distributions.getParent().getConstantValues());
+		}
+		return (new GSMPEvent(distributionType, firstParameter, secondParameter, astEvent.getEventName()));
+	}
+	
 }
