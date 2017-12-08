@@ -36,14 +36,21 @@ import prism.PrismLangException;
  */
 public class ValueCheck extends ASTTraverse
 {
+	
+	private Values evaluatedConstants = null;
+
+	public ValueCheck(Values evaluatedConstants)
+	{
+		this.evaluatedConstants = evaluatedConstants;
+	}
+	
 	public void visitPost(DistributionList e) throws PrismLangException
 	{
 		int i, n;
 		n = e.size();
-		Values constantValues = e.getParent().getConstantList().evaluateSomeConstants(null, null);
 		for (i = 0; i < n ; ++i) {
 			TypeDistribution dType = e.getDistributionType(i);
-			dType.parameterValueCheck(e.getFirstParameter(i), e.getSecondParameter(i), constantValues); 	
+			dType.parameterValueCheck(e.getFirstParameter(i), e.getSecondParameter(i), evaluatedConstants); 	
 		}
 	}
 }

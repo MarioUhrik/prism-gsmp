@@ -436,10 +436,11 @@ public abstract class ASTElement
 	
 	/**
 	 * Check for value-correctness of constructs that require it.
+	 * Values constantValues are evaluated constants used in evaluations of the expressions.
 	 */
-	public void valueCheck() throws PrismLangException
+	public void valueCheck(Values constantValues) throws PrismLangException
 	{
-		ValueCheck visitor = new ValueCheck();
+		ValueCheck visitor = new ValueCheck(constantValues);
 		accept(visitor);
 	}
 
