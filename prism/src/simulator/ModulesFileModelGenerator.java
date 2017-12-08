@@ -448,7 +448,6 @@ public class ModulesFileModelGenerator extends DefaultModelGenerator
 	 */
 	public Map<String, GSMPEvent> setupGSMP() throws PrismException{
 		translateCTMCCommandsIntoGSMPCommands();
-		semanticsCheckGSMP();
 		return getGSMPEvents();
 	}
 	
@@ -559,10 +558,6 @@ public class ModulesFileModelGenerator extends DefaultModelGenerator
 			secondParameter = distributions.getSecondParameter(distrIndex).evaluateDouble(distributions.getParent().getConstantValues());
 		}
 		return (new GSMPEvent(distributionType, firstParameter, secondParameter, astEvent.getEventName()));
-	}
-	
-	private void semanticsCheckGSMP() throws PrismException{
-		// TODO MAJO
 	}
 	
 }
