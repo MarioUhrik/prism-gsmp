@@ -252,6 +252,11 @@ public class ConstructModel extends PrismComponent
 				nt = modelGen.getNumTransitions(i);
 				for (j = 0; j < nt; j++) {
 					stateNew = modelGen.computeTransitionTarget(i, j);
+					if (modelType == ModelType.GSMP && ((ModulesFileModelGenerator)modelGen).getEventIdentOfChoice(i, j) == null) {
+						// this transition should be ignored, so dont even explore these states
+						mainLog.printWarning("The GSMP contains a slave command transition that was not synchronized with any event! This slave command transition has been ignored.");
+						continue;
+					}
 					// Is this a new state?
 					if (states.add(stateNew)) {
 						// If so, add to the explore list

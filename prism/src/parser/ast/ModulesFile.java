@@ -966,7 +966,6 @@ public class ModulesFile extends ASTElement implements ModelInfo
 	 *	1) Ensure that all GSMP event commands actually have an existing Event assigned to them.
 	 *   1.1) Ensure that the assigned Event is from the same Module.
 	 *	2) Ensure that all GSMP slave commands have a synch label.
-	 *   2.1) Ensure that all GSMP slave commands have at least one master (by label).
 	 *  3) Ensure for all synch labels that if they have multiple masters, they are exponential.
 	 *   
 	 *   Assumes eventIdents and synchs to not be null.
@@ -1006,14 +1005,10 @@ public class ModulesFile extends ASTElement implements ModelInfo
 			}
 			
 			// if the command is a slave
-			if (comm.isSlave()) { // TODO MAJO - unnecessarily done for all slaves, even of the same label.
+			if (comm.isSlave()) {
 				//2) if the slave and has no label, throw exception
 				if (comm.getSynch() == null || comm.getSynch().equals("")) {
 					throw new PrismLangException("All slave commands must have a label!", comm);
-				}
-				//2.1) if the slave has no masters, throw exception
-				if (getMastersOfLabel(comm.getSynch()).size() <= 0) {
-					throw new PrismLangException("All slave commands must have a master!", comm);
 				}
 			}
 		}
