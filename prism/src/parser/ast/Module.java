@@ -122,10 +122,6 @@ public class Module extends ASTElement
 		invariant = e;
 	}
 	
-	public void setCommands(List<Command> commands) {
-		this.commands = (ArrayList<Command>)commands;
-	}
-	
 	public void setParent(ModulesFile mf)
 	{
 		parent = mf;

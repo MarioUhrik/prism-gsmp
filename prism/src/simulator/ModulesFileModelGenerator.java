@@ -18,7 +18,6 @@ import parser.ast.ExpressionLiteral;
 import parser.ast.LabelList;
 import parser.ast.ModulesFile;
 import parser.ast.RewardStruct;
-import parser.ast.Updates;
 import parser.type.Type;
 import parser.type.TypeDistribution;
 import parser.type.TypeDistributionExponential;
@@ -455,53 +454,57 @@ public class ModulesFileModelGenerator extends DefaultModelGenerator
 	
 	/**
 	 * Traverses the commands of each module and replace CTMC commands with GSMP event commands.
-	 * The list of commands for each module is replaced by equivalent list of GSMP-only commands.
+	 * This method is intended to be called at the beginning of building a GSMP.
+	 * @throws PrismLangException Should never happen anyway. Necessary because this method needs to evaluate some expressions.
 	 */
-	private void translateCTMCCommandsIntoGSMPCommands(){
+	private void translateCTMCCommandsIntoGSMPCommands() throws PrismLangException{
+		Values constantList = modulesFile.getConstantList().evaluateSomeConstants(null, null);
 		//traverse all modules and get all commands
 		for (int i = 0; i < modulesFile.getNumModules() ; ++i) {
-			List<Command> newCommandList = new ArrayList<Command>();
 			for (int j = 0; j < modulesFile.getModule(i).getNumCommands() ; ++j) {
 				Command comm = modulesFile.getModule(i).getCommand(j);
 				//if it is already a valid GSMP command, just move on
 				if (comm.isGSMPCommand()) {
-					newCommandList.add(comm);
 					continue;
 				}
-				//for all updates of this CTMC command:
-				Updates updates = comm.getUpdates();
-				for (int k = 0; k < comm.getUpdates().getNumUpdates() ; ++k) {
-					//create a new exponential distribution,
-					ExpressionIdent distrIdent = new ExpressionIdent(
-							"autogenDistr_" + comm + "_" + updates.getUpdate(k));
-					Expression rate = updates.getProbability(k);
-					if (rate == null) {
-						rate = new ExpressionLiteral(TypeDouble.getInstance(), 1.0);
+				//create a new exponential distribution,
+				ExpressionIdent distrIdent = new ExpressionIdent(
+						"[autogenDistr_" + comm + "]");
+				double rate = 0.0;
+				//compute its rate - the sum of rates of updates
+				for (int k = 0 ; k < comm.getUpdates().getNumUpdates() ; ++k) {
+					Expression updateRate = comm.getUpdates().getProbability(k);
+					if (updateRate == null) {
+						rate += 1.0; //not sure if this should ever happen though
+					} else {
+						rate += updateRate.evaluateDouble(constantList);
 					}
-					modulesFile.getDistributionList().addDistribution(
-							distrIdent,
-							rate,
-							null,
-							TypeDistributionExponential.getInstance());
-					//create a new astEvent using the new exponential distribution
-					ExpressionIdent eventIdent = new ExpressionIdent(
-							"<CTMCevent_" + comm + "_" + updates.getUpdate(k) + ">");
-					Event astEvent = new Event(eventIdent, distrIdent);
-					modulesFile.getModule(i).addEvent(astEvent);
-					//create a new GSMP command using the new astEvent
-					Command commGSMP = new Command(comm);
-					commGSMP.setEventIdent(eventIdent);
-					commGSMP.setSlave(false); // it should already be true anyway though
-					Updates updatesGSMP = new Updates();
-					updatesGSMP.setParent(commGSMP);
-					updatesGSMP.addUpdate(
-							new ExpressionLiteral(TypeDouble.getInstance(), 1.0),
-							updates.getUpdate(k));
-					commGSMP.setUpdates(updatesGSMP);
-					newCommandList.add(commGSMP);
+				}
+				Expression rateExpr = new ExpressionLiteral(TypeDouble.getInstance(), rate);
+				modulesFile.getDistributionList().addDistribution(
+						distrIdent,
+						rateExpr,
+						null,
+						TypeDistributionExponential.getInstance());
+				//create a new astEvent using the new exponential distribution and assign it to the command
+				ExpressionIdent eventIdent = new ExpressionIdent(
+						"<CTMCevent_" + comm + ">");
+				Event astEvent = new Event(eventIdent, distrIdent);
+				modulesFile.getModule(i).addEvent(astEvent);
+				comm.setEventIdent(eventIdent);
+				//turn the rates of each update into probabilities
+				for (int k = 0 ; k < comm.getUpdates().getNumUpdates() ; ++k) {
+					Expression updateRate = comm.getUpdates().getProbability(k);
+					double prob;
+					if (updateRate == null) {
+						prob = 1.0 / rate;
+					} else {
+						prob = updateRate.evaluateDouble(constantList) / rate;
+					}
+					Expression probExpr = new ExpressionLiteral(TypeDouble.getInstance(), prob);
+					comm.getUpdates().setProbability(k, probExpr);
 				}
 			}
-			modulesFile.getModule(i).setCommands(newCommandList);
 		}
 	}
 	

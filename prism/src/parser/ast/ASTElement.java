@@ -436,7 +436,6 @@ public abstract class ASTElement
 	
 	/**
 	 * Check for value-correctness of constructs that require it.
-	 * If you are checking a property that might contain references to other properties, use {@link #typeCheck(PropertiesFile)}.
 	 */
 	public void valueCheck() throws PrismLangException
 	{
