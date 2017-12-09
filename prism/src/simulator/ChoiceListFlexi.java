@@ -48,6 +48,8 @@ public class ChoiceListFlexi implements Choice
 	protected List<String> eventIdents;
 	
 	protected Map<String, GSMPEvent> allGSMPEvents;
+	// ExpSyncBackwardCompatible flag from prism settings
+	public boolean expSyncBackwardCompatible;
 
 	// List of multiple updates and associated probabilities/rates
 	// Size of list is stored implicitly in target.length
@@ -65,6 +67,7 @@ public class ChoiceListFlexi implements Choice
 		probability = new ArrayList<Double>();
 		eventIdents = new ArrayList<String>();
 		allGSMPEvents = new HashMap<String, GSMPEvent>();
+		expSyncBackwardCompatible = true;
 	}
 
 	/**
@@ -77,6 +80,7 @@ public class ChoiceListFlexi implements Choice
 		updates = new ArrayList<List<Update>>(ch.updates.size());
 		eventIdents = ch.getEventIdents();
 		allGSMPEvents = ch.getAllGSMPEvents();
+		expSyncBackwardCompatible = ch.expSyncBackwardCompatible;
 		for (List<Update> list : ch.updates) {
 			List<Update> listNew = new ArrayList<Update>(list.size()); 
 			updates.add(listNew);
@@ -340,7 +344,7 @@ public class ChoiceListFlexi implements Choice
 					if (ch.getEventIdent(i) == null) { // the second one is a slave
 						// TODO MAJO - So, I guess, do nothing?
 					} else { // both are the masters (not slaves)
-						if (isExponential(getEventIdent(j)) && isExponential(ch.getEventIdent(i))) { // both are exponentially distributed - make their product
+						if (isExponential(getEventIdent(j)) && isExponential(ch.getEventIdent(i)) && this.expSyncBackwardCompatible) { // both are exponentially distributed - make their product if backward compatibility is enabled
 							String productEventName = "<[" + getEventIdent(j) + "]PRODUCT_WITH[" + ch.getEventIdent(i) + "]>";
 							if (!isExponential(productEventName)) { 
 								// if their product does not exist, create it 
@@ -355,7 +359,11 @@ public class ChoiceListFlexi implements Choice
 							// their product now definitely exists, so assign it
 							setEventIdent(j, productEventName);
 						} else { // at least one of them is not exponential - ERROR
-							throw new PrismException("Synchronizing events \"" + getEventIdent(i) + "\" and \"" + ch.getEventIdent(j) + "\"  at least one of which is not exponentially distributed!");
+							if (!isExponential(getEventIdent(j)) || !isExponential(ch.getEventIdent(i))) {
+								throw new PrismException("Synchronizing events \"" + getEventIdent(i) + "\" and \"" + ch.getEventIdent(j) + "\" at least one of which is not exponentially distributed!");
+							} else {
+								throw new PrismException("Synchronizing events \"" + getEventIdent(i) + "\" and \"" + ch.getEventIdent(j) + "\" that are exponentially distributed, but flag ExpSyncBackwardCompatible is false!");
+							}
 						}
 						
 					}

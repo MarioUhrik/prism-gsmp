@@ -55,6 +55,8 @@ public class Updater extends PrismComponent
 	protected boolean doProbChecks = true;
 	// The precision to which we check probabilities sum to 1
 	protected double sumRoundOff = 1e-5;
+	// True = exponential GSMP events are allowed to be synchronized
+	protected boolean expSyncBackwardCompatible = true;
 	
 	// Info on model being explored
 	protected ModulesFile modulesFile;
@@ -91,6 +93,7 @@ public class Updater extends PrismComponent
 		// Store some settings
 		doProbChecks = parent.getSettings().getBoolean(PrismSettings.PRISM_DO_PROB_CHECKS);
 		sumRoundOff = parent.getSettings().getDouble(PrismSettings.PRISM_SUM_ROUND_OFF);
+		expSyncBackwardCompatible = parent.getSettings().getBoolean(PrismSettings.PRISM_EXP_SYNC_BACKWARD_COMPATIBLE);
 		
 		// Get info from model
 		this.modulesFile = modulesFile;
@@ -231,6 +234,7 @@ public class Updater extends PrismComponent
 							for (l = 0; l < n; l++) {
 								ChoiceListFlexi tmp = new ChoiceListFlexi(chs.get(l));
 								tmp.setAllGSMPEvents(getAllGSMPEvents());
+								tmp.expSyncBackwardCompatible = expSyncBackwardCompatible;
 								chs.add(tmp);
 							}
 						}
@@ -361,6 +365,7 @@ public class Updater extends PrismComponent
 		// Create choice and add all info
 		ch = new ChoiceListFlexi();
 		ch.setAllGSMPEvents(getAllGSMPEvents());
+		ch.expSyncBackwardCompatible = expSyncBackwardCompatible;
 		ch.setModuleOrActionIndex(moduleOrActionIndex);
 		n = ups.getNumUpdates();
 		sum = 0;

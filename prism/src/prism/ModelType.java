@@ -80,11 +80,11 @@ public enum ModelType
 			return false;
 		}
 	},
-	GSMP("generalized semi-Markov process") { //TODO MAJO: is this correct?
+	GSMP("generalized semi-Markov process") {
 		@Override
 		public boolean choicesSumToOne()
 		{
-			return false;
+			return true;
 		}
 
 		@Override
@@ -102,7 +102,7 @@ public enum ModelType
 		@Override
 		public String probabilityOrRate()
 		{
-			return RATE;
+			return PROBABILITY;
 		}
 	},
 	LTS("labelled transition system") {

@@ -99,6 +99,7 @@ public class PrismSettings implements Observer
 	public static final	String PRISM_CUDD_EPSILON					= "prism.cuddEpsilon";
 	public static final	String PRISM_DD_EXTRA_STATE_VARS				= "prism.ddExtraStateVars";
 	public static final	String PRISM_DD_EXTRA_ACTION_VARS				= "prism.ddExtraActionVars";
+	public static final String PRISM_EXP_SYNC_BACKWARD_COMPATIBLE       = "prism.ExpSyncBackwardCompatible";
 	public static final	String PRISM_NUM_SB_LEVELS					= "prism.numSBLevels";//"prism.hybridNumLevels";
 	public static final	String PRISM_SB_MAX_MEM						= "prism.SBMaxMem";//"prism.hybridMaxMemory";
 	public static final	String PRISM_NUM_SOR_LEVELS					= "prism.numSORLevels";//"prism.hybridSORLevels";
@@ -328,7 +329,8 @@ public class PrismSettings implements Observer
 																			"Number of extra DD state variables preallocated for use in model transformation." },
 			{ INTEGER_TYPE,		PRISM_DD_EXTRA_ACTION_VARS,				"Extra DD action var allocation",		"4.3.1",			new Integer(20),														"",
 																			"Number of extra DD action variables preallocated for use in model transformation." },
-
+			{ BOOLEAN_TYPE,		PRISM_EXP_SYNC_BACKWARD_COMPATIBLE,		"Allow synchronization of exponential GSMP events",		"4.4beta",			new Boolean(true),								"",
+																			"ExpSyncBackwardCompatible\nIf this option is true, exponential events are allowed to be synchronized with each other instead of producing an error. Just like in CTMCs, the product exponential event obtains a rate equal to the product of rates of the synchronized events.\n The GSMP must be re-parsed in order for changes to take effect!" },
 
 			// ADVERSARIES/COUNTEREXAMPLES:
 			{ CHOICE_TYPE,		PRISM_EXPORT_ADV,						"Adversary export",						"3.3",			"None",																	"None,DTMC,MDP",																
@@ -1355,6 +1357,8 @@ public class PrismSettings implements Observer
 			} else {
 				throw new PrismException("No value specified for -" + sw + " switch");
 			}
+		} else if (sw.equals("ExpSyncBackwardCompatible")) {
+			set(PRISM_EXP_SYNC_BACKWARD_COMPATIBLE, false);
 		}
 		
 		// ADVERSARIES/COUNTEREXAMPLES:
@@ -1772,6 +1776,7 @@ public class PrismSettings implements Observer
 		mainLog.println("-ddsanity ...................... Enable internal sanity checks (causes slow-down)");
 		mainLog.println("-ddextrastatevars <n> .......... Set the number of preallocated state vars [default: 20]");
 		mainLog.println("-ddextraactionvars <n> ......... Set the number of preallocated action vars [default: 20]");
+		mainLog.println("-ExpSyncBackwardCompatible ..... Disable synchronization of exponential events for GSMPs ");
 		mainLog.println();
 		mainLog.println("PARAMETRIC MODEL CHECKING OPTIONS:");
 		mainLog.println("-param <vals> .................. Do parametric model checking with parameters (and ranges) <vals>");
