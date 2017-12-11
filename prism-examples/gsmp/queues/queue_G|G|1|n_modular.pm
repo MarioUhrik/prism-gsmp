@@ -1,11 +1,11 @@
-// This is a model of G/G/1/n queue, i.e.
-// the inter-arrival time is specified by Prod_event,
-// the service time is specified by Serve_event,
+// This is a multimodule model of G/G/1/n queue.
+// the inter-arrival time is specified by Prod_event.
+// the service time is specified by Serve_event.
 //
 
 gsmp
 
-const maxitem=12;
+const maxItem=12;
 
 module Producer
 
@@ -25,8 +25,8 @@ endmodule
 
 module Queue
 
-	items: [0..maxitem] init 0;
+	items: [0..maxItem] init 0;
 
-	[produce] items<maxitem --slave-> (items'=items+1);
+	[produce] items<maxItem --slave-> (items'=items+1);
 	[served] items>0 --slave-> (items'=items-1);
 endmodule
