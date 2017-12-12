@@ -29,7 +29,6 @@ package explicit;
 import java.util.*;
 
 import parser.type.TypeDistribution;
-import prism.PrismException;
 
 /**
  * Explicit engine class representing a GSMP event.
@@ -106,17 +105,6 @@ public class GSMPEvent extends DTMCSimple
 			if (event.isActive(i))
 				active.set(permut[i]);
 		}
-	}
-
-	// TODO MAJO - I think this is supposed to be some distribution parameter check leftover from fdPRISM.
-	// TODO MAJO - get rid of it, or update it
-	public int getNumberOfSteps(double interval) throws PrismException {
-		System.out.println("Delay: " + firstParameter + " interval: " + interval
-				+ " res: "
-				+ (new Double(Math.floor(firstParameter / interval))).intValue());
-        if(firstParameter < interval)
-        	throw new PrismException("Delay(" + firstParameter + " is smaller than discretization step(" + interval + " ).");
-		return (int) Math.round(firstParameter / interval);
 	}
 
 	/**
