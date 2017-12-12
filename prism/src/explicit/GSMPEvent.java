@@ -179,6 +179,36 @@ public class GSMPEvent extends DTMCSimple
 	public TypeDistribution getDistributionType() {
 		return distributionType;
 	}
+	
+	/**
+	 * Makes the probabilities of each row in the transition matrix sum to one.
+	 */
+	public void normalize() { // TODO MAJO - better precision
+		final double tolerance = 0.0001;// TODO MAJO - make this dependent on some global prism setting
+		for (int s = 0; s < getNumStates() ; ++s) {
+			Distribution distribution = trans.get(s);
+			if (distribution.isEmpty()) {
+				continue;
+			}
+			double probabilitySum = 0.0;
+			for (int i = 0; i < getNumStates() ; ++i) {
+				if (distribution.contains(i)) {
+					probabilitySum = probabilitySum + distribution.get(i);
+				}
+			}
+			if (probabilitySum > (1.0 - tolerance) && probabilitySum < (1.0 + tolerance)) {
+				// good enough, so this row does not need normalization. Better not do it than to further screw up the precision.
+				continue;
+			} else {
+				// not good enough, so this row needs normalization
+				for (int i = 0; i < getNumStates() ; ++i) {
+					if (distribution.contains(i)) {
+						distribution.set(i, distribution.get(i) / probabilitySum);
+					}
+				}
+			}
+		}
+	}
 
 	@Override
 	public String toString() {

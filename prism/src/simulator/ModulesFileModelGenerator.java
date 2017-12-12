@@ -496,7 +496,7 @@ public class ModulesFileModelGenerator extends DefaultModelGenerator
 					Expression updateRate = comm.getUpdates().getProbability(k);
 					double prob;
 					if (updateRate == null) {
-						prob = 1.0 / rate;
+						prob = 1.0 / rate; // TODO MAJO - improve precision. This is also a good argument on why not to do it this way. Instead, we can have one event for each update and probability 1.
 					} else {
 						prob = updateRate.evaluateDouble(constantList) / rate;
 					}

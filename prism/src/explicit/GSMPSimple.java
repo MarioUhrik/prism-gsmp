@@ -332,6 +332,16 @@ public class GSMPSimple extends ModelExplicit implements GSMP
         setEvents(events);
 	}
 	
+	/**
+	 * Makes the probabilities of each row in the transition matrix of each event sum to one.
+	 */
+	public void normalize() {
+		List<GSMPEvent> events = getEventList();
+		for (int e = 0; e < events.size() ; ++e) {
+			events.get(e).normalize();
+		}
+	} 
+	
 	@Override
 	public void setStatesList(List<State> statesList){
 		List<GSMPEvent> events = getEventList();

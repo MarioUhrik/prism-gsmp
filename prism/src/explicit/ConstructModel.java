@@ -363,6 +363,7 @@ public class ConstructModel extends PrismComponent
 				break;
 			case GSMP:
 				gsmp.removeEmptyEvents();
+				gsmp.normalize();
 				model = sort ? new GSMPSimple(gsmp, permut) : (GSMPSimple) gsmp;
 				break;
 			case MDP:
