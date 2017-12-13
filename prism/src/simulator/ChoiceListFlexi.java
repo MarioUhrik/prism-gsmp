@@ -341,8 +341,8 @@ public class ChoiceListFlexi implements Choice
 				if (getEventIdent(j) == null ) { // the first one is a slave
 					setEventIdent(j, ch.getEventIdent(i));
 				} else {
-					if (ch.getEventIdent(i) == null) { // the second one is a slave
-						// TODO MAJO - So, I guess, do nothing?
+					if (ch.getEventIdent(i) == null) { // both are slaves
+						// in this case, do nothing
 					} else { // both are the masters (not slaves)
 						if (isExponential(getEventIdent(j)) && isExponential(ch.getEventIdent(i)) && this.expSyncBackwardCompatible) { // both are exponentially distributed - make their product if backward compatibility is enabled
 							String productEventName = "<[" + getEventIdent(j) + "]PRODUCT_WITH[" + ch.getEventIdent(i) + "]>";

@@ -441,8 +441,6 @@ public class ModulesFileModelGenerator extends DefaultModelGenerator
 	/**
 	 * 1) Transforms the modulesFile so that it becomes suitable for GSMP construction.
 	 *    For example, all CTMC commands are translated into equivalent GSMP events.
-	 * 2) Then various semantic checks are performed to ensure the would-be 
-	 *    constructed GSMP complies with all the rules.
 	 * 3) Lastly, constructs a list of GSMP events that can be assigned to GSMP models.
 	 * @return Map of all GSMP events onto their unique identifiers
 	 */
@@ -457,7 +455,6 @@ public class ModulesFileModelGenerator extends DefaultModelGenerator
 	 * @throws PrismLangException Should never happen anyway. Necessary because this method needs to evaluate some expressions.
 	 */
 	private void translateCTMCCommandsIntoGSMPCommands() throws PrismLangException{
-		Values constantList = modulesFile.getConstantList().evaluateSomeConstants(null, null);
 		//traverse all modules and get all commands
 		for (int i = 0; i < modulesFile.getNumModules() ; ++i) {
 			for (int j = 0; j < modulesFile.getModule(i).getNumCommands() ; ++j) {
@@ -476,7 +473,7 @@ public class ModulesFileModelGenerator extends DefaultModelGenerator
 					if (updateRate == null) {
 						rate += 1.0; //not sure if this should ever happen though
 					} else {
-						rate += updateRate.evaluateDouble(constantList);
+						rate += updateRate.evaluateDouble(mfConstants);
 					}
 				}
 				Expression rateExpr = new ExpressionLiteral(TypeDouble.getInstance(), rate);
@@ -496,9 +493,9 @@ public class ModulesFileModelGenerator extends DefaultModelGenerator
 					Expression updateRate = comm.getUpdates().getProbability(k);
 					double prob;
 					if (updateRate == null) {
-						prob = 1.0 / rate; // TODO MAJO - improve precision. This is also a good argument on why not to do it this way. Instead, we can have one event for each update and probability 1.
+						prob = 1.0 / rate; // TODO MAJO - improve precision. This is also a good argument on why not to do it this way. Instead, we could have one event for each update and probability 1.
 					} else {
-						prob = updateRate.evaluateDouble(constantList) / rate;
+						prob = updateRate.evaluateDouble(mfConstants) / rate;
 					}
 					Expression probExpr = new ExpressionLiteral(TypeDouble.getInstance(), prob);
 					comm.getUpdates().setProbability(k, probExpr);
@@ -531,7 +528,7 @@ public class ModulesFileModelGenerator extends DefaultModelGenerator
 	/**
 	 * Assumes that methods setupGSMP() and then updater.calculateTransitions()
 	 * have already been called!
-	 * @return Complete, final list of all GMSP events, including translate CTMC events and GSMP event products
+	 * @return Complete, final list of all GMSP events, including translated CTMC events and GSMP event products
 	 */
 	public Map<String, GSMPEvent> getAllGSMPEventsAfterProducts(){
 		return updater.getAllGSMPEvents();
@@ -551,11 +548,11 @@ public class ModulesFileModelGenerator extends DefaultModelGenerator
 		TypeDistribution distributionType = distributions.getDistributionType(distrIndex);
 		double firstParameter = 0;
 		if (distributionType.getNumParams() >= 1) {
-			firstParameter = distributions.getFirstParameter(distrIndex).evaluateDouble(distributions.getParent().getConstantValues());
+			firstParameter = distributions.getFirstParameter(distrIndex).evaluateDouble(mfConstants);
 		}
 		double secondParameter = 0;
 		if (distributionType.getNumParams() >= 2) {
-			secondParameter = distributions.getSecondParameter(distrIndex).evaluateDouble(distributions.getParent().getConstantValues());
+			secondParameter = distributions.getSecondParameter(distrIndex).evaluateDouble(mfConstants);
 		}
 		return (new GSMPEvent(distributionType, firstParameter, secondParameter, astEvent.getEventName()));
 	}

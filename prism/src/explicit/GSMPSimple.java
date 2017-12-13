@@ -127,13 +127,13 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 	}
 
 	/**
-	 * Change the probabilities of event under index {@code eventIndex}
-	 * @return true if successfully done, false if event was not found
+	 * Change the probabilities of event with name {@code eventIdent}
+	 * @return true if successfully done, false if the event was not found
 	 */
 	public boolean addToProbability(int i, int j, double prob, String eventIdent) {
 		GSMPEvent event = getEvent(eventIdent);
 		if (event == null) {
-			// this should never happen !
+			// in practice, this should never happen
 			return false;
 		}
 		event.addToProbability(i, j, prob);
@@ -158,6 +158,9 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 		return events.size();
 	}
 
+	/**
+	 * Careful! The event must have an amount of states consistent with other existing events.
+	 */
 	public void addEvent(GSMPEvent event) {
 		events.put(event.getIdentifier(), event);
 	}
@@ -333,7 +336,7 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 	}
 	
 	/**
-	 * Makes the probabilities of each row in the transition matrix of each event sum to one.
+	 * Makes the probabilities of each used row in the transition matrix of each event sum to one.
 	 */
 	public void normalize() {
 		List<GSMPEvent> events = getEventList();

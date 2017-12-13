@@ -169,10 +169,10 @@ public class GSMPEvent extends DTMCSimple
 	}
 	
 	/**
-	 * Makes the probabilities of each row in the transition matrix sum to one.
+	 * Makes the probabilities of each used row in the transition matrix sum to one.
 	 */
 	public void normalize() { // TODO MAJO - better precision
-		final double tolerance = 0.0001;// TODO MAJO - make this dependent on some global prism setting
+		final double tolerance = 1e-5;// TODO MAJO - make this dependent on some global prism setting
 		for (int s = 0; s < getNumStates() ; ++s) {
 			Distribution distribution = trans.get(s);
 			if (distribution.isEmpty()) {
