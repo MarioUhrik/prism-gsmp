@@ -30,10 +30,8 @@ import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Vector;
 
-import explicit.GSMPEvent;
 import parser.State;
 import parser.VarList;
 import parser.ast.Command;
@@ -63,7 +61,6 @@ public class Updater extends PrismComponent
 	protected ModelType modelType;
 	protected int numModules;
 	protected VarList varList;
-	protected Map<String, GSMPEvent> allGSMPEvents;
 	// Synchronising action info
 	protected Vector<String> synchs;
 	protected int numSynchs;
@@ -233,7 +230,6 @@ public class Updater extends PrismComponent
 						for (k = 0; k < count - 1; k++) {
 							for (l = 0; l < n; l++) {
 								ChoiceListFlexi tmp = new ChoiceListFlexi(chs.get(l));
-								tmp.setAllGSMPEvents(getAllGSMPEvents());
 								tmp.expSyncBackwardCompatible = expSyncBackwardCompatible;
 								chs.add(tmp);
 							}
@@ -364,7 +360,6 @@ public class Updater extends PrismComponent
 
 		// Create choice and add all info
 		ch = new ChoiceListFlexi();
-		ch.setAllGSMPEvents(getAllGSMPEvents());
 		ch.expSyncBackwardCompatible = expSyncBackwardCompatible;
 		ch.setModuleOrActionIndex(moduleOrActionIndex);
 		n = ups.getNumUpdates();
@@ -419,14 +414,5 @@ public class Updater extends PrismComponent
 		// Build product with existing
 		ch.productWith(chNew);
 	}
-	
-	public Map<String, GSMPEvent> getAllGSMPEvents(){
-		return allGSMPEvents;
-	}
-	
-	public void setAllGSMPEvents(Map<String, GSMPEvent> allGSMPEvents) {
-		this.allGSMPEvents = allGSMPEvents;
-	}
-	
 	
 }

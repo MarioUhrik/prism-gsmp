@@ -200,7 +200,7 @@ public class GSMPEvent extends DTMCSimple
 
 	@Override
 	public String toString() {
-		String str = "Event[name=\"" + getIdentifier() + "\", " + distributionType.getTypeString();
+		String str = "Event[name=\"" + getIdentifier();/* + "\", " + distributionType.getTypeString();
 		switch (distributionType.getNumParams()) {
 		case 1:
 			str += "(" + firstParameter + ") ";
@@ -211,6 +211,7 @@ public class GSMPEvent extends DTMCSimple
 		default:
 			str += "(Unusual number of parameters) ";
 		}
+		*/
 		str += ", active=" + active + ", probabilities_" + super.toString() + ']';
 		return str;
 	}

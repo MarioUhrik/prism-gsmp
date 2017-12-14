@@ -566,6 +566,24 @@ public class ModulesFile extends ASTElement implements ModelInfo
 	public Vector<String> getEventIdents(){
 		return eventIdents;
 	}
+	
+	/**
+	 * @param eventName
+	 * @return Event of name eventName from within this modulesFile if it exists, else null
+	 */
+	public Event getEvent(String eventName) {
+		for (int m = 0 ; m < getNumModules() ; ++m) {
+			Module module = getModule(m);
+			int eventIndex = module.getEvent(eventName);
+			if (eventIndex == -1) {
+				// event does not exist in this module
+				continue;
+			} else {
+				return module.getEvent(eventIndex);
+			}
+		}
+		return null;
+	}
 
 	// Variable query methods
 

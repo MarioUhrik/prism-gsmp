@@ -133,7 +133,7 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 	public boolean addToProbability(int i, int j, double prob, String eventIdent) {
 		GSMPEvent event = getEvent(eventIdent);
 		if (event == null) {
-			// in practice, this should never happen
+			// this should never happen
 			return false;
 		}
 		event.addToProbability(i, j, prob);
@@ -158,11 +158,18 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 		return events.size();
 	}
 
-	/**
-	 * Careful! The event must have an amount of states consistent with other existing events.
-	 */
-	public void addEvent(GSMPEvent event) {
-		events.put(event.getIdentifier(), event);
+	public boolean addEvent(GSMPEvent event) {
+		if (getEvent(event.getIdentifier()) != null) {
+			return false;
+		}
+		GSMPEvent tmp = new GSMPEvent(
+				getNumStates(),
+				event.getDistributionType(),
+				event.getFirstParameter(),
+				event.getSecondParameter(),
+				event.getIdentifier());
+		events.put(event.getIdentifier(), tmp);
+		return true;
 	}
 
 	public GSMPEvent getEvent(String identifier) {
