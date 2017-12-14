@@ -330,7 +330,8 @@ public class ChoiceListFlexi implements Choice
 					setEventIdent(j, ch.getEventIdent(i));
 				} else {
 					if (ch.getEventIdent(i) == null) { //master synchronizing with a slave
-						// TODO MAJO - ch.setEventIdent(i, getEventIdent(j));
+						//ch.setEventIdent(i, getEventIdent(j));
+						// TODO MAJO - not sure if the above line should be here. I think it should, but testing proved it makes no difference
 					} else { // both are the masters 
 						if (isExponential(getEventIdent(j)) && isExponential(ch.getEventIdent(i)) && this.expSyncBackwardCompatible) { // if synchronization of these events is allowed, do it
 							String productEventName = "<[" + getEventIdent(j) + "]PRODUCT_WITH[" + ch.getEventIdent(i) + "]>";

@@ -207,7 +207,7 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 
 	@Override
 	public String toString() {
- 		String str =  "GSMP Events:";
+ 		String str =  "GSMP with " + getNumEvents() + " events:";
  		List<GSMPEvent> events = getEventList();
 		for (int i = 0; i < events.size(); i++) {
 			str += "\n" + events.get(i);
@@ -268,10 +268,14 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 		}
 		if (fix && getDeadlockStates().iterator().hasNext() ) {
 			//fix all the deadlocks by creating a new exponential event looping over them
-			String selfLoopEventIdent = "autogen_special_deadlock_fixing_exp_event(" + getFirstDeadlockState() + ")";
+			double uniformizationRate = getUniformisationRate();
+			String selfLoopEventIdent = 
+					"<Deadlock_fixing_exp_event>\"=" +
+					TypeDistributionExponential.getInstance().getTypeString() + 
+					"(" + uniformizationRate + ")";
 			GSMPEvent selfLoop = new GSMPEvent(getNumStates()
 					,TypeDistributionExponential.getInstance(),
-					getUniformisationRate(),
+					uniformizationRate,
 					0.0,
 					selfLoopEventIdent);
 			this.addEvent(selfLoop);
