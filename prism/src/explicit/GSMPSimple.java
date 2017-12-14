@@ -206,16 +206,6 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 	}
 
 	@Override
-	public String toString() {
- 		String str =  "GSMP with " + getNumEvents() + " events:";
- 		List<GSMPEvent> events = getEventList();
-		for (int i = 0; i < events.size(); i++) {
-			str += "\n" + events.get(i);
-		}
- 		return str;
-	}
-
-	@Override
 	public void buildFromPrismExplicit(String filename) throws PrismException {
 		//TODO MAJO - implement
 		throw new UnsupportedOperationException("Not yet implemented!");
@@ -363,6 +353,16 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 			events.get(i).setStatesList(statesList);
 		}
 		this.statesList = statesList;
+	}
+	
+	@Override
+	public String toString() {
+ 		String str =  "GSMP with " + getNumEvents() + " events:";
+ 		List<GSMPEvent> events = getEventList();
+		for (int i = 0; i < events.size(); i++) {
+			str += "\n" + events.get(i);
+		}
+ 		return str;
 	}
 
 }
