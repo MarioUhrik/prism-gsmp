@@ -42,6 +42,9 @@ public class TypeDistribution extends Type {
 		singleton = new TypeDistribution();
 	}
 	
+	/**
+	 * e.g. "Erlang distribution"
+	 */
 	@Override
 	public String getTypeString()
 	{

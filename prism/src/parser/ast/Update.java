@@ -27,7 +27,6 @@
 package parser.ast;
 
 import java.util.ArrayList;
-import java.util.BitSet;
 
 import parser.*;
 import parser.type.*;

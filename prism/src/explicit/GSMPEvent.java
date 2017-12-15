@@ -90,7 +90,7 @@ public class GSMPEvent extends DTMCSimple
 	}
 
 	/**
-	 * Copy constructor.
+	 * Copy constructor with a state permutation.
 	 */
 	public GSMPEvent(GSMPEvent event, int permut[]) {
 		super(event, permut);
@@ -175,24 +175,15 @@ public class GSMPEvent extends DTMCSimple
 		final double tolerance = 1e-5;// TODO MAJO - make this dependent on some global prism setting
 		for (int s = 0; s < getNumStates() ; ++s) {
 			Distribution distribution = trans.get(s);
-			if (distribution.isEmpty()) {
-				continue;
-			}
-			double probabilitySum = 0.0;
-			for (int i = 0; i < getNumStates() ; ++i) {
-				if (distribution.contains(i)) {
-					probabilitySum = probabilitySum + distribution.get(i);
-				}
-			}
+			double probabilitySum = distribution.sum();
 			if (probabilitySum > (1.0 - tolerance) && probabilitySum < (1.0 + tolerance)) {
 				// good enough, so this row does not need normalization. Better not do it than to further screw up the precision.
 				continue;
 			} else {
 				// not good enough, so this row needs normalization
-				for (int i = 0; i < getNumStates() ; ++i) {
-					if (distribution.contains(i)) {
-						distribution.set(i, distribution.get(i) / probabilitySum);
-					}
+				Set<Integer> distributionSupport = distribution.getSupport();
+				for (int supportedState : distributionSupport) {
+					distribution.set(supportedState, distribution.get(supportedState) / probabilitySum);
 				}
 			}
 		}
@@ -200,18 +191,19 @@ public class GSMPEvent extends DTMCSimple
 
 	@Override
 	public String toString() {
-		String str = "Event[name=\"" + getIdentifier() + "\", " + distributionType.getTypeString();
-		switch (distributionType.getNumParams()) {
-		case 1:
-			str += "(" + firstParameter + ") ";
-			break;
-		case 2:
-			str += "(" + firstParameter + "," + secondParameter + ") ";
-			break;
-		default:
-			str += "(Unusual number of parameters) ";
+		String str = "Event \"" + getIdentifier() + "\n      ";
+		boolean first = true;
+		for (int i = 0; i < numStates; i++) {
+			if (trans.get(i).isEmpty()) {
+				continue;
+			}
+			if (first) {
+				first = false;
+			} else {
+				str += ", ";
+			}
+			str += i + ": " + trans.get(i);
 		}
-		str += ", active=" + active + ", probabilities_" + super.toString() + ']';
 		return str;
 	}
 }

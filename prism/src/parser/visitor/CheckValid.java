@@ -28,7 +28,6 @@ package parser.visitor;
 
 import parser.ast.*;
 import parser.type.*;
-import prism.PrismException;
 import prism.PrismLangException;
 import prism.ModelType;
 

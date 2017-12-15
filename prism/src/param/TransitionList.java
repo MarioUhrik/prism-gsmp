@@ -30,8 +30,6 @@ package param;
 import java.util.*;
 
 import parser.*;
-import parser.ast.Expression;
-import parser.ast.ExpressionLiteral;
 import prism.*;
 
 public class TransitionList

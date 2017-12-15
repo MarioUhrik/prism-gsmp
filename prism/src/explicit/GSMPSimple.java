@@ -133,7 +133,7 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 	public boolean addToProbability(int i, int j, double prob, String eventIdent) {
 		GSMPEvent event = getEvent(eventIdent);
 		if (event == null) {
-			// in practice, this should never happen
+			// this should never happen
 			return false;
 		}
 		event.addToProbability(i, j, prob);
@@ -158,11 +158,18 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 		return events.size();
 	}
 
-	/**
-	 * Careful! The event must have an amount of states consistent with other existing events.
-	 */
-	public void addEvent(GSMPEvent event) {
-		events.put(event.getIdentifier(), event);
+	public boolean addEvent(GSMPEvent event) {
+		if (getEvent(event.getIdentifier()) != null) {
+			return false;
+		}
+		GSMPEvent tmp = new GSMPEvent(
+				getNumStates(),
+				event.getDistributionType(),
+				event.getFirstParameter(),
+				event.getSecondParameter(),
+				event.getIdentifier());
+		events.put(event.getIdentifier(), tmp);
+		return true;
 	}
 
 	public GSMPEvent getEvent(String identifier) {
@@ -196,16 +203,6 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 	public void exportToPrismExplicitTra(PrismLog out) {
 		//TODO MAJO - is this enough?
 		out.println(this);
-	}
-
-	@Override
-	public String toString() {
- 		String str =  "GSMP Events:";
- 		List<GSMPEvent> events = getEventList();
-		for (int i = 0; i < events.size(); i++) {
-			str += "\n" + events.get(i);
-		}
- 		return str;
 	}
 
 	@Override
@@ -261,10 +258,14 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 		}
 		if (fix && getDeadlockStates().iterator().hasNext() ) {
 			//fix all the deadlocks by creating a new exponential event looping over them
-			String selfLoopEventIdent = "autogen_special_deadlock_fixing_exp_event(" + getFirstDeadlockState() + ")";
+			double uniformizationRate = getUniformisationRate();
+			String selfLoopEventIdent = 
+					"<Deadlock_fixing_exp_event>\"=" +
+					TypeDistributionExponential.getInstance().getTypeString() + 
+					"(" + uniformizationRate + ")";
 			GSMPEvent selfLoop = new GSMPEvent(getNumStates()
 					,TypeDistributionExponential.getInstance(),
-					getUniformisationRate(),
+					uniformizationRate,
 					0.0,
 					selfLoopEventIdent);
 			this.addEvent(selfLoop);
@@ -352,6 +353,16 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 			events.get(i).setStatesList(statesList);
 		}
 		this.statesList = statesList;
+	}
+	
+	@Override
+	public String toString() {
+ 		String str =  "GSMP with " + getNumEvents() + " events:";
+ 		List<GSMPEvent> events = getEventList();
+		for (int i = 0; i < events.size(); i++) {
+			str += "\n" + events.get(i);
+		}
+ 		return str;
 	}
 
 }

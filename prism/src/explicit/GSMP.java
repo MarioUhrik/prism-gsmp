@@ -36,7 +36,7 @@ import java.util.List;
  * Out of the active states, only one "wins" by occuring the soonest.
  * Each event has a distribution on states for each state, determining the next state.
  */
-public interface GSMP extends ModelSimple // TODO MAJO - incomplete
+public interface GSMP extends ModelSimple
 {
 	/**
 	 * Get all events.
@@ -50,9 +50,11 @@ public interface GSMP extends ModelSimple // TODO MAJO - incomplete
 	public List<GSMPEvent> getActiveEvents(int state);
 	
 	/**
-	 * Adds an event into the GSMP.
+	 * Adds a new empty event into the GSMP iff this event has not yet been added.
 	 * @param event to add
+	 * @return true if the event was successfully added,
+	 *         false if the event is already in and nothing happened
 	 */
-	public void addEvent(GSMPEvent event);
+	public boolean addEvent(GSMPEvent event);
 
 }

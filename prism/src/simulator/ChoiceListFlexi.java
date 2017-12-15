@@ -28,7 +28,6 @@ package simulator;
 
 import java.util.*;
 
-import explicit.GSMPEvent;
 import parser.*;
 import parser.ast.*;
 import parser.type.TypeDistributionExponential;
@@ -47,7 +46,6 @@ public class ChoiceListFlexi implements Choice
 	//GSMP event identifiers
 	protected List<String> eventIdents;
 	
-	protected Map<String, GSMPEvent> allGSMPEvents;
 	// ExpSyncBackwardCompatible flag from prism settings
 	public boolean expSyncBackwardCompatible;
 
@@ -66,7 +64,6 @@ public class ChoiceListFlexi implements Choice
 		updates = new ArrayList<List<Update>>();
 		probability = new ArrayList<Double>();
 		eventIdents = new ArrayList<String>();
-		allGSMPEvents = new HashMap<String, GSMPEvent>();
 		expSyncBackwardCompatible = true;
 	}
 
@@ -79,7 +76,6 @@ public class ChoiceListFlexi implements Choice
 		moduleOrActionIndex = ch.moduleOrActionIndex;
 		updates = new ArrayList<List<Update>>(ch.updates.size());
 		eventIdents = ch.getEventIdents();
-		allGSMPEvents = ch.getAllGSMPEvents();
 		expSyncBackwardCompatible = ch.expSyncBackwardCompatible;
 		for (List<Update> list : ch.updates) {
 			List<Update> listNew = new ArrayList<Update>(list.size()); 
@@ -136,10 +132,6 @@ public class ChoiceListFlexi implements Choice
 	public void setEventIdent(int i, String eventIdent) {
 		eventIdents.set(i, eventIdent);
 	}
-	
-	public void setAllGSMPEvents(Map<String, GSMPEvent> allGSMPEvents) {
-		this.allGSMPEvents = allGSMPEvents;
-	}
 
 	/**
 	 * Modify this choice, constructing product of it with another.
@@ -190,10 +182,6 @@ public class ChoiceListFlexi implements Choice
 	
 	public List<String> getEventIdents() {
 		return eventIdents;
-	}
-	
-	public Map<String, GSMPEvent> getAllGSMPEvents(){
-		return allGSMPEvents;
 	}
 
 	@Override
@@ -338,27 +326,42 @@ public class ChoiceListFlexi implements Choice
 	private void eventProduct(ChoiceListFlexi ch) throws PrismException {
 		for ( int i = 0; i < ch.size() ; ++i) {
 			for (int j = 0; j < size()  ; ++j) {
-				if (getEventIdent(j) == null ) { // the first one is a slave
+				if (getEventIdent(j) == null ) { // slave synchronizing with a master
 					setEventIdent(j, ch.getEventIdent(i));
 				} else {
-					if (ch.getEventIdent(i) == null) { // both are slaves
-						// in this case, do nothing
-					} else { // both are the masters (not slaves)
-						if (isExponential(getEventIdent(j)) && isExponential(ch.getEventIdent(i)) && this.expSyncBackwardCompatible) { // both are exponentially distributed - make their product if backward compatibility is enabled
+					if (ch.getEventIdent(i) == null) { //master synchronizing with a slave
+						//ch.setEventIdent(i, getEventIdent(j));
+						// TODO MAJO - not sure if the above line should be here. I think it should, but testing proved it makes no difference
+					} else { // both are the masters 
+						if (isExponential(getEventIdent(j)) && isExponential(ch.getEventIdent(i)) && this.expSyncBackwardCompatible) { // if synchronization of these events is allowed, do it
 							String productEventName = "<[" + getEventIdent(j) + "]PRODUCT_WITH[" + ch.getEventIdent(i) + "]>";
 							if (!isExponential(productEventName)) { 
-								// if their product does not exist, create it 
-								GSMPEvent product = new GSMPEvent(
-										getAllGSMPEvents().get(getEventIdent(j)).getNumStates()
-										,TypeDistributionExponential.getInstance()
-										,getRate(getEventIdent(j)) * getRate(ch.getEventIdent(i))
-										,0.0
-										,productEventName);
-								getAllGSMPEvents().put(productEventName, product);
+								// if their product event and distribution do not exist yet, create them
+								// make a new distribution and add it in the ModulesFile
+								DistributionList distrList = getModulesFile().getDistributionList();
+								int distrIndexThis = getDistributionIndex(getEvent(getEventIdent(j)).getDistributionName());
+								int distrIndexOther = getDistributionIndex(getEvent(ch.getEventIdent(i)).getDistributionName());
+								String distrNameThis = distrList.getDistributionName(distrIndexThis);
+								String distrNameOther = distrList.getDistributionName(distrIndexOther);
+								String productDistrName = "<[" + distrNameThis + "]PRODUCT_WITH[" + distrNameOther + "]>";
+								ExpressionIdent productDistrNameIdent = new ExpressionIdent(productDistrName);
+								distrList.addDistribution(
+										productDistrNameIdent,
+										new ExpressionBinaryOp(
+												ExpressionBinaryOp.TIMES,
+												distrList.getFirstParameter(distrIndexThis),
+												distrList.getFirstParameter(distrIndexOther)),
+										null,
+										TypeDistributionExponential.getInstance());
+								// make a new event and add it to the Module this choicelist comes from
+								Module module = getEvent(getEventIdent(j)).getParent();
+								module.addEvent(new Event(
+										new ExpressionIdent(productEventName),
+										productDistrNameIdent));
 							} 
-							// their product now definitely exists, so assign it
+							// their product now definitely exists, so just assign it
 							setEventIdent(j, productEventName);
-						} else { // at least one of them is not exponential - ERROR
+						} else { // else synchronization of these events is not allowed
 							if (!isExponential(getEventIdent(j)) || !isExponential(ch.getEventIdent(i))) {
 								throw new PrismException("Synchronizing events \"" + getEventIdent(i) + "\" and \"" + ch.getEventIdent(j) + "\" at least one of which is not exponentially distributed!");
 							} else {
@@ -374,22 +377,39 @@ public class ChoiceListFlexi implements Choice
 	
 	// returns true if this event is exponentially distributed and exists, else false
 	private boolean isExponential(String eventName) {
-			GSMPEvent ev = getAllGSMPEvents().get(eventName);
-			if (ev == null) {
-				return false;
-			}
-			if (ev.getDistributionType() instanceof TypeDistributionExponential) {
-				return true;
-			}
-		return false;
+		Event event = getEvent(eventName);
+		if (event == null) {
+			return false;
+		}
+		DistributionList distributionList = getModulesFile().getDistributionList();
+		int distrIndex = distributionList.getDistributionIndex(event.getDistributionName());
+		return (distributionList.getDistributionType(distrIndex) instanceof TypeDistributionExponential);
 	}
 	
-	// returns the first parameter of event with name eventName. if not found, returns 0;
-	private double getRate(String eventName) {
-		GSMPEvent ev = getAllGSMPEvents().get(eventName);
-		if (ev == null) {
-			return 0;
-		}
-		return ev.getFirstParameter();
+	/**
+	 * Assumes that all the choices are from the same modulesFile and that there is at least one choice
+	 * @return ModulesFile the choices originate from
+	 */
+	private ModulesFile getModulesFile() {
+		// beautiful
+		return updates.get(0).get(0).getParent().getParent().getParent().getParent();
+	}
+	
+	/**
+	 * @param eventName
+	 * @return Event of name eventName from within getModulesFile() if it exists, else null
+	 */
+	private Event getEvent(String eventName) {
+		return getModulesFile().getEvent(eventName);
+	}
+	
+	/**
+	 * 
+	 * @param distributionName
+	 * @return Index of distribution of name distributionName from within getModulesFile() if it exists, else -1
+	 */
+	private int getDistributionIndex(String distributionName) {
+		DistributionList distributionList = getModulesFile().getDistributionList();
+		return distributionList.getDistributionIndex(distributionName);
 	}
 }
