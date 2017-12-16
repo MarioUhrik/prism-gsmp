@@ -44,6 +44,7 @@ import prism.PrismLangException;
 import prism.PrismLog;
 import prism.PrismNotSupportedException;
 import explicit.DTMC;
+import explicit.GSMP;
 import explicit.MDP;
 import explicit.Model;
 
@@ -84,6 +85,8 @@ public class ConstructRewards
 			return buildMCRewardStructure((DTMC) model, rewStr, constantValues);
 		case MDP:
 			return buildMDPRewardStructure((MDP) model, rewStr, constantValues);
+		case GSMP:
+			return buildGSMPRewardStructure((GSMP) model, rewStr, constantValues);
 		default:
 			throw new PrismNotSupportedException("Cannot build rewards for " + model.getModelType() + "s");
 		}
@@ -202,6 +205,11 @@ public class ConstructRewards
 			return rewSimple;
 		}
 	}
+	
+	public GSMPRewards buildGSMPRewardStructure(GSMP gsmp, RewardStruct rewStr, Values constantValues) throws PrismException {
+		// TODO MAJO - implement
+		throw new PrismNotSupportedException("Not yet implemented.");
+	}
 
 	/**
 	 * Construct the rewards for a model from a model generator. 
@@ -217,6 +225,8 @@ public class ConstructRewards
 			return buildMCRewardStructure((DTMC) model, modelGen, r);
 		case MDP:
 			return buildMDPRewardStructure((MDP) model, modelGen, r);
+		case GSMP:
+			return buildGSMPRewardStructure((GSMP) model, modelGen, r);
 		default:
 			throw new PrismNotSupportedException("Cannot build rewards for " + model.getModelType() + "s");
 		}
@@ -287,6 +297,18 @@ public class ConstructRewards
 			}
 		}
 		return rewSimple;
+	}
+	
+	/**
+	 * Construct the rewards for a GSMP from a model generator.
+	 * @param gsmp
+	 * @param modelGen
+	 * @param r The index of the reward structure to build
+	 * @return complete GSMP Reward structure
+	 */
+	public GSMPRewards buildGSMPRewardStructure(GSMP gsmp, ModelGenerator modelGen, int r) throws PrismException {
+		// TODO MAJO - implement
+		throw new PrismNotSupportedException("Not yet implemented.");
 	}
 
 	/**
