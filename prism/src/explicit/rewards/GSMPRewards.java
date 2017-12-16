@@ -42,7 +42,7 @@ public interface GSMPRewards extends Rewards
 	/**
 	 * Get the transition rewards for going from state {@code s} to state {@code t} via event of name {@code eventName}
 	 */
-	public abstract double getTransitionReward(int s, int t, String eventName);
+	public abstract double getTransitionReward(String eventName, int s, int t);
 
 	@Override
 	public GSMPRewards liftFromModel(Product<? extends Model> product);

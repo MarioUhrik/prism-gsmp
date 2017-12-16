@@ -206,6 +206,12 @@ public class ConstructRewards
 		}
 	}
 	
+	/**
+	 * Construct the rewards for a GSMP from a model and reward structure. 
+	 * @param mdp The GSMP
+	 * @param rewStr The reward structure
+	 * @param constantValues Values for any undefined constants needed
+	 */
 	public GSMPRewards buildGSMPRewardStructure(GSMP gsmp, RewardStruct rewStr, Values constantValues) throws PrismException {
 		// TODO MAJO - implement
 		throw new PrismNotSupportedException("Not yet implemented.");
