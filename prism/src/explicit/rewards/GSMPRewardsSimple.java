@@ -61,7 +61,7 @@ public class GSMPRewardsSimple implements GSMPRewards
 			//HashMap - O(1) read/insertion, but the hash tables have recursive(3x) memory redundancy
 			//TreeMap - O(log n) read/insertion, but no memory redundancy at all
 		//Why not just ArrayList - awkward indexing for events, overwhelming memory redundancy
-	     //(always O(|E|*|S|*|S|) space complexity regardless of rewards)
+	    	//(always O(|E|*|S|*|S|) space complexity regardless of rewards)
 
 	public GSMPRewardsSimple() {
 		stateRewards = new HashMap<Integer, Double>();

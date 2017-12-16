@@ -35,8 +35,8 @@ public class RewardStruct extends ASTElement
 {
 	private String name;		// name (optional)
 	private Vector<RewardStructItem> items;		// list of items
-	private int numStateItems;	// how may of the items are state rewards
-	private int numTransItems;	// how may of the items are transition rewards
+	private int numStateItems;	// how many of the items are state rewards
+	private int numTransItems;	// how many of the items are transition rewards
 	
 	// Constructor
 	

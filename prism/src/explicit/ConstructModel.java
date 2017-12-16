@@ -279,7 +279,6 @@ public class ConstructModel extends PrismComponent
 							break;
 						case GSMP:
 							if (!(modelGen instanceof ModulesFileModelGenerator)) {
-								//TODO MAJO
 								throw new PrismNotSupportedException("GSMP must be constructed from a ModulesFile using the explicit engine!");
 							}
 							String eventIdent = ((ModulesFileModelGenerator)modelGen).getEventIdentOfChoice(i, j);
