@@ -70,14 +70,24 @@ public class GSMPRewardsSimple implements GSMPRewards
 	
 	@Override
 	public double getStateReward(int s) {
-		return stateRewards.get(s);
+		Double reward = stateRewards.get(s);
+		if (reward == null) {
+			return 0.0;
+		} else {
+			return reward;
+		}
 	}
 	
 	/**
-	 * Set assign state {@code s} reward {@code r}.
+	 * Assign reward {@code r} to state {@code s}.
 	 */
 	public void setStateReward(int s, double r) {
 		stateRewards.put(s, r);
+	}
+	
+	public void addToStateReward(int s, double r) {
+		double newReward = r + getStateReward(s); // new reward = previous + addition
+		setStateReward(s, newReward); // set new reward
 	}
 
 	@Override
@@ -90,11 +100,16 @@ public class GSMPRewardsSimple implements GSMPRewards
 		if (destToRewardMap == null) {
 			return 0.0;
 		}
-		return destToRewardMap.get(t);
+		Double reward = destToRewardMap.get(t);
+		if (reward == null) {
+			return 0.0;
+		} else {
+			return reward;
+		}
 	}
 	
 	/**
-	 * Assign award {@code r} for transitions from state {@code s} to state {@code t} via event of name {@code eventName}.
+	 * Assign reward {@code r} for transitions from state {@code s} to state {@code t} via event of name {@code eventName}.
 	 */
 	public void setTransitionReward(String eventName, int s, int t, double r) {
 		//if no records of such event exists so far, create it
@@ -109,6 +124,14 @@ public class GSMPRewardsSimple implements GSMPRewards
 		Map<Integer, Double> destToRewardMap = sourceToDestToRewardMap.get(s);
 		//now that everything exists, just assign the reward
 		destToRewardMap.put(t, r);
+	}
+	
+	/**
+	 * Add {@code r} to rewards for transitions from state {@code s} to state {@code t} via event of name {@code eventName}.
+	 */
+	public void addToTransitionReward(String eventName, int s, int t, double r) {
+		double newReward = r + getTransitionReward(eventName, s, t); // additional reward + existing reward
+		setTransitionReward(eventName, s, t, newReward); // assign their sum
 	}
 
 	// assumes the product GSMP has the same events of the same name

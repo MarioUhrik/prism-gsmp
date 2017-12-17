@@ -45,6 +45,7 @@ import prism.PrismLog;
 import prism.PrismNotSupportedException;
 import explicit.DTMC;
 import explicit.GSMP;
+import explicit.GSMPEvent;
 import explicit.MDP;
 import explicit.Model;
 
@@ -213,8 +214,66 @@ public class ConstructRewards
 	 * @param constantValues Values for any undefined constants needed
 	 */
 	public GSMPRewards buildGSMPRewardStructure(GSMP gsmp, RewardStruct rewStr, Values constantValues) throws PrismException {
-		// TODO MAJO - implement
-		throw new PrismNotSupportedException("Not yet implemented.");
+		List<State> statesList;
+		Expression guard;
+		String action;
+		String eventAction;
+		int i, j, k, numStates;
+		GSMPRewardsSimple rewSimple = new GSMPRewardsSimple();
+
+		// Special case: constant state rewards
+		if (rewStr.getNumStateItems() == 1 && Expression.isTrue(rewStr.getStates(0)) && rewStr.getReward(0).isConstant()) {
+			double rew = rewStr.getReward(0).evaluateDouble(constantValues);
+			if (Double.isNaN(rew))
+				throw new PrismLangException("Reward structure evaluates to NaN (at any state)", rewStr.getReward(0));
+			if (!allowNegative && rew < 0)
+				throw new PrismLangException("Reward structure evaluates to " + rew + " (at any state), negative rewards not allowed", rewStr.getReward(0));
+			for (int s = 0; s < gsmp.getNumStates() ; ++s) {
+				rewSimple.setStateReward(s, rew);
+			}
+			return rewSimple;
+		}
+		// Normal: state and transition rewards
+		else {
+			numStates = gsmp.getNumStates();
+			statesList = gsmp.getStatesList();
+			List<GSMPEvent> events = gsmp.getEventList();
+			for (i = 0; i < rewStr.getNumItems(); i++) {
+				guard = rewStr.getStates(i);
+				action = rewStr.getSynch(i);
+				for (j = 0; j < numStates; j++) {
+					// Is guard satisfied?
+					if (guard.evaluateBoolean(constantValues, statesList.get(j))) {
+						// Transition reward
+						if (rewStr.getRewardStructItem(i).isTransitionReward()) {
+							for (k = 0; k < gsmp.getNumStates(); k++) {
+								for (int e = 0; e < events.size() ; ++e) {
+									eventAction = events.get(e).getActionLabel(j, k);
+									if (eventAction == null ? (action.isEmpty()) : eventAction.equals(action)) {
+										double rew = rewStr.getReward(i).evaluateDouble(constantValues, statesList.get(j));
+										if (Double.isNaN(rew))
+											throw new PrismLangException("Reward structure evaluates to NaN at state " + statesList.get(j), rewStr.getReward(i));
+										if (!allowNegative && rew < 0)
+											throw new PrismLangException("Reward structure evaluates to " + rew + " at state " + statesList.get(j) +", negative rewards not allowed", rewStr.getReward(i));
+										rewSimple.addToTransitionReward(events.get(e).getIdentifier() ,j, k, rew);
+									}
+								}
+							}
+						}
+						// State reward
+						else {
+							double rew = rewStr.getReward(i).evaluateDouble(constantValues, statesList.get(j));
+							if (Double.isNaN(rew))
+								throw new PrismLangException("Reward structure evaluates to NaN at state " + statesList.get(j), rewStr.getReward(i));
+							if (!allowNegative && rew < 0)
+								throw new PrismLangException("Reward structure evaluates to " + rew + " at state " + statesList.get(j) +", negative rewards not allowed", rewStr.getReward(i));
+							rewSimple.addToStateReward(j, rew);
+						}
+					}
+				}
+			}
+			return rewSimple;
+		}
 	}
 
 	/**
@@ -313,8 +372,32 @@ public class ConstructRewards
 	 * @return complete GSMP Reward structure
 	 */
 	public GSMPRewards buildGSMPRewardStructure(GSMP gsmp, ModelGenerator modelGen, int r) throws PrismException {
-		// TODO MAJO - implement
-		throw new PrismNotSupportedException("Not yet implemented.");
+		int numStates = gsmp.getNumStates();
+		List<State> statesList = gsmp.getStatesList();
+		GSMPRewardsSimple rewSimple = new GSMPRewardsSimple();
+		List<GSMPEvent> events = gsmp.getEventList();
+		for (int j = 0; j < numStates; j++) {
+			State state = statesList.get(j);
+			// State rewards
+			double rew = modelGen.getStateReward(r, state);
+			if (Double.isNaN(rew))
+				throw new PrismException("Reward structure evaluates to NaN at state " + state);
+			if (!allowNegative && rew < 0)
+				throw new PrismException("Reward structure evaluates to " + rew + " at state " + state +", negative rewards not allowed");
+			rewSimple.addToStateReward(j, rew);
+			// State-action rewards
+			for (int k = 0; k < numStates; k++) {
+				for (int e = 0; e < events.size() ; ++e) {
+					rew = modelGen.getStateActionReward(r, state, events.get(e).getActionLabel(j, k));
+					if (Double.isNaN(rew))
+						throw new PrismException("Reward structure evaluates to NaN at state " + state);
+					if (!allowNegative && rew < 0)
+						throw new PrismException("Reward structure evaluates to " + rew + " at state " + state +", negative rewards not allowed");
+					rewSimple.addToTransitionReward(events.get(e).getIdentifier() ,j, k, rew);
+				}
+			}
+		}
+		return rewSimple;
 	}
 
 	/**
