@@ -282,11 +282,12 @@ public class ConstructModel extends PrismComponent
 								throw new PrismNotSupportedException("GSMP must be constructed from a ModulesFile using the explicit engine!");
 							}
 							String eventIdent = ((ModulesFileModelGenerator)modelGen).getEventIdentOfChoice(i, j);
+							String actionLabel = (String)modelGen.getTransitionAction(i, j);
 							GSMPEvent event = ((ModulesFileModelGenerator)modelGen).generateGSMPEvent(eventIdent);
 							if (gsmp.getEvent(event.getIdentifier()) == null) {
 								gsmp.addEvent(event);
 							}
-							gsmp.addToProbability(src, dest, modelGen.getTransitionProbability(i, j), event.getIdentifier());
+							gsmp.addToProbability(src, dest, modelGen.getTransitionProbability(i, j), event.getIdentifier(), actionLabel);
 							break;
 						case MDP:
 						case CTMDP:

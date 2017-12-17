@@ -45,9 +45,17 @@ public class GSMPEvent extends DTMCSimple
 	//This information is already stored in the state distribution matrix anyway.
 	private BitSet active;
 	/**
-	 * Unique identifier String passed over when generated from ast/Event class
+	 * Unique event identifier String passed over when generated from parser/AST/Event class
 	 */
 	private String identifier;
+	/**
+	 * Map of action labels, similar to the one in GSMPRewardsSimple.
+	 * First map maps Second Maps onto source state indices.
+	 * Second map maps destination indices onto action labels.
+	 * This one uses TreeMaps for less memory redundancy.
+	 * Additionally, it could maybe be deleted altogether after GSMPRewards are constructed.
+	 */
+	Map<Integer, Map<Integer, String>> actionLabels;
 
 	// Constructors
 
@@ -60,6 +68,7 @@ public class GSMPEvent extends DTMCSimple
 		this.firstParameter = firstParameter;
 		this.secondParameter = secondParameter;
 		this.identifier = identifier;
+		actionLabels = new TreeMap<Integer, Map<Integer, String>>();
 		clearActive();
 	}
 
@@ -143,6 +152,14 @@ public class GSMPEvent extends DTMCSimple
 	public void setDistributionType(TypeDistribution distributionType) {
 		this.distributionType = distributionType;
 	}
+	
+	public void setActionLabel(int s, int t, String actionLabel) {
+		Map<Integer, String> destToLabelMap = actionLabels.get(s);
+		if (destToLabelMap == null) {
+			actionLabels.put(s, new TreeMap<Integer, String>());
+		}
+		destToLabelMap.put(t, actionLabel);
+	}
 
 	public boolean isActive(int state) {
 		return active.get(state);
@@ -166,6 +183,20 @@ public class GSMPEvent extends DTMCSimple
 	
 	public TypeDistribution getDistributionType() {
 		return distributionType;
+	}
+	
+	/**
+	 * @param s source state index
+	 * @param t destination state index
+	 * @return Returns the action label assigned to going from state s to state t via this event.
+	 *         If unassigned, returns null.
+	 */
+	public String getActionLabel(int s, int t) {
+		Map<Integer, String> destToLabelMap = actionLabels.get(s);
+		if (destToLabelMap == null) {
+			return null;
+		}
+		return destToLabelMap.get(t);
 	}
 	
 	/**

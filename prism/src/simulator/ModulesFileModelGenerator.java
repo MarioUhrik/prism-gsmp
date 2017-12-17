@@ -343,29 +343,6 @@ public class ModulesFileModelGenerator extends DefaultModelGenerator
 		return expr.evaluateBoolean(exploreState);
 	}
 	
-	/**
-	 * @param i index of the label
-	 * @param eventName name of the event
-	 * @return True if label under i belongs to event under eventName
-	 */
-	public boolean isLabelAttachedToEvent(int i, String eventName) {
-		// TODO MAJO - is this correct?
-		String label = labelList.getLabelName(i);
-		for (int j = 0; j < transitionList.getNumChoices() ; ++j) {
-			ChoiceListFlexi choice = (ChoiceListFlexi) transitionList.getChoice(j);
-			for (int k = 0; k < choice.getEventIdents().size() ; ++k) {
-				String choiceEventIdent = choice.getEventIdent(k);
-				if (choiceEventIdent.compareTo(eventName) == 0 
-						&& choice.getModuleOrAction().compareTo(label) == 0) {
-					// There exists a choice where label i and event eventName are paired.
-					// Ergo, the label is attached to this event.
-					return true;
-				}
-			}
-		}
-		return false;
-	}
-	
 	@Override
 	public double getStateReward(int r, State state) throws PrismException
 	{

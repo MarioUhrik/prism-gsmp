@@ -82,7 +82,15 @@ public class GSMPRewardsSimple implements GSMPRewards
 
 	@Override
 	public double getTransitionReward(String eventName, int s, int t) {
-		return transitionRewards.get(eventName).get(s).get(t);
+		Map<Integer,Map<Integer, Double>> sourceToDestToRewardMap = transitionRewards.get(eventName);
+		if (sourceToDestToRewardMap == null) {
+			return 0.0;
+		}
+		Map<Integer, Double> destToRewardMap = sourceToDestToRewardMap.get(s);
+		if (destToRewardMap == null) {
+			return 0.0;
+		}
+		return destToRewardMap.get(t);
 	}
 	
 	/**
