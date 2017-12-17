@@ -34,11 +34,13 @@ import java.util.BitSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Predicate;
 
+import explicit.rewards.GSMPRewards;
 import prism.ModelType;
 import prism.PrismException;
 import prism.PrismLog;
@@ -56,6 +58,11 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 	 * Mapping of events onto their unique identifiers.
 	 */
 	protected Map<String, GSMPEvent> events = new HashMap<String, GSMPEvent>();
+	
+	/**
+	 * Reference to the rewards structure of this model. Null if not yet constructed/assigned.
+	 */
+	protected GSMPRewards rewards = null;
 	
 	/**
 	 * Default constructor without a predefined number of states.
@@ -82,6 +89,7 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 		copyFrom(gsmp);
 		this.statesList = gsmp.getStatesList();
 		this.events = new HashMap<String, GSMPEvent>(gsmp.getNumEvents());
+		this.rewards = gsmp.rewards;
 		List<GSMPEvent> tmp = gsmp.getEventList();
 		for (int i = 0; i < tmp.size(); ++i) {
 			this.events.put(tmp.get(i).getIdentifier(), new GSMPEvent(tmp.get(i)));
@@ -190,20 +198,18 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 	
 	@Override
 	public List<GSMPEvent> getActiveEvents(int state){
-		List<GSMPEvent> actEvents = new ArrayList<GSMPEvent>();
-		List<GSMPEvent> allEvents = getEventList();
-		for (int e = 0; e < allEvents.size() ; ++e) {
-			if (allEvents.get(e).isActive(state)) {
-				actEvents.add(allEvents.get(e));
+		List<GSMPEvent> actEvents = new LinkedList<GSMPEvent>();
+		for (GSMPEvent event : events.values()) {
+			if (event.isActive(state)) {
+				actEvents.add(event);
 			}
 		}
 		return actEvents;
 	}
-
+	
 	@Override
-	public void exportToPrismExplicitTra(PrismLog out) {
-		//TODO MAJO - is this enough?
-		out.println(this);
+	public void setRewards(GSMPRewards rewards) {
+		this.rewards = rewards;
 	}
 
 	@Override
@@ -320,12 +326,6 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 			}
 		}
 	}
-
-	@Override
-	public void exportToPrismLanguage(String filename) throws PrismException {
-		//TODO MAJO - implement
-		throw new UnsupportedOperationException("Not yet implemented!");
-	}
 	
 	/**
 	 * Removes all events that have no probability in any state.
@@ -354,6 +354,27 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 			events.get(i).setStatesList(statesList);
 		}
 		this.statesList = statesList;
+	}
+	
+	@Override
+	public void exportToPrismExplicitTra(PrismLog out) {
+		out.println(this);
+	}
+	
+	@Override
+	public void exportToPrismLanguage(String filename) throws PrismException {
+		//TODO MAJO - implement
+		throw new UnsupportedOperationException("Not yet implemented!");
+	}
+	
+	@Override
+	public void exportRewards(PrismLog out) {
+		// TODO MAJO - fix this 
+		if (rewards == null) {
+			out.printWarning("Nothing to print - rewards not yet constructed. Rewards are constructed after model checking is initiated.");
+		} else {
+			out.println(rewards);
+		}
 	}
 	
 	@Override

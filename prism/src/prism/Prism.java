@@ -35,6 +35,7 @@ import java.util.List;
 
 import dv.DoubleVector;
 import explicit.CTMC;
+import explicit.GSMP;
 import explicit.CTMCModelChecker;
 import explicit.ConstructModel;
 import explicit.DTMC;
@@ -2358,6 +2359,13 @@ public class Prism extends PrismComponent implements PrismSettingsListener
 	 */
 	public void exportStateRewardsToFile(int exportType, File file) throws FileNotFoundException, PrismException
 	{
+		
+		// TODO MAJO - very simplistic and ugly solution. fix this
+		if (currentModelType == ModelType.GSMP) {
+			exportTransRewardsToFile(true, exportType, file);
+			return;
+		}
+		
 		int numRewardStructs = currentModelInfo.getNumRewardStructs();
 		if (numRewardStructs == 0) {
 			mainLog.println("\nOmitting state reward export as there are no reward structures");
@@ -2423,9 +2431,15 @@ public class Prism extends PrismComponent implements PrismSettingsListener
 			return;
 		}
 		
-		if (getExplicit())
+		if (getExplicit() && currentModelType != ModelType.GSMP) { // TODO MAJO - not so nice
 			throw new PrismException("Export of transition rewards not yet supported by explicit engine");
+		}
 
+		if (currentModelType == ModelType.GSMP) {
+			if (!ordered)
+				mainLog.printWarning("Cannot export unordered transition reward matrix for GSMPs; using ordered.");
+			ordered = true;
+		}
 		// Can only do ordered version of export for MDPs
 		if (currentModelType == ModelType.MDP) {
 			if (!ordered)
@@ -2464,7 +2478,13 @@ public class Prism extends PrismComponent implements PrismSettingsListener
 			if (!getExplicit()) {
 				currentModel.exportTransRewardsToFile(r, exportType, ordered, fileToUse);
 			} else {
-				// Not implemented yet
+				if (currentModelType == ModelType.GSMP) {
+					// currently GSMP only supports export to the main log
+					// also, for simplicity, this will also print the state rewards.
+					// TODO MAJO - fix this (but the priority is very low)
+					mainLog.printWarning("GSMP rewards may only be printed into the main log for now! Sorry!");
+					((GSMP)currentModelExpl).exportRewards(mainLog);
+				}
 			}
 		}
 		

@@ -231,6 +231,7 @@ public class ConstructRewards
 			for (int s = 0; s < gsmp.getNumStates() ; ++s) {
 				rewSimple.setStateReward(s, rew);
 			}
+			gsmp.setRewards(rewSimple);
 			return rewSimple;
 		}
 		// Normal: state and transition rewards
@@ -272,6 +273,7 @@ public class ConstructRewards
 					}
 				}
 			}
+			gsmp.setRewards(rewSimple);
 			return rewSimple;
 		}
 	}
@@ -397,6 +399,7 @@ public class ConstructRewards
 				}
 			}
 		}
+		gsmp.setRewards(rewSimple);
 		return rewSimple;
 	}
 

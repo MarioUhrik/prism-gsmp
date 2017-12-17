@@ -176,6 +176,6 @@ public class GSMPRewardsSimple implements GSMPRewards
 	@Override
 	public String toString()
 	{
-		return "st: " + stateRewards + "; tr:" + transitionRewards;
+		return "State rewards: \n" + stateRewards + "; Transition Rewards: \n" + transitionRewards;
 	}
 }

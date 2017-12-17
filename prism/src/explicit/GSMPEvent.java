@@ -68,7 +68,7 @@ public class GSMPEvent extends DTMCSimple
 		this.firstParameter = firstParameter;
 		this.secondParameter = secondParameter;
 		this.identifier = identifier;
-		actionLabels = new TreeMap<Integer, Map<Integer, String>>();
+		this.actionLabels = new TreeMap<Integer, Map<Integer, String>>();
 		clearActive();
 	}
 
@@ -81,6 +81,7 @@ public class GSMPEvent extends DTMCSimple
 		this.firstParameter = firstParameter;
 		this.secondParameter = secondParameter;
 		this.identifier = identifier;
+		this.actionLabels = new TreeMap<Integer, Map<Integer, String>>();
 		clearActive();
 	}
 
@@ -94,6 +95,7 @@ public class GSMPEvent extends DTMCSimple
 		this.firstParameter = event.firstParameter;
 		this.secondParameter = event.secondParameter;
 		this.identifier = event.getIdentifier();
+		this.actionLabels = event.actionLabels;
 		clearActive();
 		this.active.or(event.active);
 	}
@@ -108,6 +110,8 @@ public class GSMPEvent extends DTMCSimple
 		this.firstParameter = event.firstParameter;
 		this.secondParameter = event.secondParameter;
 		this.identifier =  event.getIdentifier();
+		// TODO MAJO - permut action labels.
+		this.actionLabels = event.actionLabels;
 		clearActive();
 		int min = (numStates < permut.length ? numStates : permut.length);
 		for (int i = 0; i < min; i++) {
@@ -158,7 +162,7 @@ public class GSMPEvent extends DTMCSimple
 		if (destToLabelMap == null) {
 			actionLabels.put(s, new TreeMap<Integer, String>());
 		}
-		destToLabelMap.put(t, actionLabel);
+		actionLabels.get(s).put(t, actionLabel);
 	}
 
 	public boolean isActive(int state) {
