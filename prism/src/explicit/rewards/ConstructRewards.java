@@ -32,6 +32,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.List;
+import java.util.Set;
 
 import parser.State;
 import parser.Values;
@@ -217,7 +218,7 @@ public class ConstructRewards
 		List<State> statesList;
 		Expression guard;
 		String action;
-		String eventAction;
+		Set<String> eventActions;
 		int i, j, k, numStates;
 		GSMPRewardsSimple rewSimple = new GSMPRewardsSimple();
 
@@ -242,21 +243,23 @@ public class ConstructRewards
 			for (i = 0; i < rewStr.getNumItems(); i++) {
 				guard = rewStr.getStates(i);
 				action = rewStr.getSynch(i);
-				for (j = 0; j < numStates; j++) {
+				for (j = 0; j < numStates; j++) { // TODO MAJO - testing
 					// Is guard satisfied?
 					if (guard.evaluateBoolean(constantValues, statesList.get(j))) {
 						// Transition reward
 						if (rewStr.getRewardStructItem(i).isTransitionReward()) {
 							for (k = 0; k < gsmp.getNumStates(); k++) {
 								for (int e = 0; e < events.size() ; ++e) {
-									eventAction = events.get(e).getActionLabel(j, k);
-									if (eventAction == null ? (action.isEmpty()) : eventAction.equals(action)) {
-										double rew = rewStr.getReward(i).evaluateDouble(constantValues, statesList.get(j));
-										if (Double.isNaN(rew))
-											throw new PrismLangException("Reward structure evaluates to NaN at state " + statesList.get(j), rewStr.getReward(i));
-										if (!allowNegative && rew < 0)
-											throw new PrismLangException("Reward structure evaluates to " + rew + " at state " + statesList.get(j) +", negative rewards not allowed", rewStr.getReward(i));
-										rewSimple.addToTransitionReward(events.get(e).getIdentifier() ,j, k, rew);
+									eventActions = events.get(e).getActionLabels(j, k);
+									for (String eventAction : eventActions) {
+										if (eventAction == null ? (action.isEmpty()) : eventAction.equals(action)) {
+											double rew = rewStr.getReward(i).evaluateDouble(constantValues, statesList.get(j));
+											if (Double.isNaN(rew))
+												throw new PrismLangException("Reward structure evaluates to NaN at state " + statesList.get(j), rewStr.getReward(i));
+											if (!allowNegative && rew < 0)
+												throw new PrismLangException("Reward structure evaluates to " + rew + " at state " + statesList.get(j) +", negative rewards not allowed", rewStr.getReward(i));
+											rewSimple.addToTransitionReward(events.get(e).getIdentifier() ,j, k, rew);
+										}
 									}
 								}
 							}
@@ -388,14 +391,16 @@ public class ConstructRewards
 				throw new PrismException("Reward structure evaluates to " + rew + " at state " + state +", negative rewards not allowed");
 			rewSimple.addToStateReward(j, rew);
 			// State-action rewards
-			for (int k = 0; k < numStates; k++) {
+			for (int k = 0; k < numStates; k++) { // TODO MAJO - testing
 				for (int e = 0; e < events.size() ; ++e) {
-					rew = modelGen.getStateActionReward(r, state, events.get(e).getActionLabel(j, k));
-					if (Double.isNaN(rew))
-						throw new PrismException("Reward structure evaluates to NaN at state " + state);
-					if (!allowNegative && rew < 0)
-						throw new PrismException("Reward structure evaluates to " + rew + " at state " + state +", negative rewards not allowed");
-					rewSimple.addToTransitionReward(events.get(e).getIdentifier() ,j, k, rew);
+					for (String eventAction : events.get(e).getActionLabels(j, k)) {
+						rew = modelGen.getStateActionReward(r, state, eventAction);
+						if (Double.isNaN(rew))
+							throw new PrismException("Reward structure evaluates to NaN at state " + state);
+						if (!allowNegative && rew < 0)
+							throw new PrismException("Reward structure evaluates to " + rew + " at state " + state +", negative rewards not allowed");
+						rewSimple.addToTransitionReward(events.get(e).getIdentifier() ,j, k, rew);
+					}
 				}
 			}
 		}

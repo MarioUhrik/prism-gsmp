@@ -145,7 +145,7 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 			return false;
 		}
 		event.addToProbability(i, j, prob);
-		event.setActionLabel(i,j, actionLabel);
+		event.addActionLabel(i,j, actionLabel);
 		return true;
 	}
 

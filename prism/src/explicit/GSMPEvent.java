@@ -51,11 +51,11 @@ public class GSMPEvent extends DTMCSimple
 	/**
 	 * Map of action labels, similar to the one in GSMPRewardsSimple.
 	 * First map maps Second Maps onto source state indices.
-	 * Second map maps destination indices onto action labels.
+	 * Second map maps destination indices onto a set of action labels active in that position.
 	 * This one uses TreeMaps for less memory redundancy.
 	 * Additionally, it could maybe be deleted altogether after GSMPRewards are constructed.
 	 */
-	Map<Integer, Map<Integer, String>> actionLabels;
+	Map<Integer, Map<Integer, Set<String>>> actionLabels;
 
 	// Constructors
 
@@ -68,7 +68,7 @@ public class GSMPEvent extends DTMCSimple
 		this.firstParameter = firstParameter;
 		this.secondParameter = secondParameter;
 		this.identifier = identifier;
-		this.actionLabels = new TreeMap<Integer, Map<Integer, String>>();
+		this.actionLabels = new TreeMap<Integer, Map<Integer, Set<String>>>();
 		clearActive();
 	}
 
@@ -81,7 +81,7 @@ public class GSMPEvent extends DTMCSimple
 		this.firstParameter = firstParameter;
 		this.secondParameter = secondParameter;
 		this.identifier = identifier;
-		this.actionLabels = new TreeMap<Integer, Map<Integer, String>>();
+		this.actionLabels = new TreeMap<Integer, Map<Integer, Set<String>>>();
 		clearActive();
 	}
 
@@ -110,8 +110,7 @@ public class GSMPEvent extends DTMCSimple
 		this.firstParameter = event.firstParameter;
 		this.secondParameter = event.secondParameter;
 		this.identifier =  event.getIdentifier();
-		// TODO MAJO - permut action labels.
-		this.actionLabels = event.actionLabels;
+		this.actionLabels = event.actionLabelMapPermut(permut);
 		clearActive();
 		int min = (numStates < permut.length ? numStates : permut.length);
 		for (int i = 0; i < min; i++) {
@@ -157,12 +156,15 @@ public class GSMPEvent extends DTMCSimple
 		this.distributionType = distributionType;
 	}
 	
-	public void setActionLabel(int s, int t, String actionLabel) {
-		Map<Integer, String> destToLabelMap = actionLabels.get(s);
-		if (destToLabelMap == null) {
-			actionLabels.put(s, new TreeMap<Integer, String>());
+	public void addActionLabel(int s, int t, String actionLabel) {
+		if (actionLabels.get(s) == null) {
+			actionLabels.put(s, new TreeMap<Integer, Set<String>>());
 		}
-		actionLabels.get(s).put(t, actionLabel);
+		Map<Integer, Set<String>> destToLabelsMap = actionLabels.get(s);
+		if (destToLabelsMap.get(t) == null) {
+			destToLabelsMap.put(t, new HashSet<String>());
+		}
+		destToLabelsMap.get(t).add(actionLabel);
 	}
 
 	public boolean isActive(int state) {
@@ -192,15 +194,34 @@ public class GSMPEvent extends DTMCSimple
 	/**
 	 * @param s source state index
 	 * @param t destination state index
-	 * @return Returns the action label assigned to going from state s to state t via this event.
-	 *         If unassigned, returns null.
+	 * @return Returns the set of action labels assigned to going from state s to state t via this event.
+	 *         If unassigned, returns null (NOT AN EMPTY SET!).
 	 */
-	public String getActionLabel(int s, int t) {
-		Map<Integer, String> destToLabelMap = actionLabels.get(s);
+	public Set<String> getActionLabels(int s, int t) {
+		Map<Integer, Set<String>> destToLabelMap = actionLabels.get(s);
 		if (destToLabelMap == null) {
 			return null;
 		}
 		return destToLabelMap.get(t);
+	}
+	
+	/**
+	 * @param permut permutation of state indices
+	 * @return A new map of action labels with permuted state indices as specified by {@code permut}
+	 */
+	private Map<Integer, Map<Integer, Set<String>>> actionLabelMapPermut(int[] permut) {
+		Map<Integer, Map<Integer, Set<String>>> newActionLabelMap = new TreeMap<Integer, Map<Integer, Set<String>>>();
+		
+		for (Map.Entry<Integer, Map<Integer, Set<String>>> oldSourceEntry : actionLabels.entrySet()) {
+			Map<Integer, Set<String>> oldSubMap = oldSourceEntry.getValue();
+			Map<Integer, Set<String>> newSubMap = new TreeMap<Integer, Set<String>>();
+			for (Map.Entry<Integer, Set<String>> oldDestEntry : oldSubMap.entrySet()) {
+				newSubMap.put(permut[oldDestEntry.getKey()], oldDestEntry.getValue());
+			}
+			newActionLabelMap.put(permut[oldSourceEntry.getKey()], newSubMap);
+		}
+		
+		return newActionLabelMap;
 	}
 	
 	/**
