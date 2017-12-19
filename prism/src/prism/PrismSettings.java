@@ -232,7 +232,7 @@ public class PrismSettings implements Observer
 			//====================================================================================================================================================================================================================================================================================================================================
 			
 			// ENGINES/METHODS:
-			{ CHOICE_TYPE,		PRISM_ENGINE,							"Engine",								"2.1",			"Hybrid",																	"MTBDD,Sparse,Hybrid,Explicit",																		
+			{ CHOICE_TYPE,		PRISM_ENGINE,							"Engine",								"2.1",			"Explicit",																	"MTBDD,Sparse,Hybrid,Explicit",																		
 																			"Which engine (hybrid, sparse, MTBDD, explicit) should be used for model checking." },
 			{ BOOLEAN_TYPE,		PRISM_EXACT_ENABLED,					"Do exact model checking",			"4.2.1",			new Boolean(false),															"",
 																			"Perform exact model checking." },
@@ -329,8 +329,6 @@ public class PrismSettings implements Observer
 																			"Number of extra DD state variables preallocated for use in model transformation." },
 			{ INTEGER_TYPE,		PRISM_DD_EXTRA_ACTION_VARS,				"Extra DD action var allocation",		"4.3.1",			new Integer(20),														"",
 																			"Number of extra DD action variables preallocated for use in model transformation." },
-			{ BOOLEAN_TYPE,		PRISM_EXP_SYNC_BACKWARD_COMPATIBLE,		"Allow synchronization of exponential GSMP events",		"4.4beta",			new Boolean(true),								"",
-																			"ExpSyncBackwardCompatible\nIf this option is true, exponential events are allowed to be synchronized with each other instead of producing an error. Just like in CTMCs, the product exponential event obtains a rate equal to the product of rates of the synchronized events.\n The GSMP must be re-parsed in order for changes to take effect!" },
 
 			// ADVERSARIES/COUNTEREXAMPLES:
 			{ CHOICE_TYPE,		PRISM_EXPORT_ADV,						"Adversary export",						"3.3",			"None",																	"None,DTMC,MDP",																
@@ -380,6 +378,10 @@ public class PrismSettings implements Observer
 																			"For fast adaptive uniformisation (FAU), the time period is split into this number of of intervals." },
 			{ DOUBLE_TYPE,      PRISM_FAU_INITIVAL,						"FAU initial time interval",			"4.1",   	 	new Double(1.0),     														"",	
 																			"For fast adaptive uniformisation (FAU), the length of initial time interval to analyse." },
+			
+			// GSMP SETTINGS:
+			{ BOOLEAN_TYPE,		PRISM_EXP_SYNC_BACKWARD_COMPATIBLE,		"Allow synchronization of exponential GSMP events",		"4.4beta",			new Boolean(true),								"",
+			"ExpSyncBackwardCompatible\nIf this option is true, exponential events are allowed to be synchronized with each other instead of producing an error. Just like in CTMCs, the product exponential event obtains a rate equal to the product of rates of the synchronized events.\n The GSMP must be re-parsed in order for changes to take effect!" },
 		},
 		{
 			{ INTEGER_TYPE,		SIMULATOR_DEFAULT_NUM_SAMPLES,			"Default number of samples",			"4.0",		new Integer(1000),			"1,",
