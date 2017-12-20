@@ -46,9 +46,6 @@ public class Event extends ASTElement
 	private Module parent;
 	
 	/** Constructor */
-	public Event()
-	{
-	}
 
 	public Event(ExpressionIdent eventEI, ExpressionIdent distributionEI)
 	{
@@ -57,6 +54,16 @@ public class Event extends ASTElement
 		
 		this.distributionNameIdent = distributionEI;
 		this.distributionName = distributionEI.getName();
+		
+		setBeginColumn(0);
+		setBeginLine(eventEI.getBeginLine());
+		if (distributionEI.hasPosition()) {
+			setEndColumn(distributionEI.getEndColumn()+1);
+			setEndLine(distributionEI.getEndLine());
+		} else {
+			setEndColumn(eventEI.getEndColumn() +1);
+			setEndLine(eventEI.getEndLine());
+		}
 	}
 
 	// Get methods
@@ -91,12 +98,17 @@ public class Event extends ASTElement
 	{
 		this.eventNameIdent = eventNameIdent;
 		this.eventName = eventNameIdent.getName();
+		setBeginLine(eventNameIdent.getBeginLine());
 	}
 	
 	public void setDistributionNameIdent(ExpressionIdent distributionNameIdent)
 	{
 		this.distributionNameIdent = distributionNameIdent;
 		this.distributionName = distributionNameIdent.getName();
+		if (distributionNameIdent.hasPosition()) {
+			setEndColumn(distributionNameIdent.getEndColumn()+1);
+			setEndLine(distributionNameIdent.getEndLine());
+		}
 	}
 	
 	public void setEventName(String eventName) //added for module renaming

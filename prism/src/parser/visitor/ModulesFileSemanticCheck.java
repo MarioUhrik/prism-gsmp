@@ -132,6 +132,23 @@ public class ModulesFileSemanticCheck extends SemanticCheck
 			}
 		}
 	}
+	
+	public void visitPost(DistributionList e) throws PrismLangException
+	{
+		// Make sure that GSMP syntax is not used for non-GSMP models
+		if (modulesFile.getModelType() != ModelType.GSMP) {
+			if (e.size() > 0) {
+				//try to make the parser highlight the whole line
+				Expression tmp = e.getFirstParameter(0).deepCopy();
+				tmp.setBeginColumn(0);
+				if (e.getSecondParameter(0) != null) {
+					tmp.setEndColumn(e.getSecondParameter(0).getEndColumn());
+				}
+				tmp.setEndColumn(tmp.getEndColumn() + 2);
+				throw new PrismLangException("Distributions and Events may only be declared in GSMP models!", tmp);
+			} 
+		}
+	}
 
 	public void visitPost(Declaration e) throws PrismLangException
 	{
@@ -189,6 +206,12 @@ public class ModulesFileSemanticCheck extends SemanticCheck
 		for (i = 0; i < n; i++) {
 			if (e.getDeclaration(i) != null) e.getDeclaration(i).accept(this);
 		}
+		// Make sure that GSMP syntax is not used for non-GSMP models
+		if (modulesFile.getModelType() != ModelType.GSMP) {
+			if (e.getNumEvents() > 0) {
+				throw new PrismLangException("Events may only be declared in GSMP models!",e.getEvent(0));
+			}
+		}
 		inInvariant = e.getInvariant();
 		if (e.getInvariant() != null)
 			e.getInvariant().accept(this);
@@ -211,6 +234,16 @@ public class ModulesFileSemanticCheck extends SemanticCheck
 	{
 		// Override this so we can keep track of when we are in a command
 		visitPre(e);
+		// Make sure that GSMP syntax is not used for non-GSMP models
+		if (modulesFile.getModelType() != ModelType.GSMP) {
+			if (e.isSlave() || e.getEventIdent() != null) {
+				//make the parser highlight only the syntax unique to GSMPs
+				Command tmp = (Command)e.deepCopy();
+				tmp.setBeginColumn(e.getGuard().getEndColumn() +1);
+				tmp.setEndColumn(e.getUpdates().getBeginColumn() -1);
+				throw new PrismLangException("GSMP command syntax is only allowed in GSMP models!", tmp);
+			}
+		}
 		inGuard = e.getGuard();
 		e.getGuard().accept(this);
 		inGuard = null;

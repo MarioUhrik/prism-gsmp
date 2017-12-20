@@ -709,11 +709,15 @@ public class ModulesFile extends ASTElement implements ModelInfo
 		// Check constants for cyclic dependencies
 		constantList.findCycles();
 		
-		// Check distribution identifiers
-		checkDistributionIdents();
+		// Check distribution identifiers (for GSMPs)
+		if (modelType == ModelType.GSMP) {
+			checkDistributionIdents();
+		}
 		
-		// Check event identifiers within each module
-		checkEvents();
+		// Check event identifiers within each module (for GSMPs)
+		if (modelType == ModelType.GSMP) {
+			checkEvents();
+		}
 
 		// Check variable names, etc.
 		checkVarNames();
@@ -737,13 +741,15 @@ public class ModulesFile extends ASTElement implements ModelInfo
 		findAllActions(synchs);
 		
 		// GSMP command parse-time check:
-		checkGSMPCommands();
+		if (modelType == ModelType.GSMP) {
+			checkGSMPCommands();
+		}
 
 		// Various semantic checks 
 		doSemanticChecks();
 		// Type checking
 		typeCheck();
-		// Value checking (introduced for GSMP distribution attributes)
+		// Value checking (introduced for GSMP distribution attributes, might be useful for others too)
 		valueCheck(constantList.evaluateSomeConstants(null, null));
 		
 		// If there are no undefined constants, set up values for constants
