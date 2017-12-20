@@ -367,13 +367,21 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 		throw new UnsupportedOperationException("Not yet implemented!");
 	}
 	
-	@Override
-	public void exportRewards(PrismLog out) {
+	public void exportStateRewards(PrismLog out) {
 		// TODO MAJO - fix this 
 		if (rewards == null) {
 			out.printWarning("Nothing to print - rewards not yet constructed. Rewards are constructed after model checking is initiated.");
 		} else {
-			out.println(rewards);
+			out.println(rewards.toStringStateRewards());
+		}
+	}
+	
+	public void exportTransitionRewards(PrismLog out) {
+		// TODO MAJO - fix this 
+		if (rewards == null) {
+			out.printWarning("Nothing to print - rewards not yet constructed. Rewards are constructed after model checking is initiated.");
+		} else {
+			out.println(rewards.toStringTransitionRewards());
 		}
 	}
 	

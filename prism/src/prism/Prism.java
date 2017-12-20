@@ -2359,13 +2359,6 @@ public class Prism extends PrismComponent implements PrismSettingsListener
 	 */
 	public void exportStateRewardsToFile(int exportType, File file) throws FileNotFoundException, PrismException
 	{
-		
-		// TODO MAJO - very simplistic and ugly solution. fix this
-		if (currentModelType == ModelType.GSMP) {
-			exportTransRewardsToFile(true, exportType, file);
-			return;
-		}
-		
 		int numRewardStructs = currentModelInfo.getNumRewardStructs();
 		if (numRewardStructs == 0) {
 			mainLog.println("\nOmitting state reward export as there are no reward structures");
@@ -2400,10 +2393,19 @@ public class Prism extends PrismComponent implements PrismSettingsListener
 			if (!getExplicit()) {
 				currentModel.exportStateRewardsToFile(r, exportType, fileToUse);
 			} else {
-				PrismLog out = getPrismLogForFile(fileToUse);
-				explicit.StateModelChecker mcExpl = createModelCheckerExplicit(null);
-				((explicit.ProbModelChecker) mcExpl).exportStateRewardsToFile(currentModelExpl, r, exportType, out);
-				out.close();
+				if (currentModelType == ModelType.GSMP) {
+					// currently GSMP only supports export to the main log
+					// TODO MAJO - fix this (but the priority is very low)
+					if (file != null) {
+						mainLog.printWarning("GSMP rewards may only be printed into the main log for now! Sorry!");
+					}
+					((GSMP)currentModelExpl).exportStateRewards(mainLog);
+				} else { // TODO MAJO - merge this if/else
+					PrismLog out = getPrismLogForFile(fileToUse);
+					explicit.StateModelChecker mcExpl = createModelCheckerExplicit(null);
+					((explicit.ProbModelChecker) mcExpl).exportStateRewardsToFile(currentModelExpl, r, exportType, out);
+					out.close();
+				}
 			}
 		}
 		
@@ -2480,10 +2482,11 @@ public class Prism extends PrismComponent implements PrismSettingsListener
 			} else {
 				if (currentModelType == ModelType.GSMP) {
 					// currently GSMP only supports export to the main log
-					// also, for simplicity, this will also print the state rewards.
 					// TODO MAJO - fix this (but the priority is very low)
-					mainLog.printWarning("GSMP rewards may only be printed into the main log for now! Sorry!");
-					((GSMP)currentModelExpl).exportRewards(mainLog);
+					if (file != null) {
+						mainLog.printWarning("GSMP rewards may only be printed into the main log for now! Sorry!");
+					}
+					((GSMP)currentModelExpl).exportTransitionRewards(mainLog);
 				}
 			}
 		}

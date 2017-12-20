@@ -31,6 +31,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -219,6 +220,7 @@ public class ConstructRewards
 		Expression guard;
 		String action;
 		Set<String> eventActions;
+		Set<String> emptyEventActions = new HashSet<String>();
 		int i, j, k, numStates;
 		GSMPRewardsSimple rewSimple = new GSMPRewardsSimple();
 
@@ -243,7 +245,7 @@ public class ConstructRewards
 			for (i = 0; i < rewStr.getNumItems(); i++) {
 				guard = rewStr.getStates(i);
 				action = rewStr.getSynch(i);
-				for (j = 0; j < numStates; j++) { // TODO MAJO - testing
+				for (j = 0; j < numStates; j++) {
 					// Is guard satisfied?
 					if (guard.evaluateBoolean(constantValues, statesList.get(j))) {
 						// Transition reward
@@ -251,6 +253,9 @@ public class ConstructRewards
 							for (k = 0; k < gsmp.getNumStates(); k++) {
 								for (int e = 0; e < events.size() ; ++e) {
 									eventActions = events.get(e).getActionLabels(j, k);
+									if (eventActions == null) { // simple and fast workaround to prevent null pointer exception
+										eventActions = emptyEventActions;
+									}
 									for (String eventAction : eventActions) {
 										if (eventAction == null ? (action.isEmpty()) : eventAction.equals(action)) {
 											double rew = rewStr.getReward(i).evaluateDouble(constantValues, statesList.get(j));
@@ -259,7 +264,7 @@ public class ConstructRewards
 											if (!allowNegative && rew < 0)
 												throw new PrismLangException("Reward structure evaluates to " + rew + " at state " + statesList.get(j) +", negative rewards not allowed", rewStr.getReward(i));
 											rewSimple.addToTransitionReward(events.get(e).getIdentifier() ,j, k, rew);
-										}
+										} // TODO MAJO - should this be a sum, or the uniform average? So far, it is a sum.
 									}
 								}
 							}
@@ -376,6 +381,7 @@ public class ConstructRewards
 	 * @param r The index of the reward structure to build
 	 * @return complete GSMP Reward structure
 	 */
+	@Deprecated // TODO MAJO - make sure this method works before removing the annotation
 	public GSMPRewards buildGSMPRewardStructure(GSMP gsmp, ModelGenerator modelGen, int r) throws PrismException {
 		int numStates = gsmp.getNumStates();
 		List<State> statesList = gsmp.getStatesList();
@@ -391,7 +397,7 @@ public class ConstructRewards
 				throw new PrismException("Reward structure evaluates to " + rew + " at state " + state +", negative rewards not allowed");
 			rewSimple.addToStateReward(j, rew);
 			// State-action rewards
-			for (int k = 0; k < numStates; k++) { // TODO MAJO - testing
+			for (int k = 0; k < numStates; k++) { // TODO MAJO - testing, probably broken
 				for (int e = 0; e < events.size() ; ++e) {
 					for (String eventAction : events.get(e).getActionLabels(j, k)) {
 						rew = modelGen.getStateActionReward(r, state, eventAction);

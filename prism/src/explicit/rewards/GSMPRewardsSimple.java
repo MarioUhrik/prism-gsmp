@@ -173,9 +173,31 @@ public class GSMPRewardsSimple implements GSMPRewards
 		return (!transitionRewards.isEmpty());
 	}
 	
+	public String toStringStateRewards() {
+		return "GSMP state rewards:\n" + stateRewards;
+	}
+	
+	public String toStringTransitionRewards() {
+		String str = "GSMP transition rewards:\n";
+		for ( Map.Entry<String, Map<Integer,Map<Integer, Double>>> firstEntry : transitionRewards.entrySet()) {
+			str += "Event \"" + firstEntry.getKey() + "\n";
+			boolean first = true;
+			for (Map.Entry<Integer, Map<Integer, Double>> secondEntry : firstEntry.getValue().entrySet()) {
+				if (first) {
+					first = false;
+				} else {
+					str += ", ";
+				}
+				str += secondEntry.getKey() + ": " + secondEntry.getValue();
+			}
+			str += "\n";
+		}
+		return str;
+	}
+	
 	@Override
 	public String toString()
 	{
-		return "State rewards: \n" + stateRewards + "; Transition Rewards: \n" + transitionRewards;
+		return toStringStateRewards() + "\n" + toStringTransitionRewards();
 	}
 }

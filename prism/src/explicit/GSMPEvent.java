@@ -247,7 +247,7 @@ public class GSMPEvent extends DTMCSimple
 
 	@Override
 	public String toString() {
-		String str = "Event \"" + getIdentifier() + "\n      ";
+		String str = "Event \"" + getIdentifier() + "\n";
 		boolean first = true;
 		for (int i = 0; i < numStates; i++) {
 			if (trans.get(i).isEmpty()) {

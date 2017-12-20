@@ -65,11 +65,19 @@ public interface GSMP extends ModelSimple
 	 * @param rewards constructed rewards belonging to this model
 	 */
 	public void setRewards(GSMPRewards rewards);
-
+	
 	/**
-	 * Prints the state rewards and the transition rewards into the main log
+	 * Prints the state rewards into the main log if the rewards have been computed this far.
+	 * Else prints a warning into the log.
 	 * @param mainLog
 	 */
-	public void exportRewards(PrismLog mainLog);
+	public void exportStateRewards(PrismLog out);
+	
+	/**
+	 * Prints the transition rewards into the main log if the rewards have been computed this far.
+	 * Else prints a warning into the log.
+	 * @param mainLog
+	 */
+	public void exportTransitionRewards(PrismLog out);
 
 }

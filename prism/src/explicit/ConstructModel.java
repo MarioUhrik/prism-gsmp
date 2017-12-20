@@ -33,6 +33,7 @@ import java.util.BitSet;
 import java.util.LinkedList;
 import java.util.List;
 
+import explicit.rewards.ConstructRewards;
 import parser.State;
 import parser.Values;
 import parser.VarList;
@@ -369,6 +370,13 @@ public class ConstructModel extends PrismComponent
 				gsmp.removeEmptyEvents();
 				gsmp.normalize();
 				model = sort ? new GSMPSimple(gsmp, permut) : (GSMPSimple) gsmp;
+				// TODO MAJO - this may not be the best place to construct the rewards. 
+				model.setStatesList(statesList); 
+				if (modelGen.getNumRewardStructs() == 1) { // TODO MAJO - this is not even correct
+					((GSMP)model).setRewards((new ConstructRewards(mainLog)).buildGSMPRewardStructure((GSMP)model, modelGen.getRewardStruct(0), modelGen.getConstantValues()));
+				} else if (modelGen.getNumRewardStructs() > 1) {
+					mainLog.printWarning("GSMP rewards were not constructed! Please, use only one reward structure.");
+				}
 				break;
 			case MDP:
 				if (buildSparse) {

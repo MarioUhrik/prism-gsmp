@@ -49,4 +49,14 @@ public interface GSMPRewards extends Rewards
 
 	/** Returns true if this reward structure has transition rewards */
 	public boolean hasTransitionRewards();
+	
+	/**
+	 * Returns a human-readable string of state rewards suited for printing
+	 */
+	public String toStringStateRewards();
+	
+	/**
+	 * Returns a human-readable string of transition rewards suited for printing
+	 */
+	public String toStringTransitionRewards();
 }
