@@ -12,6 +12,11 @@ rewards // nonsensical rewards for testing
 	[consumptionFinal] true : rew * rew;
 endrewards
 
+rewards // nonsensical second rewards to make sure multiple reward structures still work
+	items = 5 : rew * rew - rew;
+
+endrewards
+
 const maxItem=12;
 
 

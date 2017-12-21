@@ -35,7 +35,6 @@ import java.util.List;
 
 import dv.DoubleVector;
 import explicit.CTMC;
-import explicit.GSMP;
 import explicit.CTMCModelChecker;
 import explicit.ConstructModel;
 import explicit.DTMC;
@@ -2393,17 +2392,10 @@ public class Prism extends PrismComponent implements PrismSettingsListener
 			if (!getExplicit()) {
 				currentModel.exportStateRewardsToFile(r, exportType, fileToUse);
 			} else {
-				if (currentModelType == ModelType.GSMP) {
-					// currently GSMP only supports export to the main log
-					// TODO MAJO - fix this (but the priority is very low)
-					if (file != null) {
-						mainLog.printWarning("GSMP rewards may only be printed into the main log for now! Sorry!");
-					}
-					((GSMP)currentModelExpl).exportStateRewards(mainLog);
-				} else { // TODO MAJO - merge this if/else
-					PrismLog out = getPrismLogForFile(fileToUse);
-					explicit.StateModelChecker mcExpl = createModelCheckerExplicit(null);
-					((explicit.ProbModelChecker) mcExpl).exportStateRewardsToFile(currentModelExpl, r, exportType, out);
+				PrismLog out = getPrismLogForFile(fileToUse);
+				explicit.StateModelChecker mcExpl = createModelCheckerExplicit(null);
+				((explicit.ProbModelChecker) mcExpl).exportStateRewardsToFile(currentModelExpl, r, exportType, out);
+				if (out != mainLog) {
 					out.close();
 				}
 			}
@@ -2480,13 +2472,11 @@ public class Prism extends PrismComponent implements PrismSettingsListener
 			if (!getExplicit()) {
 				currentModel.exportTransRewardsToFile(r, exportType, ordered, fileToUse);
 			} else {
-				if (currentModelType == ModelType.GSMP) {
-					// currently GSMP only supports export to the main log
-					// TODO MAJO - fix this (but the priority is very low)
-					if (file != null) {
-						mainLog.printWarning("GSMP rewards may only be printed into the main log for now! Sorry!");
-					}
-					((GSMP)currentModelExpl).exportTransitionRewards(mainLog);
+				PrismLog out = getPrismLogForFile(fileToUse);
+				explicit.StateModelChecker mcExpl = createModelCheckerExplicit(null);
+				((explicit.ProbModelChecker) mcExpl).exportTransitionRewardsToFile(currentModelExpl, r, exportType, out);
+				if (out != mainLog) {
+					out.close();
 				}
 			}
 		}

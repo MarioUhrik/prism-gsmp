@@ -392,8 +392,11 @@ public class ConstructRewards
 	 * @param r The index of the reward structure to build
 	 * @return complete GSMP Reward structure
 	 */
-	@Deprecated // TODO MAJO - make sure this method works before removing the annotation
 	public GSMPRewards buildGSMPRewardStructure(GSMP gsmp, ModelGenerator modelGen, int r) throws PrismException {
+		return buildGSMPRewardStructure(gsmp, modelGen.getRewardStruct(r), modelGen.getConstantValues());
+		
+		// TODO MAJO - the commented out code is probably safe to remove. Remove it after becoming certain.
+		/*
 		int numStates = gsmp.getNumStates();
 		List<State> statesList = gsmp.getStatesList();
 		GSMPRewardsSimple rewSimple = new GSMPRewardsSimple();
@@ -423,6 +426,7 @@ public class ConstructRewards
 		}
 		gsmp.setRewards(rewSimple);
 		return rewSimple;
+		*/
 	}
 
 	/**

@@ -60,7 +60,7 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 	protected Map<String, GSMPEvent> events = new HashMap<String, GSMPEvent>();
 	
 	/**
-	 * Reference to the rewards structure of this model. Null if not yet constructed/assigned.
+	 * Reference to the last built reward structure of this model. Null if not yet constructed/assigned.
 	 */
 	protected GSMPRewards rewards = null;
 	
@@ -365,24 +365,6 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 	public void exportToPrismLanguage(String filename) throws PrismException {
 		//TODO MAJO - implement
 		throw new UnsupportedOperationException("Not yet implemented!");
-	}
-	
-	public void exportStateRewards(PrismLog out) {
-		// TODO MAJO - fix this 
-		if (rewards == null) {
-			out.printWarning("Nothing to print - rewards not yet constructed. Rewards are constructed after model checking is initiated.");
-		} else {
-			out.println(rewards.toStringStateRewards());
-		}
-	}
-	
-	public void exportTransitionRewards(PrismLog out) {
-		// TODO MAJO - fix this 
-		if (rewards == null) {
-			out.printWarning("Nothing to print - rewards not yet constructed. Rewards are constructed after model checking is initiated.");
-		} else {
-			out.println(rewards.toStringTransitionRewards());
-		}
 	}
 	
 	@Override

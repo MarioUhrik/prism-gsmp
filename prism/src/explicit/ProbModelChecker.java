@@ -31,6 +31,7 @@ import java.util.BitSet;
 import java.util.List;
 
 import explicit.rewards.ConstructRewards;
+import explicit.rewards.GSMPRewards;
 import explicit.rewards.MCRewards;
 import explicit.rewards.MDPRewards;
 import explicit.rewards.Rewards;
@@ -1307,8 +1308,32 @@ public class ProbModelChecker extends NonProbModelChecker
 				}
 			}
 			break;
+		case GSMP:
+			GSMPRewards gsmpRewards = (GSMPRewards) modelRewards;
+			out.println(gsmpRewards.toStringStateRewards());
+			break;
 		default:
 			throw new PrismNotSupportedException("Explicit engine does not yet export state rewards for " + model.getModelType() + "s");
+		}
+	}
+	
+	/**
+	 * Export (non-zero) transition rewards for one reward structure of a model.
+	 * @param model The model
+	 * @param r Index of reward structure to export (0-indexed)
+	 * @param exportType The format in which to export
+	 * @param out Where to export
+	 */
+	public void exportTransitionRewardsToFile(Model model, int r, int exportType, PrismLog out) throws PrismException
+	{
+		Rewards modelRewards = constructRewards(model, r);
+		switch (model.getModelType()) {
+		case GSMP:
+			GSMPRewards gsmpRewards = (GSMPRewards) modelRewards;
+			out.println(gsmpRewards.toStringTransitionRewards());
+			break;
+		default:
+			throw new PrismNotSupportedException("Explicit engine does not yet export transition rewards for " + model.getModelType() + "s");
 		}
 	}
 }

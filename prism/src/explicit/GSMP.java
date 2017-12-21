@@ -29,7 +29,6 @@ package explicit;
 import java.util.List;
 
 import explicit.rewards.GSMPRewards;
-import prism.PrismLog;
 
 /**
  * Interface for classes that represent an explicit-state GSMP.
@@ -61,23 +60,9 @@ public interface GSMP extends ModelSimple
 	public boolean addEvent(GSMPEvent event);
 	
 	/**
-	 * Assigns a reference to this model's constructed rewards.
+	 * Assigns a reference to this model's last constructed rewards for convenience.
 	 * @param rewards constructed rewards belonging to this model
 	 */
 	public void setRewards(GSMPRewards rewards);
-	
-	/**
-	 * Prints the state rewards into the main log if the rewards have been computed this far.
-	 * Else prints a warning into the log.
-	 * @param mainLog
-	 */
-	public void exportStateRewards(PrismLog out);
-	
-	/**
-	 * Prints the transition rewards into the main log if the rewards have been computed this far.
-	 * Else prints a warning into the log.
-	 * @param mainLog
-	 */
-	public void exportTransitionRewards(PrismLog out);
 
 }
