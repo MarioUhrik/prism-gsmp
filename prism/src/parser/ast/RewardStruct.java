@@ -114,6 +114,19 @@ public class RewardStruct extends ASTElement
 	{
 		return getRewardStructItem(i).getReward();
 	}
+	
+	/**
+	 * Returns the index of the reward item with such synch within this rewardStruct. Else -1 if not found
+	 */
+	public int getItemIndex(String synch) {
+		for (int i = 0; i < items.size() ;  ++i) {
+			RewardStructItem item = items.get(i);
+			if (item.getSynch() != null && item.getSynch().equals(synch)) {
+				return i;
+			}
+		}
+		return -1;
+	}
 
 	// Methods required for ASTElement:
 	
