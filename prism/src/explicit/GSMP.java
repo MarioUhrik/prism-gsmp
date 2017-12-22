@@ -28,14 +28,12 @@ package explicit;
 
 import java.util.List;
 
-import explicit.rewards.GSMPRewards;
-
 /**
  * Interface for classes that represent an explicit-state GSMP.
  * 
  * GSMP is a model driven by events with general time distributions.
  * GSMP may have any number of events, and any number of events can be active at any given time.
- * Out of the active states, only one "wins" by occuring the soonest.
+ * Out of the active states, only one "wins" by occurring the soonest.
  * Each event has a distribution on states for each state, determining the next state.
  */
 public interface GSMP extends ModelSimple
@@ -60,9 +58,8 @@ public interface GSMP extends ModelSimple
 	public boolean addEvent(GSMPEvent event);
 	
 	/**
-	 * Assigns a reference to this model's last constructed rewards for convenience.
-	 * @param rewards constructed rewards belonging to this model
+	 * Constructs a CTMC in from all the exponentially distributed events within this GSMP.
+	 * This is very useful for CTMC-based model checking methods.
 	 */
-	public void setRewards(GSMPRewards rewards);
-
+	public CTMC mergeAllExponentialEvents();
 }

@@ -40,10 +40,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Predicate;
 
-import explicit.rewards.GSMPRewards;
 import prism.ModelType;
 import prism.PrismException;
 import prism.PrismLog;
+import prism.PrismNotSupportedException;
 
 /**
  * Simple explicit-state representation of a GSMP.
@@ -54,15 +54,8 @@ import prism.PrismLog;
  */
 public class GSMPSimple extends ModelExplicit implements GSMP
 {
-	/**
-	 * Mapping of events onto their unique identifiers.
-	 */
+	/** Mapping of events onto their unique identifiers. */
 	protected Map<String, GSMPEvent> events = new HashMap<String, GSMPEvent>();
-	
-	/**
-	 * Reference to the last built reward structure of this model. Null if not yet constructed/assigned.
-	 */
-	protected GSMPRewards rewards = null;
 	
 	/**
 	 * Default constructor without a predefined number of states.
@@ -89,7 +82,6 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 		copyFrom(gsmp);
 		this.statesList = gsmp.getStatesList();
 		this.events = new HashMap<String, GSMPEvent>(gsmp.getNumEvents());
-		this.rewards = gsmp.rewards;
 		List<GSMPEvent> tmp = gsmp.getEventList();
 		for (int i = 0; i < tmp.size(); ++i) {
 			this.events.put(tmp.get(i).getIdentifier(), new GSMPEvent(tmp.get(i)));
@@ -206,16 +198,11 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 		}
 		return actEvents;
 	}
-	
-	@Override
-	public void setRewards(GSMPRewards rewards) {
-		this.rewards = rewards;
-	}
 
 	@Override
 	public void buildFromPrismExplicit(String filename) throws PrismException {
 		//TODO MAJO - implement
-		throw new UnsupportedOperationException("Not yet implemented!");
+		throw new PrismNotSupportedException("Not yet implemented!");
 	}
 
 	@Override
@@ -265,7 +252,7 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 		}
 		if (fix && getDeadlockStates().iterator().hasNext() ) {
 			//fix all the deadlocks by creating a new exponential event looping over them
-			double uniformizationRate = getUniformisationRate();
+			double uniformizationRate = computeUniformisationRate();
 			String selfLoopEventIdent = 
 					"<Deadlock_fixing_exp_event>\"=" +
 					TypeDistributionExponential.getInstance().getTypeString() + 
@@ -286,7 +273,7 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 	 * @return The highest rate (first parameter) of all exponentially distributed events in this GSMP
 	 *         If there are no exponentially distributed events, return 1.
 	 */
-	public double getUniformisationRate(){
+	public double computeUniformisationRate(){
 		List<GSMPEvent> events = getEventList();
 		double maxExitRate = Double.MIN_VALUE;
 		boolean expEventVisited = false;
@@ -346,6 +333,13 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 			events.get(e).normalize();
 		}
 	} 
+	
+	public CTMC mergeAllExponentialEvents() {
+		// TODO MAJO - implement
+		// get a list of all exponential events
+		// construct a CTMC from the exp-events and return it
+		return null;
+	}
 	
 	@Override
 	public void setStatesList(List<State> statesList){

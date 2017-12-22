@@ -26,6 +26,9 @@
 
 package explicit;
 
+import java.util.List;
+
+import parser.type.TypeDistributionExponential;
 import prism.PrismComponent;
 import prism.PrismException;
 
@@ -35,13 +38,41 @@ import prism.PrismException;
 public class GSMPModelChecker extends ProbModelChecker
 {
 	/**
-	 * Create a new DTMCModelChecker, inherit basic state from parent (unless null).
+	 * Create a new GSMPModelChecker, inherit basic state from parent (unless null).
 	 */
 	public GSMPModelChecker(PrismComponent parent) throws PrismException
 	{
 		super(parent);
 	}
 
-	// Model checking functions
+	// ACTMC model checking functions
+
+	/**
+	 * Prerequisite test for ACTMC-only model-checking methods.
+	 * @param gsmp
+	 * @return  True iff the provided GSMP is an ACTMC (Alarm Continuous-Time Markov Chain),
+	 * 			i.e. at most one non-exponential event is active in any given state.
+	 */
+	public boolean isACTMC(GSMP gsmp) {
+		int numStates = gsmp.getNumStates();
+		for ( int s = 0 ; s < numStates ; ++s) {
+			List<GSMPEvent> activeEvents = gsmp.getActiveEvents(s);
+			boolean foundNonExponentialEvent = false;
+				// exponential events have not been merged.
+			for (GSMPEvent activeEvent : activeEvents) {
+				if (activeEvent.getDistributionType() != TypeDistributionExponential.getInstance()) {
+					// a non-exponential event active in this state has been found
+					if (foundNonExponentialEvent) {
+						// this is the second active non-exponential event => not an ACTMC
+						return false;
+					} else {
+						// this is the first active non-exponential event so far => still tolerable
+						foundNonExponentialEvent = true;
+					}
+				}
+			}
+		}
+		return true;
+	}
 
 }
