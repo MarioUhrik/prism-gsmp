@@ -58,8 +58,8 @@ public interface GSMP extends ModelSimple
 	public boolean addEvent(GSMPEvent event);
 	
 	/**
-	 * Constructs a CTMC in from all the exponentially distributed events within this GSMP.
-	 * This is very useful for CTMC-based model checking methods.
+	 * Constructs a CTMC from the exponentially distributed events within this GSMP.
+	 * This is useful for CTMC-based model checking methods, e.g. ACTMC construction.
 	 */
-	public CTMC mergeAllExponentialEvents();
+	public CTMC generateCTMC();
 }

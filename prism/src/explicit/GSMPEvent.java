@@ -29,6 +29,7 @@ package explicit;
 import java.util.*;
 
 import parser.type.TypeDistribution;
+import parser.type.TypeDistributionExponential;
 
 /**
  * Explicit engine class representing a GSMP event.
@@ -189,6 +190,13 @@ public class GSMPEvent extends DTMCSimple
 	
 	public TypeDistribution getDistributionType() {
 		return distributionType;
+	}
+	
+	/**
+	 * @return True if the distribution of this event is exponential, else false.
+	 */
+	public boolean isExponential() {
+		return (distributionType == TypeDistributionExponential.getInstance());
 	}
 	
 	/**

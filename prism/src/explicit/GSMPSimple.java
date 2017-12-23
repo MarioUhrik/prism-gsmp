@@ -278,7 +278,7 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 		double maxExitRate = Double.MIN_VALUE;
 		boolean expEventVisited = false;
 		for (int i = 0 ; i < events.size() ; ++i) {
-			if (events.get(i).getDistributionType() instanceof TypeDistributionExponential) {
+			if (events.get(i).isExponential()) {
 				expEventVisited = true;
 				if (events.get(i).getFirstParameter() > maxExitRate) {
 					maxExitRate = events.get(i).getFirstParameter();
@@ -334,11 +334,22 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 		}
 	} 
 	
-	public CTMC mergeAllExponentialEvents() {
-		// TODO MAJO - implement
-		// get a list of all exponential events
-		// construct a CTMC from the exp-events and return it
-		return null;
+	public CTMCSimple generateCTMC() {
+		List<GSMPEvent> expEvents = getEventList();
+		expEvents.removeIf(e -> (!e.isExponential()));
+		CTMCSimple ctmc = new CTMCSimple(getNumStates());
+		ctmc.copyFrom(this);
+		//use the exponential events to construct CTMC transition matrix
+		for (int e = 0; e < expEvents.size() ; ++e) {
+			GSMPEvent expEvent = expEvents.get(e);
+			for (int s = expEvent.getActive().nextSetBit(0); s >= 0; s = expEvent.getActive().nextSetBit(s+1)) {
+			     Distribution distr = expEvent.getTransitions(s);
+			     for (Integer t : distr.getSupport()) {
+			    	 ctmc.addToProbability(s, t, distr.get(t) * expEvent.getFirstParameter());
+			     }
+			 }
+		}
+		return ctmc;
 	}
 	
 	@Override

@@ -52,21 +52,22 @@ public class ACTMCSimple extends CTMCSimple
 	// 			   It would probably be necessary to create a new reward mapping.
 
 	/**
-	 * Constructor from an already created GSMP.
-	 * 
+	 * Constructor from an already created GSMP that has been verified
+	 * to have at most one non-exponential event active in any given state.
+	 * Otherwise, the behavior of this method is undefined.
 	 */
 	public ACTMCSimple(GSMPSimple gsmp) {
-		super();
+		super(gsmp.generateCTMC());
 		initialise(gsmp.getNumStates());
 		copyFrom(gsmp);
-		this.statesList = gsmp.getStatesList();
-		/* //TODO MAJO - implement
 		this.events = new HashMap<Integer, GSMPEvent>(gsmp.getNumEvents());
-		List<GSMPEvent> tmp = gsmp.getEventList();
-		for (int i = 0; i < tmp.size(); ++i) {
-			this.events.put(tmp.get(i).getIdentifier(), new GSMPEvent(tmp.get(i)));
+		List<GSMPEvent> allEvents = gsmp.getEventList();
+		for (int e = 0; e < allEvents.size(); ++e) {
+			if (!allEvents.get(e).isExponential()) {
+				GSMPEvent nonExpEvent = allEvents.get(e);
+				this.events.put(nonExpEvent.getActive().nextSetBit(0), nonExpEvent); // shallow copy
+			}
 		}
-		*/
 	}
 	
 	@Override
@@ -89,6 +90,10 @@ public class ACTMCSimple extends CTMCSimple
 		return events.size();
 	}
 	
+	/**
+	 * @param state index of a state
+	 * @return The event active in the provided state, or null if none.
+	 */
 	public GSMPEvent getActiveEvent(int state) {
 		return events.get(state);
 	}

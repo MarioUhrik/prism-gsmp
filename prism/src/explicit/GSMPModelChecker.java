@@ -28,7 +28,6 @@ package explicit;
 
 import java.util.List;
 
-import parser.type.TypeDistributionExponential;
 import prism.PrismComponent;
 import prism.PrismException;
 
@@ -44,6 +43,9 @@ public class GSMPModelChecker extends ProbModelChecker
 	{
 		super(parent);
 	}
+	
+	// TODO MAJO - First, model checking calls should check whether the model is an ACTMC.
+	//           - Then, a switch statement decides which model checking algorithm to use.
 
 	// ACTMC model checking functions
 
@@ -60,7 +62,7 @@ public class GSMPModelChecker extends ProbModelChecker
 			boolean foundNonExponentialEvent = false;
 				// exponential events have not been merged.
 			for (GSMPEvent activeEvent : activeEvents) {
-				if (activeEvent.getDistributionType() != TypeDistributionExponential.getInstance()) {
+				if (!activeEvent.isExponential()) {
 					// a non-exponential event active in this state has been found
 					if (foundNonExponentialEvent) {
 						// this is the second active non-exponential event => not an ACTMC
