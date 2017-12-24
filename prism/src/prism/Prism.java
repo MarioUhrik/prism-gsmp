@@ -42,6 +42,8 @@ import explicit.DTMCModelChecker;
 import explicit.ExplicitFiles2Model;
 import explicit.FastAdaptiveUniformisation;
 import explicit.FastAdaptiveUniformisationModelChecker;
+import explicit.GSMP;
+import explicit.GSMPModelChecker;
 import hybrid.PrismHybrid;
 import jdd.JDD;
 import jdd.JDDNode;
@@ -3337,8 +3339,14 @@ public class Prism extends PrismComponent implements PrismSettingsListener
 		PrismLog tmpLog;
 
 		// Do some checks
-		if (!(currentModelType == ModelType.CTMC || currentModelType == ModelType.DTMC))
-			throw new PrismException("Steady-state probabilities only computed for DTMCs/CTMCs");
+		switch (currentModelType) {
+		case DTMC:
+		case CTMC:
+		case GSMP:
+			break;
+		default:
+			throw new PrismException("Steady-state probabilities not yet implemented for " + currentModelType + "s!");
+		}
 		if (fileOut != null && getEngine() == MTBDD)
 			// TODO: auto-switch?
 			throw new PrismException("Steady-state probability export not supported for MTBDD engine");
@@ -3413,16 +3421,22 @@ public class Prism extends PrismComponent implements PrismSettingsListener
 	 */
 	protected explicit.StateValues computeSteadyStateProbabilitiesExplicit(explicit.Model model, File fileIn) throws PrismException
 	{
-		DTMCModelChecker mcDTMC;
 		explicit.StateValues probs;
-		if (model.getModelType() == ModelType.DTMC) {
-			mcDTMC = new DTMCModelChecker(this);
+		switch (currentModelType) {
+		case DTMC:
+			DTMCModelChecker mcDTMC = new DTMCModelChecker(this);
 			//TODO: probs = mcDTMC.doSteadyState((DTMC) model, fileIn);
 			probs = mcDTMC.doSteadyState((DTMC) model, (File) null);
-		} else if (model.getModelType() == ModelType.CTMC) {
-			throw new PrismException("Not implemented yet");
-		} else {
-			throw new PrismException("Steady-state probabilities only computed for DTMCs/CTMCs");
+			break;
+		case CTMC:
+			throw new PrismException("Explicit engine CTMC steady-state computation implemented yet.");
+			// TODO MAJO - maybe I could implement this
+		case GSMP:
+			GSMPModelChecker mcGSMP = new GSMPModelChecker(this);
+			probs = mcGSMP.doSteadyState((GSMP) model, mcGSMP.readDistributionFromFile(fileIn, currentModelExpl));
+			break;
+		default:
+			throw new PrismException("Steady-state probabilities not yet implemented for " + currentModelType + "s!");
 		}
 		return probs;
 	}
@@ -3453,8 +3467,14 @@ public class Prism extends PrismComponent implements PrismSettingsListener
 		PrismLog tmpLog;
 
 		// Do some checks
-		if (!(currentModelType == ModelType.CTMC || currentModelType == ModelType.DTMC))
-			throw new PrismException("Steady-state probabilities only computed for DTMCs/CTMCs");
+		switch (currentModelType) {
+		case DTMC:
+		case CTMC:
+		case GSMP:
+			break;
+		default:
+			throw new PrismException("Transient probabilities computation not yet supported for " + currentModelType + "s!");
+		}
 		if (time < 0)
 			throw new PrismException("Cannot compute transient probabilities for negative time value");
 		if (fileOut != null && getEngine() == MTBDD)
@@ -3492,14 +3512,21 @@ public class Prism extends PrismComponent implements PrismSettingsListener
 		// Explicit
 		else {
 			buildModelIfRequired();
-			if (currentModelType == ModelType.DTMC) {
+			switch (currentModelType) {
+			case DTMC:
 				DTMCModelChecker mcDTMC = new DTMCModelChecker(this);
 				probsExpl = mcDTMC.doTransient((DTMC) currentModelExpl, (int) time, fileIn);
-			} else if (currentModelType == ModelType.CTMC) {
+				break;
+			case CTMC:
 				CTMCModelChecker mcCTMC = new CTMCModelChecker(this);
 				probsExpl = mcCTMC.doTransient((CTMC) currentModelExpl, time, fileIn);
-			} else {
-				throw new PrismException("Transient probabilities only computed for DTMCs/CTMCs");
+				break;
+			case GSMP:
+				GSMPModelChecker mcGSMP = new GSMPModelChecker(this);
+				probsExpl = mcGSMP.doTransient((GSMP) currentModelExpl, time, mcGSMP.readDistributionFromFile(fileIn, currentModelExpl));
+				break;
+			default:
+				throw new PrismException("Transient probabilities computation not yet supported for " + currentModelType + "s!");
 			}
 		}
 
@@ -3552,8 +3579,14 @@ public class Prism extends PrismComponent implements PrismSettingsListener
 		File fileOutActual = null;
 
 		// Do some checks
-		if (!(currentModelType == ModelType.CTMC || currentModelType == ModelType.DTMC))
-			throw new PrismException("Steady-state probabilities only computed for DTMCs/CTMCs");
+		switch (currentModelType) {
+		case DTMC:
+		case CTMC:
+		case GSMP:
+			break;
+		default:
+			throw new PrismException("Transient probabilities computation not yet supported for " + currentModelType + "s!");
+		}
 		if (fileOut != null && getEngine() == MTBDD)
 			throw new PrismException("Transient probability export only supported for sparse/hybrid engines");
 		if (exportType == EXPORT_MRMC)
@@ -3613,20 +3646,33 @@ public class Prism extends PrismComponent implements PrismSettingsListener
 			// Explicit
 			else {
 				buildModelIfRequired();
-				if (currentModelType.continuousTime()) {
-					CTMCModelChecker mc = new CTMCModelChecker(this);
+				switch (currentModelType) {
+				case DTMC:
+					DTMCModelChecker mcDTMC = new DTMCModelChecker(this);
 					if (i == 0) {
-						initDistExpl = mc.readDistributionFromFile(fileIn, currentModelExpl);
-						initTimeDouble = 0;
-					}
-					probsExpl = mc.doTransient((CTMC) currentModelExpl, timeDouble - initTimeDouble, initDistExpl);
-				} else {
-					DTMCModelChecker mc = new DTMCModelChecker(this);
-					if (i == 0) {
-						initDistExpl = mc.readDistributionFromFile(fileIn, currentModelExpl);
+						initDistExpl = mcDTMC.readDistributionFromFile(fileIn, currentModelExpl);
 						initTimeInt = 0;
 					}
-					probsExpl = mc.doTransient((DTMC) currentModelExpl, timeInt - initTimeInt, initDistExpl);
+					probsExpl = mcDTMC.doTransient((DTMC) currentModelExpl, (int) timeInt - initTimeInt, initDistExpl);
+					break;
+				case CTMC:
+					CTMCModelChecker mcCTMC = new CTMCModelChecker(this);
+					if (i == 0) {
+						initDistExpl = mcCTMC.readDistributionFromFile(fileIn, currentModelExpl);
+						initTimeDouble = 0;
+					}
+					probsExpl = mcCTMC.doTransient((CTMC) currentModelExpl, timeDouble - initTimeDouble, initDistExpl);
+					break;
+				case GSMP:
+					GSMPModelChecker mcGSMP = new GSMPModelChecker(this);
+					if (i == 0) {
+						initDistExpl = mcGSMP.readDistributionFromFile(fileIn, currentModelExpl);
+						initTimeDouble = 0;
+					}
+					probsExpl = mcGSMP.doTransient((GSMP) currentModelExpl, timeDouble - initTimeDouble, initDistExpl);
+					break;
+				default:
+					throw new PrismException("Transient probabilities computation not yet supported for " + currentModelType + "s!");
 				}
 			}
 

@@ -226,6 +226,9 @@ public class PrismExplicit extends PrismComponent
 		case STPG:
 			mc = new STPGModelChecker(this);
 			break;
+		case GSMP:
+			mc = new GSMPModelChecker(this);
+			break;
 		default:
 			throw new PrismException("Unknown model type " + model.getModelType());
 		}
@@ -258,8 +261,14 @@ public class PrismExplicit extends PrismComponent
 		StateValues probs = null;
 		PrismLog tmpLog;
 		
-		if (!(model.getModelType() == ModelType.CTMC || model.getModelType() == ModelType.DTMC))
-			throw new PrismNotSupportedException("Steady-state probabilities only computed for DTMCs/CTMCs");
+		switch (model.getModelType()) {
+		case DTMC:
+		case CTMC:
+		case GSMP:
+			break;
+		default:
+			throw new PrismNotSupportedException("Steady-state probabilities not supported for " + model.getModelType() + "s!");	
+		}
 		
 		// no specific states format for MRMC
 		if (exportType == Prism.EXPORT_MRMC) exportType = Prism.EXPORT_PLAIN;
@@ -307,16 +316,22 @@ public class PrismExplicit extends PrismComponent
 	public StateValues computeSteadyStateProbabilities(Model model) throws PrismException
 	{
 		StateValues probs;
-		if (model.getModelType() == ModelType.DTMC) {
+		switch (model.getModelType()) {
+		case DTMC:
 			DTMCModelChecker mcDTMC = new DTMCModelChecker(this);
 			probs = mcDTMC.doSteadyState((DTMC) model);
+			break;
+		case CTMC:
+			throw new PrismNotSupportedException("Explicit engine CTMC steady-state computation not implemented yet!");
+			// TODO MAJO - I think I could implement CTMC steady state computation to use ACTMC steady state computation.
+		case GSMP:
+			GSMPModelChecker mcGSMP = new GSMPModelChecker(this);
+			probs = mcGSMP.doSteadyState((GSMP) model, null);
+			break;
+		default:
+			throw new PrismNotSupportedException("Explicit engine steady-state probabilities computation not yet implemented for " + model.getModelType() + "s!");
 		}
-		else if (model.getModelType() == ModelType.CTMC) {
-			throw new PrismNotSupportedException("Not implemented yet"); // TODO
-		}
-		else {
-			throw new PrismNotSupportedException("Steady-state probabilities only computed for DTMCs/CTMCs");
-		}
+
 		return probs;
 	}
 
@@ -350,16 +365,22 @@ public class PrismExplicit extends PrismComponent
 		
 		l = System.currentTimeMillis();
 
-		if (model.getModelType() == ModelType.DTMC) {
-			throw new PrismNotSupportedException("Not implemented yet"); // TODO
-		}
-		else if (model.getModelType() == ModelType.CTMC) {
+		
+		switch (model.getModelType()) {
+		case DTMC:
+			throw new PrismNotSupportedException("Explicit engine DTMC transient analysis not yet implemented."); // TODO
+		case CTMC:
 			mainLog.println("\nComputing transient probabilities (time = " + time + ")...");
 			CTMCModelChecker mcCTMC = new CTMCModelChecker(this);
 			probs = mcCTMC.doTransient((CTMC) model, time, fileIn);
-		}
-		else {
-			throw new PrismNotSupportedException("Transient probabilities only computed for DTMCs/CTMCs");
+			break;
+		case GSMP:
+			mainLog.println("\nComputing transient probabilities (time = " + time + ")...");
+			GSMPModelChecker mcGSMP = new GSMPModelChecker(this);
+			probs = mcGSMP.doTransient((GSMP) model, time, mcGSMP.readDistributionFromFile(fileIn, model));
+			break;
+		default:
+			throw new PrismNotSupportedException("Transient probabilities computation not yet implemented for" + model.getModelType() + "s!");
 		}
 		
 		l = System.currentTimeMillis() - l;

@@ -44,10 +44,48 @@ public class GSMPModelChecker extends ProbModelChecker
 		super(parent);
 	}
 	
-	// TODO MAJO - First, model checking calls should check whether the model is an ACTMC.
-	//           - Then, a switch statement decides which model checking algorithm to use.
+	// forking methods
+	
+	/**
+	 * Main method to initiate steady-state analysis computation.
+	 * @param gsmp
+	 * @param initDistr initial probability distribution on states. if null, default for the model is used
+	 * @return steady state probability distribution on states
+	 * @throws PrismException
+	 */
+	public StateValues doSteadyState(GSMP gsmp, StateValues initDistr) throws PrismException {
+		if (initDistr == null) {
+			initDistr = buildInitialDistribution(gsmp);
+		}
+		if (isACTMC(gsmp) && gsmp instanceof GSMPSimple) {
+			ACTMCSimple actmc = new ACTMCSimple((GSMPSimple)gsmp);
+			return computeSteadyStateACTMC(actmc, initDistr);
+		} else {
+			return computeSteadyStateGSMP(gsmp, initDistr);
+		}
+	}
+	
+	/**
+	 * Main method to initiate transient analysis computation.
+	 * @param gsmp
+	 * @param time positive value
+	 * @param initDistr initial probability distribution on states. if null, default for the model is used
+	 * @return probability distribution on states at the specified time
+	 * @throws PrismException
+	 */
+	public StateValues doTransient(GSMP gsmp, double time, StateValues initDistr) throws PrismException {
+		if (initDistr == null) {
+			initDistr = buildInitialDistribution(gsmp);
+		}
+		if (isACTMC(gsmp) && gsmp instanceof GSMPSimple) {
+			ACTMCSimple actmc = new ACTMCSimple((GSMPSimple)gsmp);
+			return computeTransientACTMC(actmc, time, initDistr);
+		} else {
+			return computeTransientGSMP(gsmp, time, initDistr);
+		}
+	}
 
-	// ACTMC model checking functions
+	// ACTMC model checking functions (fast alternative for GSMPs that are ACTMCs)
 
 	/**
 	 * Prerequisite test for ACTMC-only model-checking methods.
@@ -75,6 +113,28 @@ public class GSMPModelChecker extends ProbModelChecker
 			}
 		}
 		return true;
+	}
+	
+	private StateValues computeSteadyStateACTMC(ACTMCSimple actmc, StateValues initDistr) throws PrismException {
+		// TODO MAJO - implement
+		return buildInitialDistribution(actmc);
+	}
+	
+	private StateValues computeTransientACTMC(ACTMCSimple actmc, double time, StateValues initDistr) throws PrismException {
+		// TODO MAJO - implement
+		return buildInitialDistribution(actmc);
+	}
+	
+	// general GSMP model checking functions (works for any GSMP, but slow)
+	
+	private StateValues computeSteadyStateGSMP(GSMP gsmp, StateValues initDistr) throws PrismException {
+		// TODO MAJO - implement
+		return buildInitialDistribution(gsmp);
+	}
+	
+	private StateValues computeTransientGSMP(GSMP gsmp, double time, StateValues initDistr) throws PrismException {
+		// TODO MAJO - implement
+		return buildInitialDistribution(gsmp);
 	}
 
 }
