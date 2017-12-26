@@ -984,6 +984,9 @@ public class ProbModelChecker extends NonProbModelChecker
 					rewards = checkRewardTotal(model, modelRewards, exprTemp, minMax);
 				}
 				break;
+			case ExpressionTemporal.R_S:
+				rewards = checkRewardsSteadyState(model, modelRewards, exprTemp, minMax);
+				break;
 			default:
 				throw new PrismNotSupportedException("Explicit engine does not yet handle the " + exprTemp.getOperatorSymbol() + " reward operator");
 			}
@@ -995,6 +998,26 @@ public class ProbModelChecker extends NonProbModelChecker
 			throw new PrismException("Unrecognised operator in R operator");
 
 		return rewards;
+	}
+
+	private StateValues checkRewardsSteadyState(Model model, Rewards modelRewards, ExpressionTemporal expr, MinMax minMax) throws PrismException {
+		// Compute/return the rewards
+		ModelCheckerResult res = null;
+		switch (model.getModelType()) {
+		case GSMP:
+			if (minMax == null) {
+				// just expected steady-state
+				res = ((GSMPModelChecker) this).doSteadyStateRewards((GSMP) model, (GSMPRewards) modelRewards);
+			} else { // TODO MAJO - return values! are they correct?
+				// parameter synthesis via steady-state rewards
+				res = ((GSMPModelChecker) this).doSteadyStateParameterSynthesis((GSMP) model, (GSMPRewards) modelRewards, minMax.isMin());
+			}
+			break;
+		default:
+			throw new PrismNotSupportedException("Explicit engine does not yet handle the " + expr.getOperatorSymbol() + " reward operator for " + model.getModelType()+ "s");
+		}
+		result.setStrategy(res.strat);
+		return StateValues.createFromDoubleArray(res.soln, model);
 	}
 
 	/**
@@ -1150,6 +1173,15 @@ public class ProbModelChecker extends NonProbModelChecker
 			break;
 		case STPG:
 			res = ((STPGModelChecker) this).computeReachRewards((STPG) model, (STPGRewards) modelRewards, target, minMax.isMin1(), minMax.isMin2());
+			break;
+		case GSMP:
+			if (minMax == null) {
+				// just compute expected reachability reward
+				res = ((GSMPModelChecker) this).doReachRewards((GSMP) model, (GSMPRewards) modelRewards, target);
+			} else { // TODO MAJO - return values! are they correct?
+				// compute parameter synthesis via reachability reward
+				res = ((GSMPModelChecker) this).doReachParameterSynthesis((GSMP) model, (GSMPRewards) modelRewards, target, minMax.isMin());
+			}
 			break;
 		default:
 			throw new PrismNotSupportedException("Explicit engine does not yet handle the " + expr.getOperatorSymbol() + " reward operator for " + model.getModelType()

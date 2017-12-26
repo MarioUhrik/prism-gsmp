@@ -86,13 +86,17 @@ public class OpRelOpBound
 	public MinMax getMinMax(ModelType modelType, boolean forAll) throws PrismLangException
 	{
 		MinMax minMax = MinMax.blank();
-		if (modelType.nondeterministic()) {
-			if (!(modelType == ModelType.MDP || modelType == ModelType.CTMDP)) {
+		if (modelType.nondeterministic() || modelType == ModelType.GSMP) {
+			if (!(modelType == ModelType.MDP || modelType == ModelType.CTMDP || modelType == ModelType.GSMP)) {
 				throw new PrismLangException("Don't know how to model check " + getTypeOfOperator() + " properties for " + modelType + "s");
 			}
 			if (isNumeric()) {
 				if (relOp == RelOp.EQ) {
-					throw new PrismLangException("Can't use \"" + op + "=?\" for nondeterministic models; use e.g. \"" + op + "min=?\" or \"" + op + "max=?\"");
+					if (modelType == ModelType.GSMP) {
+						return null; // return null to signal there is no min/max
+					} else {
+						throw new PrismLangException("Can't use \"" + op + "=?\" for nondeterministic models; use e.g. \"" + op + "min=?\" or \"" + op + "max=?\"");
+					}
 				}
 				minMax = relOp.isMin() ? MinMax.min() : MinMax.max();
 			} else {
