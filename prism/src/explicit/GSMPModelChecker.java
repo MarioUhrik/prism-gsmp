@@ -117,24 +117,28 @@ public class GSMPModelChecker extends ProbModelChecker
 	
 	private StateValues computeSteadyStateACTMC(ACTMCSimple actmc, StateValues initDistr) throws PrismException {
 		// TODO MAJO - implement
-		return buildInitialDistribution(actmc);
+		mainLog.printWarning("Not yet implemented! Printing the initial distribution instead.");
+		return initDistr;
 	}
 	
 	private StateValues computeTransientACTMC(ACTMCSimple actmc, double time, StateValues initDistr) throws PrismException {
 		// TODO MAJO - implement
-		return buildInitialDistribution(actmc);
+		mainLog.printWarning("Not yet implemented! Printing the initial distribution instead.");
+		return initDistr;
 	}
 	
 	// general GSMP model checking functions (works for any GSMP, but slow)
 	
 	private StateValues computeSteadyStateGSMP(GSMP gsmp, StateValues initDistr) throws PrismException {
 		// TODO MAJO - implement
-		return buildInitialDistribution(gsmp);
+		mainLog.printWarning("Not yet implemented! Printing the initial distribution instead.");
+		return initDistr;
 	}
 	
 	private StateValues computeTransientGSMP(GSMP gsmp, double time, StateValues initDistr) throws PrismException {
 		// TODO MAJO - implement
-		return buildInitialDistribution(gsmp);
+		mainLog.printWarning("Not yet implemented! Printing the initial distribution instead.");
+		return initDistr;
 	}
 
 }

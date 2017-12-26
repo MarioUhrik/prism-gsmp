@@ -38,7 +38,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Predicate;
 
 import prism.ModelType;
 import prism.PrismException;
@@ -273,7 +272,7 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 	 * @return The highest rate (first parameter) of all exponentially distributed events in this GSMP
 	 *         If there are no exponentially distributed events, return 1.
 	 */
-	public double computeUniformisationRate(){
+	public double computeUniformisationRate() {
 		List<GSMPEvent> events = getEventList();
 		double maxExitRate = Double.MIN_VALUE;
 		boolean expEventVisited = false;
@@ -319,8 +318,7 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 	 */
 	public void removeEmptyEvents() {
 		List<GSMPEvent> events = getEventList();
-        Predicate<GSMPEvent> eventIsEmpty = e -> e.getActive().isEmpty();
-        events.removeIf(eventIsEmpty);
+        events.removeIf(e -> e.getActive().isEmpty());
         setEvents(events);
 	}
 	
@@ -349,6 +347,7 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 			     }
 			 }
 		}
+		ctmc.uniformise(ctmc.getDefaultUniformisationRate());
 		return ctmc;
 	}
 	
