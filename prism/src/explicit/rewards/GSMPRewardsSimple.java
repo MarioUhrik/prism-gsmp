@@ -36,7 +36,7 @@ import explicit.Model;
 import explicit.Product;
 
 /**
- * Simple explicit-state storage of rewards for an GSMP.
+ * Sparse-state storage of rewards for an GSMP.
  * 
  * For a GSMP, transition rewards have an additional dimension - event they belong to.
  * Hence, to identify a GSMP transition, we need the source state, the destination state, and the event.
@@ -51,7 +51,7 @@ public class GSMPRewardsSimple implements GSMPRewards
 	 * The First map   contains Second Maps mapped onto eventNames.
 	 * The Second maps contain  Third maps  mapped onto source state indices.
 	 * The Third maps  contain  rewards     mapped onto destination state indices.
-	 * 
+	 * <br>
 	 * One can imagine this as a subset of a 3D array of size |Events|x|States|x|States|
 	 * containing only the non-zero transition rewards.
 	 */
@@ -76,6 +76,10 @@ public class GSMPRewardsSimple implements GSMPRewards
 		} else {
 			return reward;
 		}
+	}
+	
+	public Map<Integer, Double> getStateRewards() {
+		return stateRewards;
 	}
 	
 	/**
@@ -106,6 +110,10 @@ public class GSMPRewardsSimple implements GSMPRewards
 		} else {
 			return reward;
 		}
+	}
+	
+	public Map<Integer,Map<Integer, Double>> getTransitionRewardsOfEvent(String eventName) {
+		return transitionRewards.get(eventName);
 	}
 	
 	/**
