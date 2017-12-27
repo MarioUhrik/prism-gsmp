@@ -641,6 +641,9 @@ Property Property() :
 	Expression expr;
 	Property prop;
 	Token begin = null;
+	List<ParameterToSynthesize> paramList = new ArrayList<ParameterToSynthesize>();
+	ExpressionIdent eventNameExpr;
+	Expression paramIndexExpr, lowerBoundExpr, upperBoundExpr;
 }
 {
 	// Note that we jump in a few levels down in the Expression hierarchy
@@ -652,7 +655,26 @@ Property Property() :
 	expr = ExpressionITE(true, false)
 	{ prop = new Property(expr, name, getPrecedingCommentBlock(begin)); }
 	)
-	{ prop.setPosition(begin, getToken(0)); return prop; }
+	// GSMP parameter synthesis - specification of parameters to synthesize
+	(
+	 <LBRACE>
+		( <LPARENTH>
+		  eventNameExpr = IdentifierExpression() <COMMA>
+		  paramIndexExpr = Expression(false, false) <COMMA>
+		  lowerBoundExpr = Expression(false, false) <DOTS> upperBoundExpr = Expression(false, false)
+		  <RPARENTH>
+		  { paramList.add(new ParameterToSynthesize(eventNameExpr, paramIndexExpr, lowerBoundExpr, upperBoundExpr)); }
+		)
+		( <COMMA> <LPARENTH>
+		  eventNameExpr = IdentifierExpression() <COMMA>
+		  paramIndexExpr = Expression(false, false) <COMMA>
+		  lowerBoundExpr = Expression(false, false) <DOTS> upperBoundExpr = Expression(false, false)
+		  <RPARENTH>
+		  { paramList.add(new ParameterToSynthesize(eventNameExpr, paramIndexExpr, lowerBoundExpr, upperBoundExpr)); }
+		)*
+	 <RBRACE>
+	)?
+	{ prop.setPosition(begin, getToken(0)); prop.setParamList(paramList) ; return prop; }
 }
 
 // A single expression

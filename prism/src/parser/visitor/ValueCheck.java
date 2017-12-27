@@ -44,6 +44,38 @@ public class ValueCheck extends ASTTraverse
 		this.evaluatedConstants = evaluatedConstants;
 	}
 	
+	public void visitPost(ParameterToSynthesize e) throws PrismLangException
+	{
+		// first, evaluate the expressions and store them for later convenience
+		e.setEventName(e.getEventExpr().getName());
+		e.setParamIndex(e.getParamIndexExpr().evaluateInt(evaluatedConstants));
+		e.setLowerBound(e.getLowerBoundExpr().evaluateDouble(evaluatedConstants));
+		e.setUpperBound(e.getUpperBoundExpr().evaluateDouble(evaluatedConstants));
+		
+		// now, perform value checking
+		ModulesFile mf = e.getParent().getParent().getModulesFile();
+		String distributionName = mf.getEvent(e.getEventName()).getDistributionName();
+		int distributionIndex = mf.getDistributionList().getDistributionIndex(distributionName);
+		TypeDistribution distributionType = mf.getDistributionList().getDistributionType(distributionIndex);
+		if (distributionType.getNumParams() < e.getParamIndex()) {
+			throw new PrismLangException("Parameter index is " + e.getParamIndex() + 
+					", but " + distributionType.getTypeString() + 
+					" only has " + distributionType.getNumParams() + 
+					" parameters!",
+					e.getParamIndexExpr());
+		}
+		if (e.getParamIndex() <= 0) {
+			throw new PrismLangException("Parameter index must be greater than zero!", e.getParamIndexExpr());
+		}
+		
+		if (e.getLowerBound() < 0.0) {
+			throw new PrismLangException("Lower bound must be non-negative!", e.getLowerBoundExpr());
+		}
+		if (e.getLowerBound() >= e.getUpperBound()) {
+			throw new PrismLangException("Upper bound must be greater than the lower bound!", e.getUpperBoundExpr());
+		}
+	}
+	
 	public void visitPost(DistributionList e) throws PrismLangException
 	{
 		int i, n;

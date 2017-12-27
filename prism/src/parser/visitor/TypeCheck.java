@@ -59,6 +59,19 @@ public class TypeCheck extends ASTTraverse
 	{
 		e.setType(e.getExpression().getType());
 	}
+	
+	public void visitPost(ParameterToSynthesize e) throws PrismLangException
+	{
+		if (!TypeInt.getInstance().canAssign(e.getParamIndexExpr().getType())) {
+			throw new PrismLangException("Type error: Parameter index must be of type Integer!", e.getParamIndexExpr());
+		}
+		if (!TypeDouble.getInstance().canAssign(e.getLowerBoundExpr().getType())) {
+			throw new PrismLangException("Type error: Lower bound must be of type Double!", e.getLowerBoundExpr());
+		}
+		if (!TypeDouble.getInstance().canAssign(e.getUpperBoundExpr().getType())) {
+			throw new PrismLangException("Type error: Upper bound must be of type Double!", e.getUpperBoundExpr());
+		}
+	}
 
 	public void visitPost(FormulaList e) throws PrismLangException
 	{

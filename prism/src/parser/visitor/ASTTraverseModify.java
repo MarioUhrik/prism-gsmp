@@ -99,6 +99,10 @@ public class ASTTraverseModify implements ASTVisitor
 		visitPre(e);
 		if (e.getExpression() != null)
 			e.setExpression((Expression) e.getExpression().accept(this));
+		for (int i = 0; i < e.getParamList().size() ; ++i) {
+			ParameterToSynthesize param = e.getParamList().get(i);
+			e.getParamList().set(i, (ParameterToSynthesize)param.accept(this));
+		}
 		visitPost(e);
 		return e;
 	}
@@ -108,6 +112,18 @@ public class ASTTraverseModify implements ASTVisitor
 		defaultVisitPost(e);
 	}
 
+	// -----------------------------------------------------------------------------------
+	public void visitPre(ParameterToSynthesize e) throws PrismLangException { defaultVisitPre(e); }
+	public Object visit(ParameterToSynthesize e) throws PrismLangException
+	{
+		visitPre(e);
+		e.setParamIndexExpr((Expression)e.getParamIndexExpr().accept(this));
+		e.setLowerBoundExpr((Expression)e.getLowerBoundExpr().accept(this));
+		e.setUpperBoundExpr((Expression)e.getUpperBoundExpr().accept(this));
+		visitPost(e);
+		return e;
+	}
+	public void visitPost(ParameterToSynthesize e) throws PrismLangException { defaultVisitPost(e); }
 	// -----------------------------------------------------------------------------------
 	public void visitPre(FormulaList e) throws PrismLangException { defaultVisitPre(e); }
 	public Object visit(FormulaList e) throws PrismLangException

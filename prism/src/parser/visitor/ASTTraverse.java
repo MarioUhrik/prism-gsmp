@@ -89,10 +89,22 @@ public class ASTTraverse implements ASTVisitor
 	{
 		visitPre(e);
 		if (e.getExpression() != null) e.getExpression().accept(this);
+		for (ParameterToSynthesize param : e.getParamList()) {
+			param.accept(this);
+		}
 		visitPost(e);
 		return null;
 	}
 	public void visitPost(Property e) throws PrismLangException { defaultVisitPost(e); }
+	// -----------------------------------------------------------------------------------
+	public void visitPre(ParameterToSynthesize e) throws PrismLangException { defaultVisitPre(e); }
+	public Object visit(ParameterToSynthesize e) throws PrismLangException
+	{
+		visitPre(e);
+		visitPost(e);
+		return null;
+	}
+	public void visitPost(ParameterToSynthesize e) throws PrismLangException { defaultVisitPost(e); }
 	// -----------------------------------------------------------------------------------
 	public void visitPre(FormulaList e) throws PrismLangException { defaultVisitPre(e); }
 	public Object visit(FormulaList e) throws PrismLangException

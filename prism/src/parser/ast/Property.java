@@ -52,10 +52,14 @@ public class Property extends ASTElement
 {
 	/** PRISM expression representing property */
 	private Expression expr;
+	/** GSMP-only list of parameters to synthesize */
+	private List<ParameterToSynthesize> paramList = new ArrayList<ParameterToSynthesize>();
 	/** Optional name for property (null if absent); */
 	private String name;
 	/** Optional comment for property (null if absent); */
 	private String comment;
+	
+	private PropertiesFile parent = null;
 
 	// Constructors
 
@@ -92,6 +96,17 @@ public class Property extends ASTElement
 	{
 		this.comment = comment;
 	}
+	
+	public void setParamList(List<ParameterToSynthesize> paramList) {
+		for (ParameterToSynthesize param : paramList) {
+			param.setParent(this);
+		}
+		this.paramList = paramList;
+	}
+	
+	public void setParent(PropertiesFile pf) {
+		this.parent = pf;
+	}
 
 	// Accessors
 
@@ -108,6 +123,14 @@ public class Property extends ASTElement
 	public String getComment()
 	{
 		return comment;
+	}
+	
+	public List<ParameterToSynthesize> getParamList() {
+		return paramList;
+	}
+	
+	public PropertiesFile getParent() {
+		return parent;
 	}
 
 	/**
@@ -577,6 +600,9 @@ public class Property extends ASTElement
 		if (name != null)
 			s += "\"" + name + "\": ";
 		s += expr;
+		if (!paramList.isEmpty()) {
+			s += paramList;
+		}
 		return s;
 	}
 
@@ -584,8 +610,14 @@ public class Property extends ASTElement
 	public Property deepCopy()
 	{
 		Property prop = new Property(expr, name, comment);
+		for ( ParameterToSynthesize param : paramList) {
+			ParameterToSynthesize tmp = param.deepCopy();
+			tmp.setParent(prop);
+			prop.getParamList().add(tmp);
+		}
 		prop.setType(type);
 		prop.setPosition(this);
+		prop.setParent(this.getParent());
 		return prop;
 	}
 }

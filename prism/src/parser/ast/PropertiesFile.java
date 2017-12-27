@@ -106,16 +106,20 @@ public class PropertiesFile extends ASTElement
 
 	public void addProperty(Property prop)
 	{
+		prop.setParent(this);
 		properties.add(prop);
 	}
 
 	public void addProperty(Expression p, String c)
 	{
-		properties.addElement(new Property(p, null, c));
+		Property prop = new Property(p, null, c);
+		prop.setParent(this);
+		properties.addElement(prop);
 	}
 
 	public void setPropertyObject(int i, Property prop)
 	{
+		prop.setParent(this);
 		properties.set(i, prop);
 	}
 
@@ -150,13 +154,20 @@ public class PropertiesFile extends ASTElement
 		}
 		n = pf.properties.size();
 		for (i = 0; i < n; i++) {
-			properties.add(pf.properties.get(i));
+			Property tmp = pf.properties.get(i).deepCopy(); // deep copy because of parents
+			tmp.setParent(this);
+			properties.add(tmp);
 		}
 		// Need to re-tidy (some checks should be re-done, some new info created)
 		tidyUp();
 	}
 
 	// Get methods
+	
+	public ModulesFile getModulesFile()
+	{
+		return modulesFile;
+	}
 
 	public FormulaList getFormulaList()
 	{
@@ -302,10 +313,15 @@ public class PropertiesFile extends ASTElement
 		doSemanticChecks();
 		// Type checking
 		typeCheck(this);
-
 		// Set up some values for constants
 		// (without assuming any info about undefined constants)
 		setSomeUndefinedConstants(null);
+		// Value checking
+		Values tmpConstantValues = getConstantValues();
+		tmpConstantValues.addValues(modulesFile.getConstantValues()); 
+		// TODO MAJO - should properties also use constants from the modules file ?
+		valueCheck(tmpConstantValues);
+
 	}
 
 	// check formula identifiers
@@ -636,7 +652,9 @@ public class PropertiesFile extends ASTElement
 		ret.setConstantList((ConstantList) constantList.deepCopy());
 		n = getNumProperties();
 		for (i = 0; i < n; i++) {
-			ret.addProperty((Property) getPropertyObject(i).deepCopy());
+			Property prop = getPropertyObject(i).deepCopy();
+			prop.setParent(ret);
+			ret.addProperty(prop);
 		}
 		// Copy other (generated) info
 		ret.allIdentsUsed = (allIdentsUsed == null) ? null : (Vector<String>) allIdentsUsed.clone();
