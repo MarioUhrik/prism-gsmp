@@ -27,6 +27,7 @@
 package explicit;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.List;
 
@@ -44,6 +45,7 @@ import parser.ast.ExpressionSS;
 import parser.ast.ExpressionStrategy;
 import parser.ast.ExpressionTemporal;
 import parser.ast.ExpressionUnaryOp;
+import parser.ast.SynthParam;
 import parser.ast.RewardStruct;
 import parser.type.TypeBool;
 import parser.type.TypeDouble;
@@ -93,6 +95,8 @@ public class ProbModelChecker extends NonProbModelChecker
 	// Adversary export
 	protected boolean exportAdv = false;
 	protected String exportAdvFilename;
+	/** List of parameters to synthesize (introduced for GSMP parameter synthesis) */
+	protected List<SynthParam> paramList = new ArrayList<SynthParam>();
 
 	// Delay between occasional updates for slow processes, e.g. numerical solution (milliseconds)
 	public static final int UPDATE_DELAY = 5000;
@@ -411,6 +415,11 @@ public class ProbModelChecker extends NonProbModelChecker
 	{
 		this.exportAdvFilename = exportAdvFilename;
 	}
+	
+	public void setParamList(List<SynthParam> paramList)
+	{
+		this.paramList = paramList;
+	}
 
 	// Get methods for flags/settings
 
@@ -472,6 +481,12 @@ public class ProbModelChecker extends NonProbModelChecker
 	public SolnMethod getSolnMethod()
 	{
 		return solnMethod;
+	}
+	
+	/** Returns a list of parameters to synthesize */
+	public List<SynthParam> getParamList()
+	{
+		return paramList;
 	}
 
 	/**

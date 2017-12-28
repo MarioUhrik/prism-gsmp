@@ -85,6 +85,6 @@ public interface ASTVisitor
 	// ASTElement classes (misc.)
 	public Object visit(Filter e) throws PrismLangException;
 	public Object visit(ForLoop e) throws PrismLangException;
-	public Object visit(ParameterToSynthesize e) throws PrismLangException;
+	public Object visit(SynthParam e) throws PrismLangException;
 }
 

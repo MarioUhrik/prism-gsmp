@@ -44,7 +44,7 @@ public class ValueCheck extends ASTTraverse
 		this.evaluatedConstants = evaluatedConstants;
 	}
 	
-	public void visitPost(ParameterToSynthesize e) throws PrismLangException
+	public void visitPost(SynthParam e) throws PrismLangException
 	{
 		// first, evaluate the expressions and store them for later convenience
 		e.setEventName(e.getEventExpr().getName());

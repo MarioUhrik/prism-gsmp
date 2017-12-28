@@ -53,7 +53,7 @@ public class Property extends ASTElement
 	/** PRISM expression representing property */
 	private Expression expr;
 	/** GSMP-only list of parameters to synthesize */
-	private List<ParameterToSynthesize> paramList = new ArrayList<ParameterToSynthesize>();
+	private List<SynthParam> paramList = new ArrayList<SynthParam>();
 	/** Optional name for property (null if absent); */
 	private String name;
 	/** Optional comment for property (null if absent); */
@@ -97,8 +97,8 @@ public class Property extends ASTElement
 		this.comment = comment;
 	}
 	
-	public void setParamList(List<ParameterToSynthesize> paramList) {
-		for (ParameterToSynthesize param : paramList) {
+	public void setParamList(List<SynthParam> paramList) {
+		for (SynthParam param : paramList) {
 			param.setParent(this);
 		}
 		this.paramList = paramList;
@@ -125,7 +125,7 @@ public class Property extends ASTElement
 		return comment;
 	}
 	
-	public List<ParameterToSynthesize> getParamList() {
+	public List<SynthParam> getParamList() {
 		return paramList;
 	}
 	
@@ -610,8 +610,8 @@ public class Property extends ASTElement
 	public Property deepCopy()
 	{
 		Property prop = new Property(expr, name, comment);
-		for ( ParameterToSynthesize param : paramList) {
-			ParameterToSynthesize tmp = param.deepCopy();
+		for ( SynthParam param : paramList) {
+			SynthParam tmp = param.deepCopy();
 			tmp.setParent(prop);
 			prop.getParamList().add(tmp);
 		}

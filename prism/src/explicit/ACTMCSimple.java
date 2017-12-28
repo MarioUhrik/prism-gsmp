@@ -35,7 +35,7 @@ import prism.ModelType;
 
 /**
  * Read-only explicit-state representation of an ACTMC suitable for CTMC-based model checking methods.
- * ACTMCs are constructed from viable GSMPs during GSMP model-checking.
+ * ACTMCs are constructed from viable GSMPSimple models during GSMP model-checking.
  * This is done to enable usage of more effective model-checking algorithms,
  * and to reduce the amount of events.
  * <br>

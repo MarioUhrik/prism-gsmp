@@ -26,17 +26,20 @@
 
 package parser.ast;
 
+import parser.type.TypeDouble;
+import parser.type.TypeInt;
 import parser.visitor.*;
 import prism.PrismLangException;
 
 /**
  * Simple property data structure used for GSMP parameter synthesizing.
  * Holds the name of the event, index of the parameter (starting from 1), and lower and upper bounds.
+ * <br>
  * E.g. for (ev1,1,0..5.5) we are synthesizing the first parameter of event ev1
  * to, say, maximize steady-state rewards, and the interval
  * which we consider when looking for the result is [0, 5.5].
  */
-public class ParameterToSynthesize extends ASTElement
+public class SynthParam extends ASTElement
 {
 	/** PRISM expression representing the name of the event */
 	private ExpressionIdent eventNameExpr;
@@ -59,7 +62,7 @@ public class ParameterToSynthesize extends ASTElement
 
 	// Constructor
 
-	public ParameterToSynthesize(ExpressionIdent eventName, Expression paramIndex, Expression lowerBound, Expression upperBound)
+	public SynthParam(ExpressionIdent eventName, Expression paramIndex, Expression lowerBound, Expression upperBound)
 	{
 		this.eventNameExpr = eventName;
 		this.paramIndexExpr = paramIndex;
@@ -120,20 +123,36 @@ public class ParameterToSynthesize extends ASTElement
 		this.parent = property;
 	}
 
+	/** Use with caution - make sure the newly set value would not cause trouble later */
 	public void setLowerBound(double lowerBound) {
+		Expression tmp = new ExpressionLiteral(TypeDouble.getInstance(), lowerBound);
+		tmp.setPosition(lowerBoundExpr);
+		this.lowerBoundExpr = tmp;
 		this.lowerBound = lowerBound;
 	}
 
+	/** Use with caution - make sure the newly set value would not cause trouble later */
 	public void setUpperBound(double upperBound) {
+		Expression tmp = new ExpressionLiteral(TypeDouble.getInstance(), upperBound);
+		tmp.setPosition(upperBoundExpr);
+		this.upperBoundExpr = tmp;
 		this.upperBound = upperBound;
 	}
 
+	/** Use with caution - make sure the newly set value would not cause trouble later */
 	public void setParamIndex(int paramIndex) {
+		Expression tmp = new ExpressionLiteral(TypeInt.getInstance(), paramIndex);
+		tmp.setPosition(paramIndexExpr);
+		this.paramIndexExpr = tmp;
 		this.paramIndex = paramIndex;
 	}
 
+	/** Use with caution - make sure the newly set value would not cause trouble later */
 	public void setEventName(String eventName) {
-		this.eventName = eventName;
+		ExpressionIdent tmp = new ExpressionIdent(eventName);
+		tmp.setPosition(eventNameExpr);
+		this.eventNameExpr = tmp;
+		this.eventName = tmp.getName();
 	}
 	
 	/** Only used for AST traverse modify. Do not use elsewhere! */
@@ -165,14 +184,14 @@ public class ParameterToSynthesize extends ASTElement
 	public String toString()
 	{
 		String s = "";
-		s += "(" + eventNameExpr + "," + paramIndexExpr + "," + lowerBoundExpr + ".." + upperBoundExpr + ")";
+		s += "(" + eventNameExpr + ", " + paramIndexExpr + ", " + lowerBoundExpr + ".." + upperBoundExpr + ")";
 		return s;
 	}
 
 	@Override
-	public ParameterToSynthesize deepCopy()
+	public SynthParam deepCopy()
 	{
-		ParameterToSynthesize newParam = new ParameterToSynthesize(
+		SynthParam newParam = new SynthParam(
 				(ExpressionIdent)eventNameExpr.deepCopy(),
 				paramIndexExpr.deepCopy(),
 				lowerBoundExpr.deepCopy(),

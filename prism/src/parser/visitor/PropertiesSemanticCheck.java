@@ -37,7 +37,7 @@ import parser.ast.ExpressionTemporal;
 import parser.ast.FormulaList;
 import parser.ast.LabelList;
 import parser.ast.ModulesFile;
-import parser.ast.ParameterToSynthesize;
+import parser.ast.SynthParam;
 import parser.ast.PropertiesFile;
 import prism.ModelInfo;
 import prism.ModelType;
@@ -88,7 +88,7 @@ public class PropertiesSemanticCheck extends SemanticCheck
 		return null;
 	}
 	
-	public void visitPost(ParameterToSynthesize e) throws PrismLangException
+	public void visitPost(SynthParam e) throws PrismLangException
 	{
 		if (modelInfo.getModelType() != ModelType.GSMP) {
 			throw new PrismLangException("Parameter synthesis properties are only allowed for GSMPs!",e);

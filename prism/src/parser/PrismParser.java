@@ -726,7 +726,7 @@ Property Property() throws ParseException {String name = null;
         Expression expr;
         Property prop;
         Token begin = null;
-        List<ParameterToSynthesize> paramList = new ArrayList<ParameterToSynthesize>();
+        List<SynthParam> paramList = new ArrayList<SynthParam>();
         ExpressionIdent eventNameExpr;
         Expression paramIndexExpr, lowerBoundExpr, upperBoundExpr;
 begin = getToken(1);
@@ -752,7 +752,7 @@ prop = new Property(expr, name, getPrecedingCommentBlock(begin));
       jj_consume_token(DOTS);
       upperBoundExpr = Expression(false, false);
       jj_consume_token(RPARENTH);
-paramList.add(new ParameterToSynthesize(eventNameExpr, paramIndexExpr, lowerBoundExpr, upperBoundExpr));
+paramList.add(new SynthParam(eventNameExpr, paramIndexExpr, lowerBoundExpr, upperBoundExpr));
       label_6:
       while (true) {
         switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
@@ -774,7 +774,7 @@ paramList.add(new ParameterToSynthesize(eventNameExpr, paramIndexExpr, lowerBoun
         jj_consume_token(DOTS);
         upperBoundExpr = Expression(false, false);
         jj_consume_token(RPARENTH);
-paramList.add(new ParameterToSynthesize(eventNameExpr, paramIndexExpr, lowerBoundExpr, upperBoundExpr));
+paramList.add(new SynthParam(eventNameExpr, paramIndexExpr, lowerBoundExpr, upperBoundExpr));
       }
       jj_consume_token(RBRACE);
       break;

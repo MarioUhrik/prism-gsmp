@@ -2953,6 +2953,9 @@ public class Prism extends PrismComponent implements PrismSettingsListener
 				res = mc.check(prop.getExpression());
 			} else {
 				explicit.StateModelChecker mc = createModelCheckerExplicit(propertiesFile);
+				if (mc instanceof explicit.ProbModelChecker) { // TODO MAJO - not so nice solution
+					((explicit.ProbModelChecker)mc).setParamList(prop.getParamList());
+				}
 				res = mc.check(currentModelExpl, prop.getExpression());
 			}
 		} finally {

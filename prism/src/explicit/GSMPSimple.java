@@ -172,6 +172,7 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 		return true;
 	}
 
+	@Override
 	public GSMPEvent getEvent(String identifier) {
 		return events.get(identifier);
 	}
@@ -332,6 +333,7 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 		}
 	} 
 	
+	@Override
 	public CTMCSimple generateCTMC() {
 		List<GSMPEvent> expEvents = getEventList();
 		expEvents.removeIf(e -> (!e.isExponential()));

@@ -641,7 +641,7 @@ Property Property() :
 	Expression expr;
 	Property prop;
 	Token begin = null;
-	List<ParameterToSynthesize> paramList = new ArrayList<ParameterToSynthesize>();
+	List<SynthParam> paramList = new ArrayList<SynthParam>();
 	ExpressionIdent eventNameExpr;
 	Expression paramIndexExpr, lowerBoundExpr, upperBoundExpr;
 }
@@ -663,14 +663,14 @@ Property Property() :
 		  paramIndexExpr = Expression(false, false) <COMMA>
 		  lowerBoundExpr = Expression(false, false) <DOTS> upperBoundExpr = Expression(false, false)
 		  <RPARENTH>
-		  { paramList.add(new ParameterToSynthesize(eventNameExpr, paramIndexExpr, lowerBoundExpr, upperBoundExpr)); }
+		  { paramList.add(new SynthParam(eventNameExpr, paramIndexExpr, lowerBoundExpr, upperBoundExpr)); }
 		)
 		( <COMMA> <LPARENTH>
 		  eventNameExpr = IdentifierExpression() <COMMA>
 		  paramIndexExpr = Expression(false, false) <COMMA>
 		  lowerBoundExpr = Expression(false, false) <DOTS> upperBoundExpr = Expression(false, false)
 		  <RPARENTH>
-		  { paramList.add(new ParameterToSynthesize(eventNameExpr, paramIndexExpr, lowerBoundExpr, upperBoundExpr)); }
+		  { paramList.add(new SynthParam(eventNameExpr, paramIndexExpr, lowerBoundExpr, upperBoundExpr)); }
 		)*
 	 <RBRACE>
 	)?

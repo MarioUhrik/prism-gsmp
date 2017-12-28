@@ -42,7 +42,11 @@ public interface GSMP extends ModelSimple
 	 * Get all events.
 	 */
 	public List<GSMPEvent> getEventList();
-
+	
+	/**
+	 * Get GSMPEvent of name {@code eventName}. Null if not present.
+	 */
+	public GSMPEvent getEvent(String eventName);
 
 	/**
 	 * Returns a list of events active in state {@code state}.
