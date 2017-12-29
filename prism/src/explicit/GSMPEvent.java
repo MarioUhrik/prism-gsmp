@@ -158,6 +158,9 @@ public class GSMPEvent extends DTMCSimple
 	}
 	
 	public void addActionLabel(int s, int t, String actionLabel) {
+		if (actionLabel == null) {
+			return;
+		}
 		if (actionLabels.get(s) == null) {
 			actionLabels.put(s, new TreeMap<Integer, Set<String>>());
 		}

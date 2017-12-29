@@ -56,12 +56,6 @@ public class GSMPRewardsSimple implements GSMPRewards
 	 * containing only the non-zero transition rewards.
 	 */
 	private Map<String,Map<Integer,Map<Integer, Double>>> transitionRewards; 
-	// TODO MAJO - is this the best possible data structure?
-		//Why maps - fast access, which is what we want for model checking
-			//HashMap - O(1) read/insertion, but the hash tables have recursive(3x) memory redundancy
-			//TreeMap - O(log n) read/insertion, but no memory redundancy at all
-		//Why not just ArrayList - awkward indexing for events, overwhelming memory redundancy
-	    	//(always O(|E|*|S|*|S|) space complexity regardless of rewards)
 
 	public GSMPRewardsSimple() {
 		stateRewards = new HashMap<Integer, Double>();

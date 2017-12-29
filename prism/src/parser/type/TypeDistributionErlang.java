@@ -63,20 +63,15 @@ public class TypeDistributionErlang extends TypeDistribution {
 	@Override
 	public int canAssign(Type firstType, Type secondType)
 	{
-		if (!(firstType instanceof TypeDouble || firstType instanceof TypeInt)) { // if first type NOK then report bad first type
+		if (!(firstType instanceof TypeDouble || firstType instanceof TypeInt)) {
 			return 1;
 		}
-		if (!(secondType instanceof TypeInt)) { // if second type NOK then report bad second type
+		if (!(secondType instanceof TypeInt)) {
 			return 2;
 		}
-		return 0; // else all OK
+		return 0;
 	}
 	
-	/**
-	 * Checks whether the distribution has sensible parameter values. For example, dirac distribution parameter should be >0.
-	 * @return true if the parameters have sensible values
-	 * @throws PrismLangException if the parameters dont have sensible values
-	 */
 	@Override
 	public boolean parameterValueCheck(Expression firstParameter, Expression secondParameter, Values constantValues) throws PrismLangException{
 		if ((double)firstParameter.evaluateDouble(constantValues) <= 0) {

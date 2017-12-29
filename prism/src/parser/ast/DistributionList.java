@@ -48,32 +48,10 @@ public class DistributionList extends ASTElement
 	
 	private ModulesFile parent = null;
 	
-	/** Constructor */
 	public DistributionList(ModulesFile parent)
 	{
 		this.parent = parent;
 	}
-
-	///** Constructor from a Values object, i.e., a list of name=value tuples */
-	/*
-	public DistributionList(Values constValues) throws PrismLangException
-	{
-		for (int i = 0; i < constValues.getNumValues(); i++) {
-			Type type = constValues.getType(i);
-			if (type.equals(TypeBool.getInstance()) ||
-			    type.equals(TypeInt.getInstance()) ||
-			    type.equals(TypeDouble.getInstance())) {
-				addConstant(new ExpressionIdent(constValues.getName(i)),
-				            new ExpressionLiteral(type, constValues.getValue(i)),
-				            type);
-			} else {
-				throw new PrismLangException("Unsupported type for constant " + constValues.getName(i));
-			}
-		}
-	}
-	*/
-
-	// Set methods
 	
 	public void addDistribution(ExpressionIdent n, Expression firstParam, Expression secondParam, TypeDistribution t)
 	{
@@ -84,18 +62,23 @@ public class DistributionList extends ASTElement
 		nameIdents.addElement(n);
 	}
 	
-	public void setDistribution(int i, Expression firstParam, Expression secondParam) // TODO MAJO - might cause problems
+	// Set methods
+	
+	/** Use with caution - correctness checks are only done while parsing */
+	public void setDistribution(int i, Expression firstParam, Expression secondParam)
 	{
 		setFirstParameter(i, firstParam);
 		setSecondParameter(i, secondParam);
 	}
 	
-	public void setFirstParameter(int i, Expression param) // TODO MAJO - might cause problems
+	/** Use with caution - correctness checks are only done while parsing */
+	public void setFirstParameter(int i, Expression param)
 	{
 		firstParameters.setElementAt(param, i);
 	}
 	
-	public void setSecondParameter(int i, Expression param) // TODO MAJO - might cause problems
+	/** Use with caution - correctness checks are only done while parsing */
+	public void setSecondParameter(int i, Expression param)
 	{
 		secondParameters.setElementAt(param, i);
 	}
@@ -151,10 +134,10 @@ public class DistributionList extends ASTElement
 	}
 
 	/**
-	 * Remove the constant with the given name.
-	 * @param name the name of the constant
-	 * @param ignoreNonexistent if true, don't throw an exception if the constant does not exist
-	 * @throws PrismLangException if the constant does not exist (if not ignoreNonexistent)
+	 * Remove the distribution with the given name.
+	 * @param name the name of the distribution
+	 * @param ignoreNonexistent if true, don't throw an exception if the distribution does not exist
+	 * @throws PrismLangException if the distribution does not exist (if not ignoreNonexistent)
 	 */
 	public void removeDistribution(String name, boolean ignoreNonexistent) throws PrismLangException
 	{
@@ -169,7 +152,7 @@ public class DistributionList extends ASTElement
 	}
 
 	/**
-	 * Remove the constant with the given index.
+	 * Remove the distribution with the given index.
 	 * @param i the index
 	 */
 	public void removeDistribution(int i)

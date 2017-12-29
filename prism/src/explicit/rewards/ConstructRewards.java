@@ -267,7 +267,6 @@ public class ConstructRewards
 					for (int e = 0; e < events.size() ; ++e) {
 						Set<String> eventActions = events.get(e).getActionLabels(j, k);
 						if (eventActions == null) { 
-							// TODO MAJO - is the continue ok here?
 							continue;
 						}
 						double rewardSum = 0; 
@@ -392,39 +391,6 @@ public class ConstructRewards
 	 */
 	public GSMPRewards buildGSMPRewardStructure(GSMP gsmp, ModelGenerator modelGen, int r) throws PrismException {
 		return buildGSMPRewardStructure(gsmp, modelGen.getRewardStruct(r), modelGen.getConstantValues());
-		
-		// TODO MAJO - the commented out code is probably safe to remove. Remove it after becoming certain.
-		/*
-		int numStates = gsmp.getNumStates();
-		List<State> statesList = gsmp.getStatesList();
-		GSMPRewardsSimple rewSimple = new GSMPRewardsSimple();
-		List<GSMPEvent> events = gsmp.getEventList();
-		for (int j = 0; j < numStates; j++) {
-			State state = statesList.get(j);
-			// State rewards
-			double rew = modelGen.getStateReward(r, state);
-			if (Double.isNaN(rew))
-				throw new PrismException("Reward structure evaluates to NaN at state " + state);
-			if (!allowNegative && rew < 0)
-				throw new PrismException("Reward structure evaluates to " + rew + " at state " + state +", negative rewards not allowed");
-			rewSimple.addToStateReward(j, rew);
-			// State-action rewards
-			for (int k = 0; k < numStates; k++) { // TODO MAJO - testing, probably broken
-				for (int e = 0; e < events.size() ; ++e) {
-					for (String eventAction : events.get(e).getActionLabels(j, k)) {
-						rew = modelGen.getStateActionReward(r, state, eventAction);
-						if (Double.isNaN(rew))
-							throw new PrismException("Reward structure evaluates to NaN at state " + state);
-						if (!allowNegative && rew < 0)
-							throw new PrismException("Reward structure evaluates to " + rew + " at state " + state +", negative rewards not allowed");
-						rewSimple.addToTransitionReward(events.get(e).getIdentifier() ,j, k, rew);
-					}
-				}
-			}
-		}
-		gsmp.setRewards(rewSimple);
-		return rewSimple;
-		*/
 	}
 
 	/**

@@ -109,7 +109,7 @@ public class ChoiceListFlexi implements Choice
 	 */
 	public void add(double probability, List<Update> ups)
 	{
-		// TODO MAJO - assumes all the added updates are from the same command
+		// assumes all the added updates are from the same command (by default, they are)
 		if (ups.get(0).getParent().getParent().getEventIdent() != null) {
 			this.eventIdents.add(ups.get(0).getParent().getParent().getEventIdent().getName());
 		} else {
@@ -135,7 +135,6 @@ public class ChoiceListFlexi implements Choice
 
 	/**
 	 * Modify this choice, constructing product of it with another.
-	 * @throws PrismException When in a GSMP a product is made from two events at least one of which is not exponential
 	 */
 	public void productWith(ChoiceListFlexi ch) throws PrismException
 	{
@@ -326,18 +325,19 @@ public class ChoiceListFlexi implements Choice
 	private void eventProduct(ChoiceListFlexi ch) throws PrismException {
 		for ( int i = 0; i < ch.size() ; ++i) {
 			for (int j = 0; j < size()  ; ++j) {
-				if (getEventIdent(j) == null ) { // slave synchronizing with a master
+				if (getEventIdent(j) == null ) {
+					// this is a slave - so try to obtain a master
 					setEventIdent(j, ch.getEventIdent(i));
 				} else {
-					if (ch.getEventIdent(i) == null) { //master synchronizing with a slave
-						//ch.setEventIdent(i, getEventIdent(j));
-						// TODO MAJO - not sure if the above line should be here. I think it should, but testing proved it makes no difference
-					} else { // both are the masters 
-						if (isExponential(getEventIdent(j)) && isExponential(ch.getEventIdent(i)) && this.expSyncBackwardCompatible) { // if synchronization of these events is allowed, do it
+					if (ch.getEventIdent(i) == null) {
+						// this is a master synchronizing with a slave - do nothing
+					} else {
+						// both are the masters - check that their synchronization is allowed
+						if (isExponential(getEventIdent(j)) && isExponential(ch.getEventIdent(i)) && this.expSyncBackwardCompatible) {
+							// the two masters synchronize into a product event
 							String productEventName = "<[" + getEventIdent(j) + "]PRODUCT_WITH[" + ch.getEventIdent(i) + "]>";
 							if (!isExponential(productEventName)) { 
-								// if their product event and distribution do not exist yet, create them
-								// make a new distribution and add it in the ModulesFile
+								// their product even does not exist yet - create it
 								DistributionList distrList = getModulesFile().getDistributionList();
 								int distrIndexThis = getDistributionIndex(getEvent(getEventIdent(j)).getDistributionName());
 								int distrIndexOther = getDistributionIndex(getEvent(ch.getEventIdent(i)).getDistributionName());
@@ -353,15 +353,15 @@ public class ChoiceListFlexi implements Choice
 												distrList.getFirstParameter(distrIndexOther)),
 										null,
 										TypeDistributionExponential.getInstance());
-								// make a new event and add it to the Module this choicelist comes from
 								Module module = getEvent(getEventIdent(j)).getParent();
 								module.addEvent(new Event(
 										new ExpressionIdent(productEventName),
 										productDistrNameIdent));
 							} 
-							// their product now definitely exists, so just assign it
+							// assign this choicelist to the product event
 							setEventIdent(j, productEventName);
-						} else { // else synchronization of these events is not allowed
+						} else {
+							// synchronization of these masters is not allowed
 							if (!isExponential(getEventIdent(j)) || !isExponential(ch.getEventIdent(i))) {
 								throw new PrismException("Synchronizing events \"" + getEventIdent(i) + "\" and \"" + ch.getEventIdent(j) + "\" at least one of which is not exponentially distributed!");
 							} else {
@@ -375,7 +375,7 @@ public class ChoiceListFlexi implements Choice
 		}
 	}
 	
-	// returns true if this event is exponentially distributed and exists, else false
+	/** returns true if this event is exponentially distributed and exists, else false */
 	private boolean isExponential(String eventName) {
 		Event event = getEvent(eventName);
 		if (event == null) {

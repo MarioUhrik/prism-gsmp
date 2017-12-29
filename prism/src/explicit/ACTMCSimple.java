@@ -47,9 +47,6 @@ public class ACTMCSimple extends CTMCSimple
 {
 	/** Mapping of non-exponential events onto states in which they are active. */
 	protected Map<Integer, GSMPEvent> events = new HashMap<Integer, GSMPEvent>();
-	
-	// TODO MAJO - figure out how to use the GSMPRewards class for ACTMCs.
-	// 			   It would probably be necessary to create a new reward mapping.
 
 	/**
 	 * Constructor from an already created GSMP that has been verified

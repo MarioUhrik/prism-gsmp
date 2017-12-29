@@ -126,7 +126,7 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 	}
 
 	/**
-	 * Change the probabilities of event with name {@code eventIdent}
+	 * Add to the probabilities of event with name {@code eventIdent}
 	 * @return true if successfully done, false if the event was not found
 	 */
 	public boolean addToProbability(int i, int j, double prob, String eventIdent, String actionLabel) {
@@ -264,7 +264,7 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 					selfLoopEventIdent);
 			this.addEvent(selfLoop);
 			for (Integer deadlockState : getDeadlockStates()) {
-				selfLoop.addToProbability(deadlockState, deadlockState, 1.0);
+				addToProbability(deadlockState, deadlockState, 1.0, selfLoopEventIdent, null);
 			}
 		}
 	}

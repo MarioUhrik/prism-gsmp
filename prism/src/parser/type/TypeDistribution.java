@@ -51,46 +51,38 @@ public class TypeDistribution extends Type {
 		return "distribution";
 	}
 	
-	@Override
-	public Object defaultValue()
-	{
-		throw new UnsupportedOperationException("not yet implemented");
-		//return new ExponentialDistr(1.0); // TODO MAJO
-	}
-	
 	public static TypeDistribution getInstance()
 	{
 		return singleton;
 	}
 	
 	/**
-	 * 
 	 * @param firstType
 	 * @param secondType
-	 * @return 0 if both can be assigned, 1 if firstType cannot be assigned, 2 else (OK = 0, NOK = index of first wrong type)
+	 * @return If both types can be assigned, returns 0.
+	 *         Else returns the index of first wrong type (firstType starts with 1).
 	 */
 	public int canAssign(Type firstType, Type secondType)
 	{
-		// TODO MAJO - this should be overriden by children classes for now
-		throw new UnsupportedOperationException("not yet implemented");
+		// Play safe: assume not possible
+		return 1;
 	}
 	
 	/**
-	 * Checks whether the distribution has sensible parameter values. For example, dirac distribution parameter should be >0.
-	 * @return true if the parameters have sensible values
-	 * @throws PrismLangException if the parameters dont have sensible values
+	 * Checks whether the given parameter values fit constraints of this distribution.
+	 * For example, Dirac distribution parameter should be >0.
+	 * @return true if the parameters have sensible values, else throws exception or returns false
+	 * @throws PrismLangException if the parameters don't have sensible values
 	 */
 	public boolean parameterValueCheck(Expression firstParameter, Expression secondParameter, Values constantValues)  throws PrismLangException{
-		 // TODO MAJO - this should be overriden by children classes for now
-		throw new UnsupportedOperationException("not yet implemented");
+		return false;
 	}
 	
 	/**
 	 * @return The number of parameters used by this distribution.
 	 */
 	public int getNumParams() {
-		 // TODO MAJO - this should be overriden by children classes for now
-		throw new UnsupportedOperationException("not yet implemented");
+		return 0;
 	}
 	
 
