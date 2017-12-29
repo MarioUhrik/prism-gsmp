@@ -403,13 +403,18 @@ This normalisation can be considered as replacing any nondeterministic choice be
 %
 %\[\mathbf{R} (s,t) \eqdef \sum_{c \in C} \mu_{\bot,c,s}(t). \]
 
+% !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+% MAJO - I inserted \newpage here!
+% !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+\newpage
+
 \section*{Properties for Distribution-Parameter Synthesis}
 
-We extend the PRISM properties working with rewards by specification of parameters to be a subject of optimization. Currently we support two objectives: a reachability reward and a steady-state reward. We express them as follows:
-$$\code{R\{"rew\_name"\}max=? [F(prop)~:~(ev1,1,0..10); (ev2,1,-2..123); (ev3,2,1.2..72.6)]}$$ 
-states that we are looking for optimal values for the first distribution parameters of events \code{ev1} and \code{ev2}, and the second parameter of distribution of \code{ev3} in order to  maximize the reward \code{rew\_name} before reaching a state satisfying \code{prop}. For the parameters, we allow only values within the intervals \code{0..10}, \code{-2..123}, and \code{1.2..72.6}, i.e., in the last case we require values $\geq 1.2$ and $\leq72.6$. Similarly,
-$$\code{R\{"rew\_name"\}min=? [S~:~(ev1,1,0..10); (ev2,1,-2..123); (ev3,2,1.2..72.6)]}$$ 
-expresses that we would like to find parameters (as described above) minimizing the steady-state (i.e. long-run average) reward named by \code{rew\_name}.
+We extend the PRISM properties working with rewards by specification of a list of parameters to be the subject of optimization. Currently, we support both minimizing and maximizing two objectives: reachability reward and steady-state reward. We express them as follows:
+$$\code{Rmax=? [~F~(prop)~]~\{(ev1,1,0..10), (ev2,1,2..123), (ev3,2,1.2..72.6)\}}$$ 
+This states that we are looking for optimal values for the first distribution parameters of events \code{ev1} and \code{ev2}, and the second parameter of distribution of \code{ev3} in order to  maximize the expected accumulated reward before reaching a state satisfying \code{prop}. For the parameters, we allow only values within the intervals \code{0..10}, \code{2..123}, and \code{1.2..72.6}, i.e., in the last case we require values $\geq 1.2$ and $\leq72.6$. Similarly,
+$$\code{R\{"rew\_name"\}min=?~[~S~]~\{(ev1,1,0..100)\}}$$ 
+expresses that we would like to find the optimal value within interval \code{0..100} for the first distribution parameter of event \code{ev1} minimizing the steady-state reward using reward structure \code{rew\_name}.
 
 \bibliographystyle{plain}
 \begin{thebibliography}{1}
@@ -420,4 +425,3 @@ P.J. Haas.
 \end{thebibliography}
 
 \end{document}
-
