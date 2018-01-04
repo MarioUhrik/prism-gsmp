@@ -27,6 +27,7 @@
 package explicit;
 
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -61,7 +62,10 @@ public class ACTMCSimple extends CTMCSimple
 		for (int e = 0; e < allEvents.size(); ++e) {
 			if (!allEvents.get(e).isExponential()) {
 				GSMPEvent nonExpEvent = allEvents.get(e);
-				this.events.put(nonExpEvent.getActive().nextSetBit(0), nonExpEvent); // shallow copy
+				BitSet activeStates = nonExpEvent.getActive();
+				for (int s = activeStates.nextSetBit(0); s >= 0; s = activeStates.nextSetBit(s+1)) {
+					this.events.put(s, nonExpEvent); // shallow copies
+				}
 			}
 		}
 	}

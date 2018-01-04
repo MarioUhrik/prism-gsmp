@@ -42,8 +42,7 @@ public class GSMPEvent extends DTMCSimple
 	private TypeDistribution distributionType;
 	private double firstParameter;
 	private double secondParameter;
-	//BitSet of states where this event is active. However, it is redundant.
-	//This information is already stored in the state distribution matrix anyway.
+	/** BitSet of states where this event is active. Redundant, but convenient. */
 	private BitSet active;
 	/**
 	 * Unique event identifier String passed over when generated from parser/AST/Event class
@@ -120,9 +119,7 @@ public class GSMPEvent extends DTMCSimple
 		}
 	}
 
-	/**
-	 * Add to the probability for a transition.
-	 */
+	/** Add to the probability for a transition. */
 	public void addToProbability(int i, int j, double prob) {
 		super.addToProbability(i, j, prob);
 		setActive(i);
@@ -132,11 +129,11 @@ public class GSMPEvent extends DTMCSimple
 		active = new BitSet(numStates);
 	}
 
-	public void setActive(int state) {
+	private void setActive(int state) {
 		active.set(state);
 	}
 
-	public void setPassive(int state){
+	private void setPassive(int state){
 		active.clear(state);
 		clearState(state);
 	}
@@ -171,10 +168,12 @@ public class GSMPEvent extends DTMCSimple
 		destToLabelsMap.get(t).add(actionLabel);
 	}
 
+	/** Returns true iff this event is active in state {@code state} */
 	public boolean isActive(int state) {
 		return active.get(state);
 	}
 
+	/** Returns a BitSet of active states */
 	public BitSet getActive() {
 		return active;
 	}
