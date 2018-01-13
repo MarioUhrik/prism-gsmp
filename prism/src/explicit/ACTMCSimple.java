@@ -75,10 +75,16 @@ public class ACTMCSimple extends CTMCSimple
 		return ModelType.GSMP;
 	}
 
+	/**
+	 * Returns a mapping of non-exponential events within this ACTMC onto states in which they are active.
+	 */
 	public Map<Integer, GSMPEvent> getEventMap() {
 		return events;
 	}
 	
+	/**
+	 * Returns a list of non-exponential events within this ACTMC.
+	 */
 	public List<GSMPEvent> getEventList() {
 		return (new ArrayList<GSMPEvent>(events.values()));
 	}

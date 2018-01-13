@@ -131,7 +131,7 @@ public class GSMPModelChecker extends ProbModelChecker
 	 * @param target target states
 	 * @param min true iff we are minimizing the expected rewards. Else we are maximizing them.
 	 * @param paramList list of parameters to synthesize. Extracted from ProbModelChecker.
-	 * @return //TODO MAJO - which should this return anyway? optimal list of parameter values?
+	 * @return //TODO MAJO - what should this return anyway? optimal list of parameter values?
 	 */ // TODO MAJO - javadoc return value
 	public ModelCheckerResult doReachParameterSynthesis(GSMP gsmp, GSMPRewards rew, BitSet target, boolean min) throws PrismException {
 		List<SynthParam> paramList = new ArrayList<SynthParam>(getParamList());
