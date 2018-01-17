@@ -27,7 +27,9 @@
 package explicit;
 
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -80,7 +82,7 @@ public class ACTMCPotatoData
 	 */
 	public ACTMCPotatoData(ACTMCSimple actmc, GSMPEvent event) throws Exception {
 		if (actmc == null || event == null) {
-			throw new NullPointerException("ACTMCPotatoData constructor has received null objects!");
+			throw new NullPointerException("ACTMCPotatoData constructor has received a null object!");
 		}
 		if (!actmc.getEventList().contains(event)) {
 			throw new IllegalArgumentException("ACTMCPotatoData received arguments (actmc,event) where event does not belong to actmc!");
@@ -106,12 +108,11 @@ public class ACTMCPotatoData
 	 * and at the same time they are reachable in a single transition
 	 * from a state where {@code event} is not active.
 	 * <br>
-	 * If this is the first call, this method computes it first.
+	 * If this is the first call, this method computes it before returning it.
 	 */
 	public List<Integer> getEntrances() {
 		if (!entrancesComputed) {
 			computeEntrances();
-			entrancesComputed = true;
 		}
 		return entrances;
 	}
@@ -121,12 +122,11 @@ public class ACTMCPotatoData
 	 * the values are mean accumulated rewards until leaving the potato
 	 * if entered from state {@code key}.
 	 * <br>
-	 * If this is the first call, this method computes it first.
+	 * If this is the first call, this method computes it before returning it.
 	 */
 	public Map<Integer, Double> getMeanRewards() {
 		if (!meanRewardsComputed) {
 			computeMeanRewards();
-			meanRewardsComputed = true;
 		}
 		return meanRewards;
 	}
@@ -136,12 +136,11 @@ public class ACTMCPotatoData
 	 * the values are mean times until leaving the potato
 	 * if entered from state {@code key}.
 	 * <br>
-	 * If this is the first call, this method computes it first.
+	 * If this is the first call, this method computes it before returning it.
 	 */
 	public Map<Integer, Double> getMeanTimes() {
 		if (!meanTimesComputed) {
 			computeMeanTimes();
-			meanTimesComputed = true;
 		}
 		return meanTimes;
 	}
@@ -151,30 +150,76 @@ public class ACTMCPotatoData
 	 * the values are mean outcome probability distributions after leaving the potato
 	 * if entered from state {@code key}.
 	 * <br>
-	 * If this is the first call, this method computes it first.
+	 * If this is the first call, this method computes it before returning it.
 	 */
 	public Map<Integer, Distribution> getMeanDistributions() {
 		if (!meanDistributionsComputed) {
 			computeMeanDistributions();
-			meanDistributionsComputed = true;
 		}
 		return meanDistributions;
 	}
 	
 	private void computeEntrances() {
-		// TODO MAJO - implement
+		BitSet potatoBs = event.getActive();
+		List<Integer> candidateEntrances = new ArrayList<Integer>();
+		for (int ps = potatoBs.nextSetBit(0); ps >= 0; ps = potatoBs.nextSetBit(ps+1)) {
+			candidateEntrances.add(ps);
+		}
+		
+		// For each state of the ACTMC...
+		for (int s = 0 ; s < actmc.getNumStates() ; ++s) {
+			// ...if it does not belong to the potato...
+			if (actmc.getActiveEvent(s) != event) {
+				// ...check whether it has an exponential transition into the potato.
+				for (Iterator<Integer> iter = candidateEntrances.iterator() ; iter.hasNext();) {
+					int ps = iter.next();
+					if (actmc.getTransitions(s).get(ps) > 0.0) {
+						entrances.add(ps);
+						iter.remove();
+					}
+				}
+				if (candidateEntrances.isEmpty()) {
+					break;
+				}
+			}
+		}
+		entrancesComputed = true;
 	}
 	
 	private void computeMeanRewards() {
-		// TODO MAJO - implement
+		if (!entrancesComputed) {
+			computeEntrances();
+		}
+		for (int entrance : entrances) {
+			// TODO MAJO - implement
+			// I am not sure how to compute this though.
+			throw new UnsupportedOperationException();
+		}
+		meanRewardsComputed = true;
 	}
 	
 	private void computeMeanTimes() {
-		// TODO MAJO - implement
+		if (!entrancesComputed) {
+			computeEntrances();
+		}
+		for (int entrance : entrances) {
+			// TODO MAJO - implement
+			// I am not sure how to compute this though.
+			throw new UnsupportedOperationException();
+		}
+		meanTimesComputed = true;
 	}
 	
 	private void computeMeanDistributions() {
-		// TODO MAJO - implement
+		if (!entrancesComputed) {
+			computeEntrances();
+		}
+		for (int entrance : entrances) {
+			// TODO MAJO - implement
+			// I am not sure how to compute this though.
+			throw new UnsupportedOperationException();
+		}
+		meanDistributionsComputed = true;
 	}
 
 
