@@ -30,6 +30,9 @@ import parser.Values;
 import parser.ast.Expression;
 import prism.PrismLangException;
 
+/**
+ * Class intended to represent the type of continuous Dirac probability distribution.
+ */
 public class TypeDistributionDirac extends TypeDistribution {
 
 	private static TypeDistributionDirac singleton;
@@ -83,6 +86,15 @@ public class TypeDistributionDirac extends TypeDistribution {
 	@Override
 	public int getNumParams() {
 		return 1;
+	}
+	
+	@Override
+	public double cdf(double firstParameter, double secondParameter, double x) {
+		if ( x >= firstParameter) {
+			return 1;
+		} else {
+			return 0;
+		}
 	}
 	
 

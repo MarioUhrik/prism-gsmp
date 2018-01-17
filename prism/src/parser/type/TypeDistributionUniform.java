@@ -30,6 +30,9 @@ import parser.Values;
 import parser.ast.Expression;
 import prism.PrismLangException;
 
+/**
+ * Class intended to represent the type of continuous uniform probability distribution.
+ */
 public class TypeDistributionUniform extends TypeDistribution {
 
 	private static TypeDistributionUniform singleton;
@@ -89,6 +92,13 @@ public class TypeDistributionUniform extends TypeDistribution {
 	@Override
 	public int getNumParams() {
 		return 2;
+	}
+	
+	@Override
+	public double cdf(double firstParameter, double secondParameter, double x) {
+		// TODO MAJO - implement
+		// Specialized probability distribution library should be considered.
+		throw new UnsupportedOperationException("Uniform distribution CDF computation is not yet implemented!");
 	}
 
 }

@@ -30,6 +30,9 @@ import parser.Values;
 import parser.ast.Expression;
 import prism.PrismLangException;
 
+/**
+ * Class intended to represent the type of continuous exponential probability distribution.
+ */
 public class TypeDistributionExponential extends TypeDistribution {
 
 	private static TypeDistributionExponential singleton;
@@ -83,6 +86,13 @@ public class TypeDistributionExponential extends TypeDistribution {
 	@Override
 	public int getNumParams() {
 		return 1;
+	}
+	
+	@Override
+	public double cdf(double firstParameter, double secondParameter, double x) {
+		// TODO MAJO - implement
+		// Specialized probability distribution library should be considered.
+		throw new UnsupportedOperationException("Exponential distribution CDF computation is not yet implemented!");
 	}
 
 }

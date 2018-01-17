@@ -30,6 +30,9 @@ import parser.Values;
 import parser.ast.Expression;
 import prism.PrismLangException;
 
+/**
+ * Class intended to represent the type of continuous Weibull probability distribution.
+ */
 public class TypeDistributionWeibull extends TypeDistribution {
 
 	private static TypeDistributionWeibull singleton;
@@ -86,6 +89,13 @@ public class TypeDistributionWeibull extends TypeDistribution {
 	@Override
 	public int getNumParams() {
 		return 2;
+	}
+	
+	@Override
+	public double cdf(double firstParameter, double secondParameter, double x) {
+		// TODO MAJO - implement
+		// Specialized probability distribution library should be considered.
+		throw new UnsupportedOperationException("Weibull distribution CDF computation is not yet implemented!");
 	}
 
 }

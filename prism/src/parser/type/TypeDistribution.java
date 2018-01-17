@@ -31,7 +31,9 @@ import parser.ast.Expression;
 import prism.PrismLangException;
 
 /**
- * General type distribution class.
+ * Class representing a general continuous distribution type.
+ * Intended as a superclass to more specialized classes, e.g. TypeDistributionDirac.
+ * However, there may be a more proper use for it in the future.
  */
 public class TypeDistribution extends Type {
 
@@ -83,6 +85,18 @@ public class TypeDistribution extends Type {
 	 */
 	public int getNumParams() {
 		return 0;
+	}
+	
+	/**
+	 * The cumulative distribution function for this distribution type.
+	 * @param firstParameter value of the first distribution parameter
+	 * @param secondParameter value of the second distribution parameter
+	 * @param x the CDF argument (usually the time)
+	 * @return probability (0..1) that a randomly picked value is lesser than or equal to {@code x}
+	 */
+	public double cdf(double firstParameter, double secondParameter, double x) {
+		return 0;
+		// TODO MAJO - extend the implementations for arbitrary precision
 	}
 	
 
