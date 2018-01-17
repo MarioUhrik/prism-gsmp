@@ -3,6 +3,7 @@
 //	Copyright (c) 2002-
 //	Authors:
 //	* Dave Parker <david.parker@comlab.ox.ac.uk> (University of Oxford, formerly University of Birmingham)
+//	* Mario Uhrik <433501@mail.muni.cz> (Masaryk University)
 //	
 //------------------------------------------------------------------------------
 //	
@@ -39,16 +40,20 @@ public class Command extends ASTElement
 	private int synchIndex;
 	// Guard
 	private Expression guard;
-	// Assigned GSMP Event. Can be null.
+	/** Assigned GSMP Event. Can be null. */
 	private ExpressionIdent eventIdent;
-	// Used for GSMP. If true, this command is a slave to other commands with the same label.
-	// As a slave, this command does not have its own time distribution and relies on other
-	// commands (i.e. masters) to provide it during synchronization.
-	// Example use case: 
-	// There are 2 synchronized modules M1 and M2, each containing a command with label [a].
-	// Let the command in M1 be a "slave", and the command in M2 be a "master".
-	// The joint distribution for these synchronized commands is fully chosen by the master.
-	// This avoids confusion about what the joint distribution for the synchronized commands should be
+	 /** 
+	 * Used for GSMP models. 
+	 * If true, this command is a slave to other commands with the same action label.
+	 * As a slave, this command does not have its own time distribution and relies on other
+	 * commands (i.e. masters) to provide it during synchronization.
+	 * <br>
+	 * Example use case: 
+	 * <br>
+	 * There are 2 synchronized modules M1 and M2, each containing a command with action label [a].
+	 * Let the command in M1 be a "slave", and the command in M2 be a "master".
+	 * The joint time distribution for these synchronized commands is chosen by the master.
+	 */
 	private boolean isSlave;
 	// List of updates
 	private Updates updates;
@@ -67,8 +72,7 @@ public class Command extends ASTElement
 		eventIdent = null;
 	}
 	
-	// Deepcopy constructor
-	
+	/** Deepcopy constructor */
 	public Command(Command comm)
 	{
 		Command tmp = (Command) comm.deepCopy();

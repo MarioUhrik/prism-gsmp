@@ -1,8 +1,8 @@
 //==============================================================================
 //	
-//	Copyright (c) 2002-
+//	Copyright (c) 2017-
 //	Authors:
-//	* Dave Parker <david.parker@comlab.ox.ac.uk> (University of Oxford)
+//	* Mario Uhrik <433501@mail.muni.cz> (Masaryk University)
 //	
 //------------------------------------------------------------------------------
 //	
@@ -32,12 +32,12 @@ import parser.visitor.*;
 import prism.PrismLangException;
 
 /**
- * Simple property data structure used for GSMP parameter synthesizing.
+ * Simple property data structure used for GSMP parameter synthesis.
  * Holds the name of the event, index of the parameter (starting from 1), and lower and upper bounds.
  * <br>
  * E.g. for (ev1,1,0..5.5) we are synthesizing the first parameter of event ev1
  * to, say, maximize steady-state rewards, and the interval
- * which we consider when looking for the result is [0, 5.5].
+ * from which the result is picked is within bounds 0>=, <=5.5.
  */
 public class SynthParam extends ASTElement
 {
@@ -52,7 +52,8 @@ public class SynthParam extends ASTElement
 	/** Upper bound of the result */
 	private Expression upperBoundExpr;
 	
-	// The expressions are evaluated during parsing semantics check and kept here
+	// The expressions are evaluated during parse-time semantics check,
+	// and kept here so that they do not need to be evaluated again.
 	private String eventName = null;
 	private int paramIndex = 0;
 	private double lowerBound = 0.0;
@@ -203,5 +204,3 @@ public class SynthParam extends ASTElement
 	}
 	
 }
-
-//------------------------------------------------------------------------------

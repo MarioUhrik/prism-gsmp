@@ -1,8 +1,8 @@
 //==============================================================================
 //	
-//	Copyright (c) 2002-
+//	Copyright (c) 2017-
 //	Authors:
-//	* Dave Parker <david.parker@comlab.ox.ac.uk> (University of Oxford, formerly University of Birmingham)
+//	* Mario Uhrik <433501@mail.muni.cz> (Masaryk University)
 //	
 //------------------------------------------------------------------------------
 //	
@@ -33,7 +33,7 @@ import prism.PrismLangException;
 import parser.type.*;
 
 /**
- * Class to store list of defined distributions (based on ConstantList).
+ * Class to store a list of defined distributions for GSMP models (based on ConstantList).
  */
 public class DistributionList extends ASTElement
 {

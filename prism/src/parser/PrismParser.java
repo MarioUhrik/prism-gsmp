@@ -3929,12 +3929,6 @@ fl.setLHS(s);
     finally { jj_save(19, xla); }
   }
 
-  static private boolean jj_3_6()
- {
-    if (jj_scan_token(LABEL)) return true;
-    return false;
-  }
-
   static private boolean jj_3R_220()
  {
     Token xsp;
@@ -5842,6 +5836,12 @@ fl.setLHS(s);
     if (jj_3R_39()) return true;
     }
     if (jj_3R_36()) return true;
+    return false;
+  }
+
+  static private boolean jj_3_6()
+ {
+    if (jj_scan_token(LABEL)) return true;
     return false;
   }
 

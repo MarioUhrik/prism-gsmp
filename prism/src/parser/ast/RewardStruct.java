@@ -116,7 +116,8 @@ public class RewardStruct extends ASTElement
 	}
 	
 	/**
-	 * Returns the index of the reward item with such synch within this rewardStruct. Else -1 if not found
+	 * Returns the index of the reward item with action label {@code synch}
+	 * within this rewardStruct, or -1 if not found.
 	 */
 	public int getItemIndex(String synch) {
 		for (int i = 0; i < items.size() ;  ++i) {

@@ -1,8 +1,8 @@
 //==============================================================================
 //	
-//	Copyright (c) 2002-
+//	Copyright (c) 2017-
 //	Authors:
-//	* Dave Parker <david.parker@comlab.ox.ac.uk> (University of Oxford)
+//	* Mario Uhrik <433501@mail.muni.cz> (Masaryk University)
 //	
 //------------------------------------------------------------------------------
 //	

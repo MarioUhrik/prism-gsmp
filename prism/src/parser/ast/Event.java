@@ -1,8 +1,8 @@
 //==============================================================================
 //	
-//	Copyright (c) 2002-
+//	Copyright (c) 2017-
 //	Authors:
-//	* Dave Parker <david.parker@comlab.ox.ac.uk> (University of Oxford, formerly University of Birmingham)
+//	* Mario Uhrik <433501@mail.muni.cz> (Masaryk University)
 //	
 //------------------------------------------------------------------------------
 //	
@@ -31,7 +31,9 @@ import parser.visitor.*;
 import prism.PrismLangException;
 
 /**
- * Class to store a parsed Event. Event has an identifier and identifier of an assigned distribution (see class DistributionList)
+ * Class to store a parsed event for GSMP models.
+ * Each event has its own identifier,
+ * and also an identifier of the assigned distribution (see class DistributionList)
  */
 public class Event extends ASTElement
 {
