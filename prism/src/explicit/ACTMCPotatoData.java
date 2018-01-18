@@ -29,9 +29,11 @@ package explicit;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Class for storage and computation of potato-related data for ACTMCs.
@@ -51,15 +53,37 @@ public class ACTMCPotatoData
 	/** specific event of {@code actmc} this data is associated with */
 	private GSMPEvent event;
 	
+	/**
+	 * Set of states that belong to the potato.
+	 * <br>
+	 * I.e. such states of {@code actmc} where {@code event} is active.
+	 */
+	private Set<Integer> potato = new HashSet<Integer>(event.getActive().cardinality() + 1, 1);
 	/** 
-	 * List of entrances into the potato.
+	 * Subset of potato states that are acting as entrances into the potato.
 	 * <br>
 	 * I.e. such states of {@code actmc} where {@code event} is active,
-	 * and at the same time they are reachable in a single transition
-	 * from a state where {@code event} is not active.
+	 * and at the same time they are:
+	 * <br>
+	 * 1) reachable in a single exponential transition
+	 * from a state where {@code event} is not active, or
+	 * <br>
+	 * 2) reachable as a self-loop of {@code event}.
 	 */
-	private List<Integer> entrances = new ArrayList<Integer>();
-	private boolean entrancesComputed = false;
+	private Set<Integer> entrances = new HashSet<Integer>();
+	/**
+	 * Set of states that are successors of the potato states.
+	 * <br>
+	 * I.e. the states of the {@code actmc} that are:
+	 * <br>
+	 * 1) outside the potato and reachable from within
+	 * the potato in a single transition, or
+	 * <br>
+	 * 2) inside the potato and reachable from within
+	 * the potato as a self-loop of {@code event}.
+	 */
+	private Set<Integer> successors = new HashSet<Integer>();
+	private boolean statesComputed = false;
 	
 	/** Mapping of expected accumulated rewards until leaving the potato onto states used to enter the potato */
 	private Map<Integer, Double> meanRewards = new HashMap<Integer, Double>();
@@ -75,7 +99,7 @@ public class ACTMCPotatoData
 	
 
 	/**
-	 * Constructor
+	 * The only constructor
 	 * @param actmc Associated ACTMC model. Must not be null!
 	 * @param event Event belonging to the ACTMC. Must not be null!
 	 * @throws Exception if the arguments break the above rules
@@ -103,6 +127,19 @@ public class ACTMCPotatoData
 	}
 	
 	/**
+	 * Gets a list of states that belong to this potato.
+	 * I.e. such states of {@code actmc} where {@code event} is active.
+	 * <br>
+	 * If this is the first call, this method computes it before returning it.
+	 */
+	public Set<Integer> getPotato() {
+		if (!statesComputed) {
+			computeStates();
+		}
+		return potato;
+	}
+	
+	/**
 	 * Gets a list of states that are entrances into this potato.
 	 * I.e. such states of {@code actmc} where {@code event} is active,
 	 * and at the same time they are reachable in a single transition
@@ -110,11 +147,26 @@ public class ACTMCPotatoData
 	 * <br>
 	 * If this is the first call, this method computes it before returning it.
 	 */
-	public List<Integer> getEntrances() {
-		if (!entrancesComputed) {
-			computeEntrances();
+	public Set<Integer> getEntrances() {
+		if (!statesComputed) {
+			computeStates();
 		}
 		return entrances;
+	}
+	
+	/**
+	 * Gets a list of states outside the potato that are reachable
+	 * from within the potato in a single transition.
+	 * <br>
+	 * I.e. the states of the {@code actmc} that are successors of the potato states.
+	 * <br>
+	 * If this is the first call, this method computes it before returning it.
+	 */
+	public Set<Integer> getSuccessors() {
+		if (!statesComputed) {
+			computeStates();
+		}
+		return successors;
 	}
 	
 	/**
@@ -159,21 +211,33 @@ public class ACTMCPotatoData
 		return meanDistributions;
 	}
 	
-	private void computeEntrances() {
+	private void computeStates() {
+		computePotato();
+		computeEntrances();
+		computeSuccessors();
+		statesComputed = true;
+	}
+	
+	private void computePotato() {
 		BitSet potatoBs = event.getActive();
-		List<Integer> candidateEntrances = new ArrayList<Integer>();
 		for (int ps = potatoBs.nextSetBit(0); ps >= 0; ps = potatoBs.nextSetBit(ps+1)) {
-			candidateEntrances.add(ps);
+			potato.add(ps);
 		}
+	}
+	
+	/** Assumes that {@code computePotato()} has been called already */
+	private void computeEntrances() {
+		List<Integer> candidateEntrances = new ArrayList<Integer>(potato);
 		
 		// For each state of the ACTMC...
 		for (int s = 0 ; s < actmc.getNumStates() ; ++s) {
 			// ...if it does not belong to the potato...
 			if (actmc.getActiveEvent(s) != event) {
 				// ...check whether it has an exponential transition into the potato.
+				Distribution distr = actmc.getTransitions(s);
 				for (Iterator<Integer> iter = candidateEntrances.iterator() ; iter.hasNext();) {
 					int ps = iter.next();
-					if (actmc.getTransitions(s).get(ps) > 0.0) {
+					if (distr.get(ps) > 0.0) {
 						entrances.add(ps);
 						iter.remove();
 					}
@@ -183,12 +247,33 @@ public class ACTMCPotatoData
 				}
 			}
 		}
-		entrancesComputed = true;
+		
+		// Lastly, check whether the event has a self-loop.
+		for (int ps : potato) {
+			Distribution distr = event.getTransitions(ps);
+			for (int ps2 : potato) {
+				if (distr.getSupport().contains(ps2)) {
+					entrances.add(ps2);
+				}
+			}
+			// Also, since I am iterating over the event distributions,
+			// I might as well find the event distribution successors.
+			successors.addAll(distr.getSupport());
+		}
+	}
+	
+	/** Assumes that {@code computePotato()} and {@code computeEntrances()}
+	 *  have been called already */
+	private void computeSuccessors() {
+		throw new UnsupportedOperationException();
+		// TODO MAJO - implement
+		// TODO MAJO - add states outside the potato that are exponential successors
+		//             of the states within the potato
 	}
 	
 	private void computeMeanRewards() {
-		if (!entrancesComputed) {
-			computeEntrances();
+		if (!statesComputed) {
+			computeStates();
 		}
 		for (int entrance : entrances) {
 			// TODO MAJO - implement
@@ -199,8 +284,8 @@ public class ACTMCPotatoData
 	}
 	
 	private void computeMeanTimes() {
-		if (!entrancesComputed) {
-			computeEntrances();
+		if (!statesComputed) {
+			computeStates();
 		}
 		for (int entrance : entrances) {
 			// TODO MAJO - implement
@@ -211,8 +296,8 @@ public class ACTMCPotatoData
 	}
 	
 	private void computeMeanDistributions() {
-		if (!entrancesComputed) {
-			computeEntrances();
+		if (!statesComputed) {
+			computeStates();
 		}
 		for (int entrance : entrances) {
 			// TODO MAJO - implement
