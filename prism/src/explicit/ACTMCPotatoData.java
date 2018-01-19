@@ -58,7 +58,7 @@ public class ACTMCPotatoData
 	 * <br>
 	 * I.e. such states of {@code actmc} where {@code event} is active.
 	 */
-	private Set<Integer> potato = new HashSet<Integer>(event.getActive().cardinality() + 1, 1);
+	private Set<Integer> potato = new HashSet<Integer>((int)Math.round(event.getActive().cardinality() * 1.5));
 	/** 
 	 * Subset of potato states that are acting as entrances into the potato.
 	 * <br>
@@ -84,6 +84,17 @@ public class ACTMCPotatoData
 	 */
 	private Set<Integer> successors = new HashSet<Integer>();
 	private boolean statesComputed = false;
+	
+	/**
+	 * CTMC making up the part of {@code actmc} such that it only
+	 * contains states that are the union of {@code potato} and {@code successors}.
+	 */
+	private CTMCSimple potatoCTMC = null;
+	/** Mapping from the state indices of {@code actmc} (K) to {@code potatoCTMC} (V)*/
+	private Map<Integer, Integer> ACTMCtoCTMC = new HashMap<Integer, Integer>();
+	/** Mapping from the state indices of {@code potatoCTMC} (K) to {@code actmc} (V) */
+	private Map<Integer, Integer> CTMCtoACTMC = new HashMap<Integer, Integer>();
+	private boolean potatoCTMCComputed = false;
 	
 	/** Mapping of expected accumulated rewards until leaving the potato onto states used to enter the potato */
 	private Map<Integer, Double> meanRewards = new HashMap<Integer, Double>();
@@ -167,6 +178,53 @@ public class ACTMCPotatoData
 			computeStates();
 		}
 		return successors;
+	}
+	
+	/**
+	 * Gets a CTMC making up the part of the {@code actmc} such that it only
+	 * contains states that are the union of {@code potato} and {@code successors}.
+	 * It is a sub-model mimicking the potato behavior of the underlying CTMC.
+	 * <br>
+	 * WARNING: CTMC uses a different state indexing to that of the {@code actmc}.
+	 * Use maps from {@code getMapCTMCtoACTMC()} and {@code getMapACTMCtoCTMC()}.
+	 * <br>
+	 * If this is the first call, this method computes them before returning it.
+	 */
+	public CTMC getPotatoCTMC() {
+		if (!potatoCTMCComputed) {
+			computePotatoCTMC();
+		}
+		return potatoCTMC;
+	}
+	
+	/**
+	 * Gets a mapping from the state indices of {@code actmc} to {@code potatoCTMC}.
+	 * I.e. {@code actmc} indices are keys, and {@code potatoCTMC} are values.
+	 * <br>
+	 * This is a reverse mapping of {@code getMapCTMCtoACTMC()}.
+	 * <br>
+	 * If this is the first call, this method computes them before returning it.
+	 */
+	public Map<Integer, Integer> getMapACTMCtoCTMC() {
+		if (!potatoCTMCComputed) {
+			computePotatoCTMC();
+		}
+		return ACTMCtoCTMC;
+	}
+	
+	/**
+	 * Gets a mapping from the state indices of {@code potatoCTMC} to {@code actmc}.
+	 * I.e. {@code potatoCTMC} indices are keys, and {@code actmc} are values.
+	 * <br>
+	 * This is a reverse mapping of {@code getMapACTMCtoCTMC()}.
+	 * <br>
+	 * If this is the first call, this method computes them before returning it.
+	 */
+	public Map<Integer, Integer> getMapCTMCtoACTMC() {
+		if (!potatoCTMCComputed) {
+			computePotatoCTMC();
+		}
+		return CTMCtoACTMC;
 	}
 	
 	/**
@@ -265,16 +323,18 @@ public class ACTMCPotatoData
 	/** Assumes that {@code computePotato()} and {@code computeEntrances()}
 	 *  have been called already */
 	private void computeSuccessors() {
-		throw new UnsupportedOperationException();
-		// TODO MAJO - implement
-		// TODO MAJO - add states outside the potato that are exponential successors
-		//             of the states within the potato
+		for (int ps : potato) {
+			Set<Integer> support = new HashSet<Integer>(actmc.getTransitions(ps).getSupport());
+			support.removeIf( s -> potato.contains(s));
+			successors.addAll(support);
+		}
 	}
 	
 	private void computeMeanRewards() {
-		if (!statesComputed) {
-			computeStates();
+		if (!potatoCTMCComputed) {
+			computePotatoCTMC();
 		}
+		
 		for (int entrance : entrances) {
 			// TODO MAJO - implement
 			// I am not sure how to compute this though.
@@ -284,9 +344,10 @@ public class ACTMCPotatoData
 	}
 	
 	private void computeMeanTimes() {
-		if (!statesComputed) {
-			computeStates();
+		if (!potatoCTMCComputed) {
+			computePotatoCTMC();
 		}
+		
 		for (int entrance : entrances) {
 			// TODO MAJO - implement
 			// I am not sure how to compute this though.
@@ -296,15 +357,58 @@ public class ACTMCPotatoData
 	}
 	
 	private void computeMeanDistributions() {
-		if (!statesComputed) {
-			computeStates();
+		if (!potatoCTMCComputed) {
+			computePotatoCTMC();
 		}
+		
 		for (int entrance : entrances) {
 			// TODO MAJO - implement
 			// I am not sure how to compute this though.
 			throw new UnsupportedOperationException();
 		}
 		meanDistributionsComputed = true;
+	}
+	
+	private void computePotatoCTMC() {
+		if (!statesComputed) {
+			computeStates();
+		}
+		
+		// Identify the set of relevant states and declare the new CTMC
+		Set<Integer> potatoACTMCStates = new HashSet<Integer>(potato);
+		potatoACTMCStates.addAll(successors);
+		potatoCTMC = new CTMCSimple(potatoACTMCStates.size());
+		
+		// Since the states of the new CTMC are indexed from 0,
+		// we need a mapping from the original ACTMC to the new CTMC,
+		// and vice-versa.
+		{
+			int index = 0;
+			for (int s : potatoACTMCStates) {
+				ACTMCtoCTMC.put(s, index);
+				CTMCtoACTMC.put(index, s);
+				++index;
+			}
+		}
+		
+		double uniformizationRate = actmc.getDefaultUniformisationRate();
+		// Construct the transition matrix of the new CTMC
+		for (int s : potatoACTMCStates) {;
+			if (potato.contains(s)) {
+				// If the state is a part of the potato, retain the distribution as is
+				Distribution distr = actmc.getTransitions(s);
+				Set<Integer> support = new HashSet<Integer>(distr.getSupport());
+				support.removeIf( state -> !potatoACTMCStates.contains(state) );
+				for ( int state : support) {
+					potatoCTMC.addToProbability(ACTMCtoCTMC.get(s), ACTMCtoCTMC.get(state), distr.get(state));
+				}
+			} else {
+				// Else the state is a potato successor, so make it absorbing.
+				potatoCTMC.addToProbability(ACTMCtoCTMC.get(s), ACTMCtoCTMC.get(s), uniformizationRate);
+			}
+		}
+		
+		potatoCTMCComputed = true;
 	}
 
 
