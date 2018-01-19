@@ -35,6 +35,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import prism.PrismException;
+
 /**
  * Class for storage and computation of potato-related data for ACTMCs.
  * <br>
@@ -52,6 +54,8 @@ public class ACTMCPotatoData
 	private ACTMCSimple actmc;
 	/** specific event of {@code actmc} this data is associated with */
 	private GSMPEvent event;
+	/** termination epsilon (i.e. when probability gets smaller than this, stop) */
+	private double error;
 	
 	/**
 	 * Set of states that belong to the potato.
@@ -96,6 +100,18 @@ public class ACTMCPotatoData
 	private Map<Integer, Integer> CTMCtoACTMC = new HashMap<Integer, Integer>();
 	private boolean potatoCTMCComputed = false;
 	
+	/**
+	 * Map of values of the Poisson distribution for rate {@literal lambda}
+	 * given by the uniformized {@code potatoCTMC}, where the key
+	 * is the number of events {@literal k}. Absent keys are skipped because
+	 * they would contain values smaller than the allowed error.
+	 * <br>
+	 * I.e. {@code poissons.get(3)} is the Poisson probability mass function value
+	 * for {@literal lambda} of the uniformized {@code potatoCTMC} and {@literal k=3}.
+	 */
+	private Map<Integer, Double> poissons = new HashMap<Integer, Double>();
+	private boolean poissonsComputed = false;
+	
 	/** Mapping of expected accumulated rewards until leaving the potato onto states used to enter the potato */
 	private Map<Integer, Double> meanRewards = new HashMap<Integer, Double>();
 	private boolean meanRewardsComputed = false;
@@ -113,9 +129,10 @@ public class ACTMCPotatoData
 	 * The only constructor
 	 * @param actmc Associated ACTMC model. Must not be null!
 	 * @param event Event belonging to the ACTMC. Must not be null!
+	 * @param error Termination epsilon (i.e. when probability gets smaller than this, stop)
 	 * @throws Exception if the arguments break the above rules
 	 */
-	public ACTMCPotatoData(ACTMCSimple actmc, GSMPEvent event) throws Exception {
+	public ACTMCPotatoData(ACTMCSimple actmc, GSMPEvent event, double error) throws Exception {
 		if (actmc == null || event == null) {
 			throw new NullPointerException("ACTMCPotatoData constructor has received a null object!");
 		}
@@ -125,6 +142,7 @@ public class ACTMCPotatoData
 		
 		this.actmc = actmc;
 		this.event = event;
+		this.error = error;
 	}
 	
 	/** Gets the actmc model associated with this object */
@@ -234,7 +252,7 @@ public class ACTMCPotatoData
 	 * <br>
 	 * If this is the first call, this method computes it before returning it.
 	 */
-	public Map<Integer, Double> getMeanRewards() {
+	public Map<Integer, Double> getMeanRewards() throws PrismException {
 		if (!meanRewardsComputed) {
 			computeMeanRewards();
 		}
@@ -248,7 +266,7 @@ public class ACTMCPotatoData
 	 * <br>
 	 * If this is the first call, this method computes it before returning it.
 	 */
-	public Map<Integer, Double> getMeanTimes() {
+	public Map<Integer, Double> getMeanTimes() throws PrismException {
 		if (!meanTimesComputed) {
 			computeMeanTimes();
 		}
@@ -262,7 +280,7 @@ public class ACTMCPotatoData
 	 * <br>
 	 * If this is the first call, this method computes it before returning it.
 	 */
-	public Map<Integer, Distribution> getMeanDistributions() {
+	public Map<Integer, Distribution> getMeanDistributions() throws PrismException {
 		if (!meanDistributionsComputed) {
 			computeMeanDistributions();
 		}
@@ -330,9 +348,9 @@ public class ACTMCPotatoData
 		}
 	}
 	
-	private void computeMeanRewards() {
-		if (!potatoCTMCComputed) {
-			computePotatoCTMC();
+	private void computeMeanRewards() throws PrismException {
+		if (!poissonsComputed) {
+			computePoissons();
 		}
 		
 		for (int entrance : entrances) {
@@ -343,9 +361,9 @@ public class ACTMCPotatoData
 		meanRewardsComputed = true;
 	}
 	
-	private void computeMeanTimes() {
-		if (!potatoCTMCComputed) {
-			computePotatoCTMC();
+	private void computeMeanTimes() throws PrismException {
+		if (!poissonsComputed) {
+			computePoissons();
 		}
 		
 		for (int entrance : entrances) {
@@ -356,10 +374,11 @@ public class ACTMCPotatoData
 		meanTimesComputed = true;
 	}
 	
-	private void computeMeanDistributions() {
-		if (!potatoCTMCComputed) {
-			computePotatoCTMC();
+	private void computeMeanDistributions() throws PrismException {
+		if (!poissonsComputed) {
+			computePoissons();
 		}
+
 		
 		for (int entrance : entrances) {
 			// TODO MAJO - implement
@@ -393,7 +412,7 @@ public class ACTMCPotatoData
 		
 		double uniformizationRate = actmc.getDefaultUniformisationRate();
 		// Construct the transition matrix of the new CTMC
-		for (int s : potatoACTMCStates) {;
+		for (int s : potatoACTMCStates) {
 			if (potato.contains(s)) {
 				// If the state is a part of the potato, retain the distribution as is
 				Distribution distr = actmc.getTransitions(s);
@@ -407,8 +426,30 @@ public class ACTMCPotatoData
 				potatoCTMC.addToProbability(ACTMCtoCTMC.get(s), ACTMCtoCTMC.get(s), uniformizationRate);
 			}
 		}
+		potatoCTMC.uniformise(uniformizationRate);
 		
 		potatoCTMCComputed = true;
+	}
+	
+	private void computePoissons() throws PrismException {
+		if (!potatoCTMCComputed) {
+			computePotatoCTMC();
+		}
+		
+		// Using class FoxGlynn to compute the Poisson probabilities.
+		FoxGlynn fg = new FoxGlynn(potatoCTMC.getMaxExitRate(), 1e-300, 1e+300, error);
+		int left = fg.getLeftTruncationPoint();
+		int right = fg.getRightTruncationPoint();
+		if (right < 0) {
+			throw new PrismException("Overflow in Fox-Glynn computation of the Poisson distribution!");
+		}
+		double[] weights = fg.getWeights();
+		double totalWeight = fg.getTotalWeight();
+		for (int i = left; i <= right; i++) {
+			poissons.put(i, weights[i - left] / totalWeight);
+		}
+		
+		poissonsComputed = true;
 	}
 
 
