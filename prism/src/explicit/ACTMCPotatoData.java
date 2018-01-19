@@ -106,7 +106,7 @@ public class ACTMCPotatoData
 	 * is the number of events {@literal k}. Absent keys are skipped because
 	 * they would contain values smaller than the allowed error.
 	 * <br>
-	 * I.e. {@code poissons.get(3)} is the Poisson probability mass function value
+	 * E.g. {@code poissons.get(3)} is the Poisson probability mass function value
 	 * for {@literal lambda} of the uniformized {@code potatoCTMC} and {@literal k=3}.
 	 */
 	private Map<Integer, Double> poissons = new HashMap<Integer, Double>();
@@ -138,6 +138,9 @@ public class ACTMCPotatoData
 		}
 		if (!actmc.getEventList().contains(event)) {
 			throw new IllegalArgumentException("ACTMCPotatoData received arguments (actmc,event) where event does not belong to actmc!");
+		}
+		if (error <= 0.0 || error >= 0.5) { // TODO MAJO - can we force the error to be exactly 0? I guess not.
+			throw new IllegalArgumentException("ACTMCPotatoData received an inappropriate termination error bound " + error);
 		}
 		
 		this.actmc = actmc;
