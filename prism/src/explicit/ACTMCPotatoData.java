@@ -101,16 +101,11 @@ public class ACTMCPotatoData
 	private boolean potatoCTMCComputed = false;
 	
 	/**
-	 * Map of values of the Poisson distribution for rate {@literal lambda}
-	 * given by the uniformized {@code potatoCTMC}, where the key
-	 * is the number of events {@literal k}. Absent keys are skipped because
-	 * they would contain values smaller than the allowed error.
-	 * <br>
-	 * E.g. {@code poissons.get(3)} is the Poisson probability mass function value
-	 * for {@literal lambda} of the uniformized {@code potatoCTMC} and {@literal k=3}.
+	 * Poisson distribution values for this potato,
+	 * computed and stored by class FoxGlynn.
 	 */
-	private Map<Integer, Double> poissons = new HashMap<Integer, Double>();
-	private boolean poissonsComputed = false;
+	private FoxGlynn foxGlynn = null;
+	private boolean foxGlynnComputed = false;
 	
 	/** Mapping of expected accumulated rewards until leaving the potato onto states used to enter the potato */
 	private Map<Integer, Double> meanRewards = new HashMap<Integer, Double>();
@@ -352,42 +347,105 @@ public class ACTMCPotatoData
 	}
 	
 	private void computeMeanRewards() throws PrismException {
-		if (!poissonsComputed) {
-			computePoissons();
+		if (!foxGlynnComputed) {
+			computeFoxGlynn();
 		}
 		
 		for (int entrance : entrances) {
 			// TODO MAJO - implement
-			// I am not sure how to compute this though.
 			throw new UnsupportedOperationException();
 		}
 		meanRewardsComputed = true;
 	}
 	
 	private void computeMeanTimes() throws PrismException {
-		if (!poissonsComputed) {
-			computePoissons();
+		if (!foxGlynnComputed) {
+			computeFoxGlynn();
 		}
 		
 		for (int entrance : entrances) {
 			// TODO MAJO - implement
-			// I am not sure how to compute this though.
 			throw new UnsupportedOperationException();
 		}
 		meanTimesComputed = true;
 	}
 	
+	/**
+	 * For all potato entrances, computes the expected distributions
+	 * on states after leaving the potato, having entered from a particular entrance.
+	 * I.e., on average, where does the ACTMC end up when it happens to enter a potato.
+	 */
 	private void computeMeanDistributions() throws PrismException {
-		if (!poissonsComputed) {
-			computePoissons();
+		if (!foxGlynnComputed) {
+			computeFoxGlynn();
 		}
 
+		// Prepare the FoxGlynn data
+		int left = foxGlynn.getLeftTruncationPoint();
+		int right = foxGlynn.getRightTruncationPoint();
+		double[] weights = foxGlynn.getWeights();
+		// Build (implicit) uniformized DTMC
+		double uniformizationRate = potatoCTMC.getMaxExitRate();
+		DTMC potatoDTMC = potatoCTMC.buildImplicitUniformisedDTMC(uniformizationRate);
+		int numStates = potatoDTMC.getNumStates();
 		
 		for (int entrance : entrances) {
-			// TODO MAJO - implement
-			// I am not sure how to compute this though.
-			throw new UnsupportedOperationException();
+			
+			// Build the initial distribution for this potato entrance
+			double[] initDist = new double[numStates];
+			for (int s = 0; s < numStates  ; ++s) {
+				if ( s == ACTMCtoCTMC.get(entrance)) {
+					initDist[s] = 1;
+				} else {
+					initDist[s] = 0;
+				}
+			}
+			
+			// Create solution vectors
+			double[] soln = initDist;
+			double[] soln2 = new double[numStates];
+			double[] sum = new double[numStates];
+			double[] tmpsoln = new double[numStates];
+
+			// Initialize solution vectors
+			for (int i = 0; i < numStates; i++) {
+				sum[i] = 0.0;
+			}
+
+			// If necessary, compute the 0th element of summation
+			// (doesn't require any matrix powers)
+			if (left == 0) {
+				for (int i = 0; i < numStates; i++) {
+					sum[i] += weights[0] * soln[i];
+				}
+			}
+
+			// Compute the potatoCTMC solution vector just before the event occurs
+			int iters = 1;
+			while (iters <= right) {
+				// Matrix-vector multiply
+				potatoDTMC.vmMult(soln, soln2);
+				// Swap vectors for next iter
+				tmpsoln = soln;
+				soln = soln2;
+				soln2 = tmpsoln;
+				// Add to sum
+				if (iters >= left) {
+					for (int i = 0; i < numStates; i++)
+						sum[i] += weights[iters - left] * soln[i];
+				}
+				iters++;
+			}
+			
+			// Lastly, if there is some probability that the potatoDTMC would 
+			// still be within the potato at the time of the event occurrence,
+			// these probabilities must be redistributed into the successor states
+			// using the event-defined distribution on states.
+			// (I.e. the actual event behavior is applied)
+			
+			// TODO MAJO
 		}
+		
 		meanDistributionsComputed = true;
 	}
 	
@@ -434,25 +492,45 @@ public class ACTMCPotatoData
 		potatoCTMCComputed = true;
 	}
 	
-	private void computePoissons() throws PrismException {
+	private void computeFoxGlynn() throws PrismException {
 		if (!potatoCTMCComputed) {
 			computePotatoCTMC();
 		}
 		
 		// Using class FoxGlynn to compute the Poisson probabilities.
-		FoxGlynn fg = new FoxGlynn(potatoCTMC.getMaxExitRate(), 1e-300, 1e+300, error);
-		int left = fg.getLeftTruncationPoint();
-		int right = fg.getRightTruncationPoint();
+		// Different approach is required for each distribution type.
+		switch (event.getDistributionType().getEnum()) {
+		case DIRAC:
+			double fgRate = potatoCTMC.getMaxExitRate() * event.getFirstParameter();
+			foxGlynn = new FoxGlynn(fgRate, 1e-300, 1e+300, error);
+			break;
+		case ERLANG:
+			throw new UnsupportedOperationException("ACTMCPotatoData does not yet support the Erlang distribution!");
+			//break;
+		case EXPONENTIAL:
+			throw new PrismException("ACTMCPotatoData received an event with exponential distribution!");
+			//break;
+		case UNIFORM:
+			throw new UnsupportedOperationException("ACTMCPotatoData does not yet support the uniform distribution!");
+			//break;
+		case WEIBULL:
+			throw new UnsupportedOperationException("ACTMCPotatoData does not yet support the Weibull distribution!");
+			//break;
+		default:
+			throw new PrismException("ACTMCPotatoData received an event with unrecognized distribution!");
+		}
+		int left = foxGlynn.getLeftTruncationPoint();
+		int right = foxGlynn.getRightTruncationPoint();
 		if (right < 0) {
 			throw new PrismException("Overflow in Fox-Glynn computation of the Poisson distribution!");
 		}
-		double[] weights = fg.getWeights();
-		double totalWeight = fg.getTotalWeight();
+		double[] weights = foxGlynn.getWeights();
+		double totalWeight = foxGlynn.getTotalWeight();
 		for (int i = left; i <= right; i++) {
-			poissons.put(i, weights[i - left] / totalWeight);
+			weights[i - left] /= totalWeight;
 		}
 		
-		poissonsComputed = true;
+		foxGlynnComputed = true;
 	}
 
 

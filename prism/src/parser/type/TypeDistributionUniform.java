@@ -58,6 +58,11 @@ public class TypeDistributionUniform extends TypeDistribution {
 		throw new UnsupportedOperationException("not yet implemented");
 	}
 	
+	@Override
+	public DistributionEnum getEnum() {
+		return DistributionEnum.UNIFORM;
+	}
+	
 	public static TypeDistributionUniform getInstance()
 	{
 		return singleton;

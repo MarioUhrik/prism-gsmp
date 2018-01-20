@@ -58,6 +58,11 @@ public class TypeDistributionErlang extends TypeDistribution {
 		throw new UnsupportedOperationException("not yet implemented");
 	}
 	
+	@Override
+	public DistributionEnum getEnum() {
+		return DistributionEnum.ERLANG;
+	}
+	
 	public static TypeDistributionErlang getInstance()
 	{
 		return singleton;

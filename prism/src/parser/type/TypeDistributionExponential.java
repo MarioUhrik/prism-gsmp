@@ -58,6 +58,11 @@ public class TypeDistributionExponential extends TypeDistribution {
 		throw new UnsupportedOperationException("not yet implemented");
 	}
 	
+	@Override
+	public DistributionEnum getEnum() {
+		return DistributionEnum.EXPONENTIAL;
+	}
+	
 	public static TypeDistributionExponential getInstance()
 	{
 		return singleton;

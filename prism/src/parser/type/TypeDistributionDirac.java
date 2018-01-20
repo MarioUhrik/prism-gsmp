@@ -58,6 +58,11 @@ public class TypeDistributionDirac extends TypeDistribution {
 		throw new UnsupportedOperationException("not yet implemented");
 	}
 	
+	@Override
+	public DistributionEnum getEnum() {
+		return DistributionEnum.DIRAC;
+	}
+	
 	public static TypeDistributionDirac getInstance()
 	{
 		return singleton;

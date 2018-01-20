@@ -39,6 +39,15 @@ public class TypeDistribution extends Type {
 
 	private static TypeDistribution singleton;
 	
+	public enum DistributionEnum {
+		DIRAC,
+		ERLANG,
+		EXPONENTIAL,
+		UNIFORM,
+		WEIBULL,
+		UNDEFINED
+	}
+	
 	static
 	{
 		singleton = new TypeDistribution();
@@ -51,6 +60,15 @@ public class TypeDistribution extends Type {
 	public String getTypeString()
 	{
 		return "distribution";
+	}
+	
+	/**
+	 * Returns an enum value for the polymorphic distribution type.
+	 * This is useful for switch statements.
+	 * E.g. for Erlang distribution it returns {@code DistributionEnum.ERLANG}
+	 */
+	public DistributionEnum getEnum() {
+		return DistributionEnum.UNDEFINED;
 	}
 	
 	public static TypeDistribution getInstance()

@@ -58,6 +58,11 @@ public class TypeDistributionWeibull extends TypeDistribution {
 		throw new UnsupportedOperationException("not yet implemented");
 	}
 	
+	@Override
+	public DistributionEnum getEnum() {
+		return DistributionEnum.WEIBULL;
+	}
+	
 	public static TypeDistributionWeibull getInstance()
 	{
 		return singleton;
