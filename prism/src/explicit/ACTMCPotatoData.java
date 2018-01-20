@@ -368,8 +368,8 @@ public class ACTMCPotatoData
 	/**
 	 * For all potato entrances, computes the expected time spent within the potato
 	 * before leaving the potato, having entered from a particular entrance.
-	 * This is computed using the expected cumulative reward, having assigned
-	 * reward 1 to each state, and with a time bound given by the potato event.
+	 * This is computed using the expected cumulative reward with reward 1
+	 * for states within the potato, and with a time bound given by the potato event.
 	 */
 	private void computeMeanTimes() throws PrismException {
 		if (!foxGlynnComputed) {
@@ -402,9 +402,14 @@ public class ACTMCPotatoData
 		double[] result = new double[numStates];
 		double[] tmpsoln = new double[numStates];
 
-		// Initialize the solution vector by assigning reward 1 to each state.
+		// Initialize the solution array by assigning reward
+		// 1 to each state within the potato, and 0 to all others.
 		for (int i = 0; i < numStates; i++) {
-			soln[i] = 1;
+			if (potato.contains(CTMCtoACTMC.get(i))) {
+				soln[i] = 1;
+			} else {
+				soln[i] = 0;
+			}
 		}
 
 		// do 0th element of summation (doesn't require any matrix powers)
