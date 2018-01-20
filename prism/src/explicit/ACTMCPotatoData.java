@@ -541,8 +541,8 @@ public class ACTMCPotatoData
 			// We are done. 
 			// Convert the result to a distribution with original indexing and store it.
 			Distribution resultDistr = new Distribution();
-			for (int entrance2 : entrances) {
-				resultDistr.add(entrance2, result[ACTMCtoCTMC.get(entrance)]);
+			for (int state : entrances) {
+				resultDistr.add(state, result[ACTMCtoCTMC.get(state)]);
 				// TODO MAJO - the distribution might not sum to 1 (imprecision)
 			}
 			meanDistributions.put(entrance, resultDistr);
