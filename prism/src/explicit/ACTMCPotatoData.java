@@ -35,6 +35,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import explicit.rewards.ACTMCRewardsSimple;
 import prism.PrismException;
 
 /**
@@ -54,6 +55,8 @@ public class ACTMCPotatoData
 	private ACTMCSimple actmc;
 	/** specific event of {@code actmc} this data is associated with */
 	private GSMPEvent event;
+	/** Reward structure of the {@code actmc}. May be null. */
+	private ACTMCRewardsSimple rewards;
 	/** termination epsilon (i.e. when probability gets smaller than this, stop) */
 	private double error;
 	
@@ -125,9 +128,12 @@ public class ACTMCPotatoData
 	 * @param actmc Associated ACTMC model. Must not be null!
 	 * @param event Event belonging to the ACTMC. Must not be null!
 	 * @param error Termination epsilon (i.e. when probability gets smaller than this, stop)
+	 * @param rewards ACTMC Reward structure. May be null, but calls to {@code getMeanReward()}
+	 *        with null reward structure throws an exception!
 	 * @throws Exception if the arguments break the above rules
 	 */
-	public ACTMCPotatoData(ACTMCSimple actmc, GSMPEvent event, double error) throws Exception {
+	public ACTMCPotatoData(ACTMCSimple actmc,
+			GSMPEvent event, double error, ACTMCRewardsSimple rewards) throws Exception {
 		if (actmc == null || event == null) {
 			throw new NullPointerException("ACTMCPotatoData constructor has received a null object!");
 		}
@@ -140,6 +146,7 @@ public class ACTMCPotatoData
 		
 		this.actmc = actmc;
 		this.event = event;
+		this.rewards = rewards;
 		this.error = error;
 	}
 	
@@ -358,15 +365,86 @@ public class ACTMCPotatoData
 		meanRewardsComputed = true;
 	}
 	
+	/**
+	 * For all potato entrances, computes the expected time spent within the potato
+	 * before leaving the potato, having entered from a particular entrance.
+	 * This is computed using the expected cumulative reward, having assigned
+	 * reward 1 to each state, and with a time bound given by the potato event.
+	 */
 	private void computeMeanTimes() throws PrismException {
 		if (!foxGlynnComputed) {
 			computeFoxGlynn();
 		}
 		
-		for (int entrance : entrances) {
-			// TODO MAJO - implement
-			throw new UnsupportedOperationException();
+		// Build (implicit) uniformized DTMC
+		double uniformizationRate = potatoCTMC.getMaxExitRate();
+		DTMC potatoDTMC = potatoCTMC.buildImplicitUniformisedDTMC(uniformizationRate);
+		int numStates = potatoDTMC.getNumStates();
+		
+		// Prepare the FoxGlynn data
+		int left = foxGlynn.getLeftTruncationPoint();
+		int right = foxGlynn.getRightTruncationPoint();
+		double[] weights = foxGlynn.getWeights().clone();
+		double totalWeight = foxGlynn.getTotalWeight();
+		for (int i = left; i <= right; i++) {
+			weights[i - left] /= totalWeight;
 		}
+		for (int i = left+1; i <= right; i++) {
+			weights[i - left] += weights[i - 1 - left];
+		}
+		for (int i = left; i <= right; i++) {
+			weights[i - left] = (1 - weights[i - left]) / uniformizationRate;
+		}
+		
+		// Prepare solution arrays
+		double[] soln = new double[numStates];
+		double[] soln2 = new double[numStates];
+		double[] result = new double[numStates];
+		double[] tmpsoln = new double[numStates];
+
+		// Initialize the solution vector by assigning reward 1 to each state.
+		for (int i = 0; i < numStates; i++) {
+			soln[i] = 1;
+		}
+
+		// do 0th element of summation (doesn't require any matrix powers)
+		result = new double[numStates];
+		if (left == 0) {
+			for (int i = 0; i < numStates; i++) {
+				result[i] += weights[0] * soln[i];
+			}
+		} else {
+			for (int i = 0; i < numStates; i++) {
+				result[i] += soln[i] / uniformizationRate;
+			}
+		}
+
+		// Start iterations
+		int iters = 1;
+		while (iters <= right) {
+			// Matrix-vector multiply
+			potatoDTMC.mvMult(soln, soln2, null, false);
+			// Swap vectors for next iter
+			tmpsoln = soln;
+			soln = soln2;
+			soln2 = tmpsoln;
+			// Add to sum
+			if (iters >= left) {
+				for (int i = 0; i < numStates; i++)
+					result[i] += weights[iters - left] * soln[i];
+			} else {
+				for (int i = 0; i < numStates; i++)
+					result[i] += soln[i] / uniformizationRate;
+			}
+			iters++;
+		}
+		
+		// We are done. 
+		// Store the array using the original indexing.
+		for (int i = 0; i < numStates ; ++i) {
+			meanTimes.put(CTMCtoACTMC.get(i), result[i]);
+		}
+		
 		meanTimesComputed = true;
 	}
 	
@@ -379,15 +457,20 @@ public class ACTMCPotatoData
 		if (!foxGlynnComputed) {
 			computeFoxGlynn();
 		}
-
-		// Prepare the FoxGlynn data
-		int left = foxGlynn.getLeftTruncationPoint();
-		int right = foxGlynn.getRightTruncationPoint();
-		double[] weights = foxGlynn.getWeights();
+		
 		// Build (implicit) uniformized DTMC
 		double uniformizationRate = potatoCTMC.getMaxExitRate();
 		DTMC potatoDTMC = potatoCTMC.buildImplicitUniformisedDTMC(uniformizationRate);
 		int numStates = potatoDTMC.getNumStates();
+
+		// Prepare the FoxGlynn data
+		int left = foxGlynn.getLeftTruncationPoint();
+		int right = foxGlynn.getRightTruncationPoint();
+		double[] weights = foxGlynn.getWeights().clone();
+		double totalWeight = foxGlynn.getTotalWeight();
+		for (int i = left; i <= right; i++) {
+			weights[i - left] /= totalWeight;
+		}
 		
 		// Prepare solution arrays
 		double[] initDist = new double[numStates];
@@ -514,7 +597,7 @@ public class ACTMCPotatoData
 			computePotatoCTMC();
 		}
 		
-		// Using class FoxGlynn to compute the Poisson probabilities.
+		// Using class FoxGlynn to pre-compute the Poisson distribution.
 		// Different approach is required for each distribution type.
 		switch (event.getDistributionType().getEnum()) {
 		case DIRAC:
@@ -536,15 +619,8 @@ public class ACTMCPotatoData
 		default:
 			throw new PrismException("ACTMCPotatoData received an event with unrecognized distribution!");
 		}
-		int left = foxGlynn.getLeftTruncationPoint();
-		int right = foxGlynn.getRightTruncationPoint();
-		if (right < 0) {
+		if (foxGlynn.getRightTruncationPoint() < 0) {
 			throw new PrismException("Overflow in Fox-Glynn computation of the Poisson distribution!");
-		}
-		double[] weights = foxGlynn.getWeights();
-		double totalWeight = foxGlynn.getTotalWeight();
-		for (int i = left; i <= right; i++) {
-			weights[i - left] /= totalWeight;
 		}
 		
 		foxGlynnComputed = true;
