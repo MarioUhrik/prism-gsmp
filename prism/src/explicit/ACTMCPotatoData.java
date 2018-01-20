@@ -389,10 +389,16 @@ public class ACTMCPotatoData
 		DTMC potatoDTMC = potatoCTMC.buildImplicitUniformisedDTMC(uniformizationRate);
 		int numStates = potatoDTMC.getNumStates();
 		
+		// Prepare solution arrays
+		double[] initDist = new double[numStates];
+		double[] soln;
+		double[] soln2 = new double[numStates];
+		double[] result = new double[numStates];
+		double[] tmpsoln = new double[numStates];
+		
 		for (int entrance : entrances) {
 			
 			// Build the initial distribution for this potato entrance
-			double[] initDist = new double[numStates];
 			for (int s = 0; s < numStates  ; ++s) {
 				if ( s == ACTMCtoCTMC.get(entrance)) {
 					initDist[s] = 1;
@@ -400,23 +406,18 @@ public class ACTMCPotatoData
 					initDist[s] = 0;
 				}
 			}
-			
-			// Create solution vectors
-			double[] soln = initDist;
-			double[] soln2 = new double[numStates];
-			double[] sum = new double[numStates];
-			double[] tmpsoln = new double[numStates];
+			soln = initDist;
 
-			// Initialize solution vectors
+			// Initialize the result array
 			for (int i = 0; i < numStates; i++) {
-				sum[i] = 0.0;
+				result[i] = 0.0;
 			}
 
 			// If necessary, compute the 0th element of summation
 			// (doesn't require any matrix powers)
 			if (left == 0) {
 				for (int i = 0; i < numStates; i++) {
-					sum[i] += weights[0] * soln[i];
+					result[i] += weights[0] * soln[i];
 				}
 			}
 
@@ -432,7 +433,7 @@ public class ACTMCPotatoData
 				// Add to sum
 				if (iters >= left) {
 					for (int i = 0; i < numStates; i++)
-						sum[i] += weights[iters - left] * soln[i];
+						result[i] += weights[iters - left] * soln[i];
 				}
 				iters++;
 			}
@@ -442,10 +443,26 @@ public class ACTMCPotatoData
 			// these probabilities must be redistributed into the successor states
 			// using the event-defined distribution on states.
 			// (I.e. the actual event behavior is applied)
+			for ( int ps : potato) {
+				int psIndex = ACTMCtoCTMC.get(ps);
+				if (result[psIndex] >= error) {
+					Distribution distr = event.getTransitions(ps);
+					Set<Integer> distrSupport = distr.getSupport();
+					for ( int successor : distrSupport) {
+						result[ACTMCtoCTMC.get(successor)] += result[psIndex] * distr.get(successor);
+					}
+				}
+				result[psIndex] = 0;
+			}
 			
-			// TODO MAJO
+			// We are done. 
+			// Convert the result to a distribution with original indexing and store it.
+			Distribution resultDistr = new Distribution();
+			for (int i = 0; i < numStates ; ++i) {
+				resultDistr.add(CTMCtoACTMC.get(i), result[i]);
+			}
+			meanDistributions.put(entrance, resultDistr);
 		}
-		
 		meanDistributionsComputed = true;
 	}
 	
