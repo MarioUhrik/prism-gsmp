@@ -440,9 +440,9 @@ public class ACTMCPotatoData
 		}
 		
 		// We are done. 
-		// Store the array using the original indexing.
-		for (int i = 0; i < numStates ; ++i) {
-			meanTimes.put(CTMCtoACTMC.get(i), result[i]);
+		// Store the values for the entrances using the original indexing.
+		for (int entrance : entrances) {
+			meanTimes.put(entrance, result[ACTMCtoCTMC.get(entrance)]);
 		}
 		
 		meanTimesComputed = true;
@@ -541,8 +541,9 @@ public class ACTMCPotatoData
 			// We are done. 
 			// Convert the result to a distribution with original indexing and store it.
 			Distribution resultDistr = new Distribution();
-			for (int i = 0; i < numStates ; ++i) {
-				resultDistr.add(CTMCtoACTMC.get(i), result[i]);
+			for (int entrance2 : entrances) {
+				resultDistr.add(entrance2, result[ACTMCtoCTMC.get(entrance)]);
+				// TODO MAJO - the distribution might not sum to 1 (imprecision)
 			}
 			meanDistributions.put(entrance, resultDistr);
 		}
