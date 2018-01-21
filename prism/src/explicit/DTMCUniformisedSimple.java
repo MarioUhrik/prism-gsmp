@@ -88,6 +88,11 @@ public class DTMCUniformisedSimple extends DTMCExplicit
 	{
 		return ModelType.DTMC;
 	}
+	
+	public double getUniformisationRate()
+	{
+		return q;
+	}
 
 	public int getNumStates()
 	{

@@ -93,15 +93,15 @@ public class ACTMCPotatoData
 	private boolean statesComputed = false;
 	
 	/**
-	 * CTMC making up the part of {@code actmc} such that it only
+	 * Uniformized DTMC making up the part of {@code actmc} such that it only
 	 * contains states that are the union of {@code potato} and {@code successors}.
 	 */
-	private CTMCSimple potatoCTMC = null;
-	/** Mapping from the state indices of {@code actmc} (K) to {@code potatoCTMC} (V)*/
-	private Map<Integer, Integer> ACTMCtoCTMC = new HashMap<Integer, Integer>();
-	/** Mapping from the state indices of {@code potatoCTMC} (K) to {@code actmc} (V) */
-	private Map<Integer, Integer> CTMCtoACTMC = new HashMap<Integer, Integer>();
-	private boolean potatoCTMCComputed = false;
+	private DTMCUniformisedSimple potatoDTMC = null;
+	/** Mapping from the state indices of {@code actmc} (K) to {@code potatoDTMC} (V)*/
+	private Map<Integer, Integer> ACTMCtoDTMC = new HashMap<Integer, Integer>();
+	/** Mapping from the state indices of {@code potatoDTMC} (K) to {@code actmc} (V) */
+	private Map<Integer, Integer> DTMCtoACTMC = new HashMap<Integer, Integer>();
+	private boolean potatoDTMCComputed = false;
 	
 	/**
 	 * Poisson distribution values for this potato,
@@ -120,6 +120,7 @@ public class ACTMCPotatoData
 	
 	/** Mapping of expected outcome state probability distributions onto states used to enter the potato */
 	private Map<Integer, Distribution> meanDistributions = new HashMap<Integer, Distribution>();
+	private Map<Integer, Double[]> meanDistributionsBeforeEvent = new HashMap<Integer, Double[]>();
 	private boolean meanDistributionsComputed = false;
 	
 
@@ -204,50 +205,50 @@ public class ACTMCPotatoData
 	}
 	
 	/**
-	 * Gets a CTMC making up the part of the {@code actmc} such that it only
-	 * contains states that are the union of {@code potato} and {@code successors}.
-	 * It is a sub-model mimicking the potato behavior of the underlying CTMC.
+	 * Gets a uniformized DTMC making up the part of the {@code actmc} such that it
+	 * only contains states that are the union of {@code potato} and {@code successors}.
+	 * It is a sub-model mimicking the potato behavior of the underlying DTMC.
 	 * <br>
-	 * WARNING: CTMC uses a different state indexing to that of the {@code actmc}.
+	 * WARNING: this DTMC uses a different state indexing to that of the {@code actmc}.
 	 * Use maps from {@code getMapCTMCtoACTMC()} and {@code getMapACTMCtoCTMC()}.
 	 * <br>
 	 * If this is the first call, this method computes them before returning it.
 	 */
-	public CTMC getPotatoCTMC() {
-		if (!potatoCTMCComputed) {
-			computePotatoCTMC();
+	public DTMCUniformisedSimple getPotatoCTMC() {
+		if (!potatoDTMCComputed) {
+			computePotatoDTMC();
 		}
-		return potatoCTMC;
+		return potatoDTMC;
 	}
 	
 	/**
-	 * Gets a mapping from the state indices of {@code actmc} to {@code potatoCTMC}.
-	 * I.e. {@code actmc} indices are keys, and {@code potatoCTMC} are values.
+	 * Gets a mapping from the state indices of {@code actmc} to {@code potatoDTMC}.
+	 * I.e. {@code actmc} indices are keys, and {@code potatoDTMC} are values.
 	 * <br>
-	 * This is a reverse mapping of {@code getMapCTMCtoACTMC()}.
+	 * This is a reverse mapping of {@code getMapDTMCtoACTMC()}.
 	 * <br>
 	 * If this is the first call, this method computes them before returning it.
 	 */
-	public Map<Integer, Integer> getMapACTMCtoCTMC() {
-		if (!potatoCTMCComputed) {
-			computePotatoCTMC();
+	public Map<Integer, Integer> getMapACTMCtoDTMC() {
+		if (!potatoDTMCComputed) {
+			computePotatoDTMC();
 		}
-		return ACTMCtoCTMC;
+		return ACTMCtoDTMC;
 	}
 	
 	/**
-	 * Gets a mapping from the state indices of {@code potatoCTMC} to {@code actmc}.
-	 * I.e. {@code potatoCTMC} indices are keys, and {@code actmc} are values.
+	 * Gets a mapping from the state indices of {@code potatoDTMC} to {@code actmc}.
+	 * I.e. {@code potatoDTMC} indices are keys, and {@code actmc} are values.
 	 * <br>
-	 * This is a reverse mapping of {@code getMapACTMCtoCTMC()}.
+	 * This is a reverse mapping of {@code getMapACTMCtoDTMC()}.
 	 * <br>
 	 * If this is the first call, this method computes them before returning it.
 	 */
-	public Map<Integer, Integer> getMapCTMCtoACTMC() {
-		if (!potatoCTMCComputed) {
-			computePotatoCTMC();
+	public Map<Integer, Integer> getMapDTMCtoACTMC() {
+		if (!potatoDTMCComputed) {
+			computePotatoDTMC();
 		}
-		return CTMCtoACTMC;
+		return DTMCtoACTMC;
 	}
 	
 	/**
@@ -353,16 +354,90 @@ public class ACTMCPotatoData
 		}
 	}
 	
-	private void computeMeanRewards() throws PrismException {
-		if (!foxGlynnComputed) {
-			computeFoxGlynn();
+	private void computePotatoDTMC() {
+		if (!statesComputed) {
+			computeStates();
 		}
 		
-		for (int entrance : entrances) {
-			// TODO MAJO - implement
-			throw new UnsupportedOperationException();
+		// Identify the set of relevant states and declare the new CTMC
+		Set<Integer> potatoACTMCStates = new HashSet<Integer>(potato);
+		potatoACTMCStates.addAll(successors);
+		CTMCSimple potatoCTMC = new CTMCSimple(potatoACTMCStates.size());
+		
+		// Since the states of the new CTMC are indexed from 0,
+		// we need a mapping from the original ACTMC to the new DTMC,
+		// and vice-versa.
+		{
+			int index = 0;
+			for (int s : potatoACTMCStates) {
+				ACTMCtoDTMC.put(s, index);
+				DTMCtoACTMC.put(index, s);
+				++index;
+			}
 		}
-		meanRewardsComputed = true;
+		
+		double uniformizationRate = actmc.getDefaultUniformisationRate();
+		// Construct the transition matrix of the new CTMC
+		for (int s : potatoACTMCStates) {
+			if (potato.contains(s)) {
+				// If the state is a part of the potato, retain the distribution as is
+				Distribution distr = actmc.getTransitions(s);
+				Set<Integer> support = new HashSet<Integer>(distr.getSupport());
+				support.removeIf( state -> !potatoACTMCStates.contains(state) );
+				for ( int state : support) {
+					potatoCTMC.addToProbability(ACTMCtoDTMC.get(s), ACTMCtoDTMC.get(state), distr.get(state));
+				}
+			} else {
+				// Else the state is a potato successor, so make it absorbing.
+				potatoCTMC.addToProbability(ACTMCtoDTMC.get(s), ACTMCtoDTMC.get(s), uniformizationRate);
+			}
+		}
+		
+		// convert the CTMC to a DTMC and store the DTMC
+		potatoCTMC.uniformise(uniformizationRate);
+		double q = potatoCTMC.getMaxExitRate();
+		potatoDTMC = (DTMCUniformisedSimple) potatoCTMC.buildImplicitUniformisedDTMC(q);
+		
+		potatoDTMCComputed = true;
+	}
+	
+	private void computeFoxGlynn() throws PrismException {
+		if (!potatoDTMCComputed) {
+			computePotatoDTMC();
+		}
+		// TODO MAJO - should this foxGynn have accuracy =error, or better ?
+		
+		// Using class FoxGlynn to pre-compute the Poisson distribution.
+		// Different approach is required for each distribution type.
+		switch (event.getDistributionType().getEnum()) {
+		case DIRAC:
+			double fgRate = potatoDTMC.getUniformisationRate() * event.getFirstParameter();
+			foxGlynn = new FoxGlynn(fgRate, 1e-300, 1e+300, error);
+			break;
+		case ERLANG:
+			throw new UnsupportedOperationException("ACTMCPotatoData does not yet support the Erlang distribution!");
+			// TODO MAJO - implement erlang distributed event support
+			//break;
+		case EXPONENTIAL:
+			throw new PrismException("ACTMCPotatoData received an event with exponential distribution!");
+			// TODO MAJO - implement exponentially distributed event support
+			//break;
+		case UNIFORM:
+			throw new UnsupportedOperationException("ACTMCPotatoData does not yet support the uniform distribution!");
+			// TODO MAJO - implement uniformly distributed event support
+			//break;
+		case WEIBULL:
+			throw new UnsupportedOperationException("ACTMCPotatoData does not yet support the Weibull distribution!");
+			// TODO MAJO - implement weibull distributed event support
+			//break;
+		default:
+			throw new PrismException("ACTMCPotatoData received an event with unrecognized distribution!");
+		}
+		if (foxGlynn.getRightTruncationPoint() < 0) {
+			throw new PrismException("Overflow in Fox-Glynn computation of the Poisson distribution!");
+		}
+		
+		foxGlynnComputed = true;
 	}
 	
 	/**
@@ -376,9 +451,7 @@ public class ACTMCPotatoData
 			computeFoxGlynn();
 		}
 		
-		// Build (implicit) uniformized DTMC
-		double uniformizationRate = potatoCTMC.getMaxExitRate();
-		DTMC potatoDTMC = potatoCTMC.buildImplicitUniformisedDTMC(uniformizationRate);
+		double uniformizationRate = potatoDTMC.getUniformisationRate();
 		int numStates = potatoDTMC.getNumStates();
 		
 		// Prepare the FoxGlynn data
@@ -405,7 +478,7 @@ public class ACTMCPotatoData
 		// Initialize the solution array by assigning reward
 		// 1 to each state within the potato, and 0 to all others.
 		for (int i = 0; i < numStates; i++) {
-			if (potato.contains(CTMCtoACTMC.get(i))) {
+			if (potato.contains(DTMCtoACTMC.get(i))) {
 				soln[i] = 1;
 			} else {
 				soln[i] = 0;
@@ -447,7 +520,7 @@ public class ACTMCPotatoData
 		// We are done. 
 		// Store the values for the entrances using the original indexing.
 		for (int entrance : entrances) {
-			meanTimes.put(entrance, result[ACTMCtoCTMC.get(entrance)]);
+			meanTimes.put(entrance, result[ACTMCtoDTMC.get(entrance)]);
 		}
 		
 		meanTimesComputed = true;
@@ -463,9 +536,6 @@ public class ACTMCPotatoData
 			computeFoxGlynn();
 		}
 		
-		// Build (implicit) uniformized DTMC
-		double uniformizationRate = potatoCTMC.getMaxExitRate();
-		DTMC potatoDTMC = potatoCTMC.buildImplicitUniformisedDTMC(uniformizationRate);
 		int numStates = potatoDTMC.getNumStates();
 
 		// Prepare the FoxGlynn data
@@ -488,7 +558,7 @@ public class ACTMCPotatoData
 			
 			// Build the initial distribution for this potato entrance
 			for (int s = 0; s < numStates  ; ++s) {
-				if ( s == ACTMCtoCTMC.get(entrance)) {
+				if ( s == ACTMCtoDTMC.get(entrance)) {
 					initDist[s] = 1;
 				} else {
 					initDist[s] = 0;
@@ -525,6 +595,12 @@ public class ACTMCPotatoData
 				}
 				iters++;
 			}
+			// Store the CTMC solution vector for use by the computeMeanRewards() method
+			Double[] resultBeforeEvent = new Double[numStates];
+			for(int i = 0; i < numStates ; ++i ) {
+				resultBeforeEvent[i] = result[i];
+			}
+			meanDistributionsBeforeEvent.put(entrance, resultBeforeEvent);
 			
 			// Lastly, if there is some probability that the potatoDTMC would 
 			// still be within the potato at the time of the event occurrence,
@@ -532,12 +608,12 @@ public class ACTMCPotatoData
 			// using the event-defined distribution on states.
 			// (I.e. the actual event behavior is applied)
 			for ( int ps : potato) {
-				int psIndex = ACTMCtoCTMC.get(ps);
-				if (result[psIndex] >= error) {
+				int psIndex = ACTMCtoDTMC.get(ps);
+				if (result[psIndex] >= error) { // TODO MAJO - >=error or >0 ???
 					Distribution distr = event.getTransitions(ps);
 					Set<Integer> distrSupport = distr.getSupport();
 					for ( int successor : distrSupport) {
-						result[ACTMCtoCTMC.get(successor)] += result[psIndex] * distr.get(successor);
+						result[ACTMCtoDTMC.get(successor)] += result[psIndex] * distr.get(successor);
 					}
 				}
 				result[psIndex] = 0;
@@ -547,7 +623,7 @@ public class ACTMCPotatoData
 			// Convert the result to a distribution with original indexing and store it.
 			Distribution resultDistr = new Distribution();
 			for (int state : entrances) {
-				resultDistr.add(state, result[ACTMCtoCTMC.get(state)]);
+				resultDistr.add(state, result[ACTMCtoDTMC.get(state)]);
 				// TODO MAJO - the distribution might not sum to 1 (imprecision)
 			}
 			meanDistributions.put(entrance, resultDistr);
@@ -555,82 +631,115 @@ public class ACTMCPotatoData
 		meanDistributionsComputed = true;
 	}
 	
-	private void computePotatoCTMC() {
-		if (!statesComputed) {
-			computeStates();
+	/**
+	 * For all potato entrances, computes the expected reward earned within the potato
+	 * before leaving the potato, having entered from a particular entrance.
+	 * This is computed using the expected cumulative reward using the ACTMC reward
+	 * structure for states within the potato, and with a time bound
+	 * given by the potato event. Since this would only be the underlying CTMC behavior,
+	 * it is the necessary to apply the potato event behavior as well.
+	 * In order to do that, the event transition rewards are weighted by the expected
+	 * distribution on states at the time of the occurrence of the event.
+	 */
+	private void computeMeanRewards() throws PrismException {
+		if (!meanDistributionsComputed) {
+			computeMeanDistributions();
 		}
 		
-		// Identify the set of relevant states and declare the new CTMC
-		Set<Integer> potatoACTMCStates = new HashSet<Integer>(potato);
-		potatoACTMCStates.addAll(successors);
-		potatoCTMC = new CTMCSimple(potatoACTMCStates.size());
+		double uniformizationRate = potatoDTMC.getUniformisationRate();
+		int numStates = potatoDTMC.getNumStates();
 		
-		// Since the states of the new CTMC are indexed from 0,
-		// we need a mapping from the original ACTMC to the new CTMC,
-		// and vice-versa.
-		{
-			int index = 0;
-			for (int s : potatoACTMCStates) {
-				ACTMCtoCTMC.put(s, index);
-				CTMCtoACTMC.put(index, s);
-				++index;
-			}
+		// Prepare the FoxGlynn data
+		int left = foxGlynn.getLeftTruncationPoint();
+		int right = foxGlynn.getRightTruncationPoint();
+		double[] weights = foxGlynn.getWeights().clone();
+		double totalWeight = foxGlynn.getTotalWeight();
+		for (int i = left; i <= right; i++) {
+			weights[i - left] /= totalWeight;
+		}
+		for (int i = left+1; i <= right; i++) {
+			weights[i - left] += weights[i - 1 - left];
+		}
+		for (int i = left; i <= right; i++) {
+			weights[i - left] = (1 - weights[i - left]) / uniformizationRate;
 		}
 		
-		double uniformizationRate = actmc.getDefaultUniformisationRate();
-		// Construct the transition matrix of the new CTMC
-		for (int s : potatoACTMCStates) {
-			if (potato.contains(s)) {
-				// If the state is a part of the potato, retain the distribution as is
-				Distribution distr = actmc.getTransitions(s);
-				Set<Integer> support = new HashSet<Integer>(distr.getSupport());
-				support.removeIf( state -> !potatoACTMCStates.contains(state) );
-				for ( int state : support) {
-					potatoCTMC.addToProbability(ACTMCtoCTMC.get(s), ACTMCtoCTMC.get(state), distr.get(state));
-				}
-			} else {
-				// Else the state is a potato successor, so make it absorbing.
-				potatoCTMC.addToProbability(ACTMCtoCTMC.get(s), ACTMCtoCTMC.get(s), uniformizationRate);
-			}
-		}
-		potatoCTMC.uniformise(uniformizationRate);
-		
-		potatoCTMCComputed = true;
-	}
-	
-	private void computeFoxGlynn() throws PrismException {
-		if (!potatoCTMCComputed) {
-			computePotatoCTMC();
-		}
-		
-		// Using class FoxGlynn to pre-compute the Poisson distribution.
-		// Different approach is required for each distribution type.
-		switch (event.getDistributionType().getEnum()) {
-		case DIRAC:
-			double fgRate = potatoCTMC.getMaxExitRate() * event.getFirstParameter();
-			foxGlynn = new FoxGlynn(fgRate, 1e-300, 1e+300, error);
-			break;
-		case ERLANG:
-			throw new UnsupportedOperationException("ACTMCPotatoData does not yet support the Erlang distribution!");
-			//break;
-		case EXPONENTIAL:
-			throw new PrismException("ACTMCPotatoData received an event with exponential distribution!");
-			//break;
-		case UNIFORM:
-			throw new UnsupportedOperationException("ACTMCPotatoData does not yet support the uniform distribution!");
-			//break;
-		case WEIBULL:
-			throw new UnsupportedOperationException("ACTMCPotatoData does not yet support the Weibull distribution!");
-			//break;
-		default:
-			throw new PrismException("ACTMCPotatoData received an event with unrecognized distribution!");
-		}
-		if (foxGlynn.getRightTruncationPoint() < 0) {
-			throw new PrismException("Overflow in Fox-Glynn computation of the Poisson distribution!");
-		}
-		
-		foxGlynnComputed = true;
-	}
+		// Prepare solution arrays
+		double[] soln = new double[numStates];
+		double[] soln2 = new double[numStates];
+		double[] result = new double[numStates];
+		double[] tmpsoln = new double[numStates];
 
+		// Initialize the solution array by assigning rewards to the potato states
+		for (int i = 0; i < numStates; i++) {
+			int index = DTMCtoACTMC.get(i);
+			if (potato.contains(index)) {
+				soln[i] = rewards.getStateReward(index);
+			} else {
+				soln[i] = 0;
+			}
+		}
+		//////////////////////////////////////////////
+		// TODO MAJO - IMPLEMENT TRANSITION REWARDS!!!
+		if (rewards.hasTransitionRewards()) {
+			throw new UnsupportedOperationException("ACTMCPotatoData does not yet support transition rewards!");
+		}
+		// TODO MAJO - IMPLEMENT TRANSITION REWARDS!!!
+		//////////////////////////////////////////////
+
+		// do 0th element of summation (doesn't require any matrix powers)
+		result = new double[numStates];
+		if (left == 0) {
+			for (int i = 0; i < numStates; i++) {
+				result[i] += weights[0] * soln[i];
+			}
+		} else {
+			for (int i = 0; i < numStates; i++) {
+				result[i] += soln[i] / uniformizationRate;
+			}
+		}
+
+		// Start iterations
+		int iters = 1;
+		while (iters <= right) {
+			// Matrix-vector multiply
+			potatoDTMC.mvMult(soln, soln2, null, false);
+			// Swap vectors for next iter
+			tmpsoln = soln;
+			soln = soln2;
+			soln2 = tmpsoln;
+			// Add to sum
+			if (iters >= left) {
+				for (int i = 0; i < numStates; i++)
+					result[i] += weights[iters - left] * soln[i];
+			} else {
+				for (int i = 0; i < numStates; i++)
+					result[i] += soln[i] / uniformizationRate;
+			}
+			iters++;
+		}
+		
+		//Now that we have the expected rewards for the underlying CTMC behavior,
+		//event behavior is applied as described above.
+		for (int entrance : entrances) {
+			for (int ps : potato) {
+				Map<Integer, Double> rews = rewards.getEventTransitionRewards(ps);
+				Set<Integer> rewSet = rews.keySet();
+				for (int succ : rewSet) {
+					double prob = event.getTransitions(ps).get(succ);
+					double weight = meanDistributionsBeforeEvent.get(entrance)[ACTMCtoDTMC.get(ps)];
+					double eventRew = rews.get(succ);
+					result[ACTMCtoDTMC.get(entrance)] += prob * weight * eventRew;
+					// TODO MAJO - uncertain about this
+				}
+			}
+			
+			// We are done computing this potato entrance
+			// Store the value using the original indexing.
+			meanRewards.put(entrance, result[ACTMCtoDTMC.get(entrance)]);
+		}
+		
+		meanRewardsComputed = true;
+	}
 
 }

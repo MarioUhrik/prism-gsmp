@@ -160,6 +160,14 @@ public class ACTMCRewardsSimple implements Rewards
 	}
 	
 	/**
+	 * Get the reward map of non-exponential event transition rewards from state {@code s}.
+	 * Returns null if not specified.
+	 */
+	public Map<Integer, Double> getEventTransitionRewards(int s) {
+		return eventTransitionRewards.get(s);
+	}
+	
+	/**
 	 * Get the exponential transition reward when going from state s to state t.
 	 * <br>
 	 * Returns 0 if not specified.
@@ -186,8 +194,19 @@ public class ACTMCRewardsSimple implements Rewards
 		return null;
 	}
 
+	/**
+	 * Returns true iff this model has exponential transition (CTMC) rewards.
+	 * <br>
+	 * To check whether the event has non-exponential transition (event) rewards,
+	 * use {@code hasEventTransitionRewards()}.
+	 */
 	@Override
 	public boolean hasTransitionRewards() {
-		return (!eventTransitionRewards.isEmpty() || ! ctmcTransitionRewards.isEmpty());
+		return (! ctmcTransitionRewards.isEmpty());
 	}
+	
+	public boolean hasEventTransitionRewards() {
+		return (! eventTransitionRewards.isEmpty());
+	}
+	
 }
