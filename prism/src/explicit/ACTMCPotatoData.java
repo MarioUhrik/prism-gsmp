@@ -579,7 +579,7 @@ public class ACTMCPotatoData
 				}
 			}
 
-			// Compute the potatoCTMC solution vector just before the event occurs
+			// Compute the potatoDTMC solution vector just before the event occurs
 			int iters = 1;
 			while (iters <= right) {
 				// Matrix-vector multiply
@@ -595,7 +595,7 @@ public class ACTMCPotatoData
 				}
 				iters++;
 			}
-			// Store the CTMC solution vector for use by the computeMeanRewards() method
+			// Store the DTMC solution vector for use by the computeMeanRewards() method
 			Double[] resultBeforeEvent = new Double[numStates];
 			for(int i = 0; i < numStates ; ++i ) {
 				resultBeforeEvent[i] = result[i];
@@ -671,21 +671,15 @@ public class ACTMCPotatoData
 		double[] tmpsoln = new double[numStates];
 
 		// Initialize the solution array by assigning rewards to the potato states
-		for (int i = 0; i < numStates; i++) {
-			int index = DTMCtoACTMC.get(i);
+		for (int s = 0; s < numStates; s++) {
+			int index = DTMCtoACTMC.get(s);
 			if (potato.contains(index)) {
-				soln[i] = rewards.getStateReward(index);
+				// NOTE: transition rewards have already been merged into state rewards
+				soln[s] = rewards.getStateReward(index);
 			} else {
-				soln[i] = 0;
+				soln[s] = 0;
 			}
 		}
-		//////////////////////////////////////////////
-		// TODO MAJO - IMPLEMENT TRANSITION REWARDS!!!
-		if (rewards.hasTransitionRewards()) {
-			throw new UnsupportedOperationException("ACTMCPotatoData does not yet support transition rewards!");
-		}
-		// TODO MAJO - IMPLEMENT TRANSITION REWARDS!!!
-		//////////////////////////////////////////////
 
 		// do 0th element of summation (doesn't require any matrix powers)
 		result = new double[numStates];

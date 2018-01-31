@@ -102,6 +102,7 @@ public class GSMPModelChecker extends ProbModelChecker
 		if (isACTMC(gsmp) && gsmp instanceof GSMPSimple && rew instanceof GSMPRewardsSimple) {
 			ACTMCSimple actmc = new ACTMCSimple((GSMPSimple)gsmp);
 			ACTMCRewardsSimple actmcRew = new ACTMCRewardsSimple((GSMPRewardsSimple)rew, gsmp);
+			actmcRew.processCTMCTransitionRewards(actmc);
 			return computeReachRewardsACTMC(actmc, actmcRew, target);
 		} else {
 			return computeReachRewardsGSMP(gsmp, rew, target);
@@ -118,6 +119,7 @@ public class GSMPModelChecker extends ProbModelChecker
 		if (isACTMC(gsmp) && gsmp instanceof GSMPSimple && rew instanceof GSMPRewardsSimple) {
 			ACTMCSimple actmc = new ACTMCSimple((GSMPSimple)gsmp);
 			ACTMCRewardsSimple actmcRew = new ACTMCRewardsSimple((GSMPRewardsSimple)rew, gsmp);
+			actmcRew.processCTMCTransitionRewards(actmc);
 			return computeSteadyStateRewardsACTMC(actmc, actmcRew);
 		} else {
 			return computeSteadyStateRewardsGSMP(gsmp, rew);
@@ -141,6 +143,7 @@ public class GSMPModelChecker extends ProbModelChecker
 		if (isACTMC && gsmp instanceof GSMPSimple && rew instanceof GSMPRewardsSimple) {
 			ACTMCSimple actmc = new ACTMCSimple((GSMPSimple)gsmp);
 			ACTMCRewardsSimple actmcRew = new ACTMCRewardsSimple((GSMPRewardsSimple)rew, gsmp);
+			// TODO MAJO - process transition rewards?
 			return computeReachParameterSynthesisACTMC(actmc, actmcRew, target, min, paramList);
 		} else {
 			return computeReachParameterSynthesisGSMP(gsmp, rew, target, min, paramList);
@@ -163,6 +166,7 @@ public class GSMPModelChecker extends ProbModelChecker
 		if (isACTMC && gsmp instanceof GSMPSimple && rew instanceof GSMPRewardsSimple) {
 			ACTMCSimple actmc = new ACTMCSimple((GSMPSimple)gsmp);
 			ACTMCRewardsSimple actmcRew = new ACTMCRewardsSimple((GSMPRewardsSimple)rew, gsmp);
+			// TODO MAJO - process transition rewards?
 			return computeSteadyStateParameterSynthesisACTMC(actmc, actmcRew, min, paramList);
 		} else {
 			return computeSteadyStateParameterSynthesisGSMP(gsmp, rew, min, paramList);

@@ -30,7 +30,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
+import explicit.ACTMCSimple;
+import explicit.Distribution;
 import explicit.GSMP;
 import explicit.GSMPEvent;
 import explicit.Model;
@@ -46,7 +49,7 @@ import explicit.Product;
  * This is a read-only class constructed on demand from GSMPRewardsSimple.
  * See class {@code ACTMCSimple} for deeper explanation.
  */
-public class ACTMCRewardsSimple implements Rewards
+public class ACTMCRewardsSimple implements MCRewards
 {
 	
 	/**
@@ -172,7 +175,7 @@ public class ACTMCRewardsSimple implements Rewards
 	 * <br>
 	 * Returns 0 if not specified.
 	 */
-	public double getCTMCTransitionReward(int s, int t) {
+	public double getTransitionReward(int s, int t) {
 		Map<Integer, Double> destToRewardMap = ctmcTransitionRewards.get(s);
 		if (destToRewardMap == null) {
 			return 0.0;
@@ -183,6 +186,45 @@ public class ACTMCRewardsSimple implements Rewards
 		} else {
 			return reward;
 		}
+	}
+	
+	/**
+	 * Get the reward map of exponential transition rewards from state {@code s}.
+	 * Returns null if not specified.
+	 */
+	public Map<Integer, Double> getTransitionRewards(int s) {
+		return ctmcTransitionRewards.get(s);
+	}
+	
+	/**
+	 * Merge the transition rewards into the state rewards.
+	 * <br>
+	 * After calling this method, the state rewards may be increased to account
+	 * for the transition rewards, and the transition rewards are removed.
+	 * @param actmc ACTMC model these rewards are created from.
+	 *              This is needed because the rates are required as weights.
+	 */
+	public void processCTMCTransitionRewards(ACTMCSimple actmc) {
+		// TODO MAJO - make sure this is valid for reachability
+		int numStates = actmc.getNumStates();
+		for (int s = 0; s < numStates ; ++s) {
+			// prepare transition rewards from state s
+			Map<Integer, Double> rews = getTransitionRewards(s);
+			Set<Integer> rewSet = rews.keySet();
+			
+			// prepare transition rates from state s
+			Distribution distr = actmc.getTransitions(s);
+			double rateSum = distr.sum();
+			
+			double stateRewardAddition = 0;
+			// weight transitions rewards to state t by probabilities of it happening
+			for ( int t : rewSet) {
+				stateRewardAddition += rews.get(t) * (distr.get(t) / rateSum);
+			}
+			
+			stateRewards.put(s, stateRewards.get(s) + stateRewardAddition);
+		}
+		ctmcTransitionRewards.clear();
 	}
 
 	/**
