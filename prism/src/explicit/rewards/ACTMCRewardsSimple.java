@@ -222,8 +222,10 @@ public class ACTMCRewardsSimple implements MCRewards
 				stateRewardAddition += rews.get(t) * (distr.get(t) / rateSum);
 			}
 			
-			stateRewards.put(s, stateRewards.get(s) + stateRewardAddition);
+			// add the computed value to the existing state reward
+			stateRewards.put(s, getStateReward(s) + stateRewardAddition);
 		}
+		// when done, remove the transition rewards
 		ctmcTransitionRewards.clear();
 	}
 
