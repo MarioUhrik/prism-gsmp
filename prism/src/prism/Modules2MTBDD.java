@@ -1513,6 +1513,10 @@ public class Modules2MTBDD
 		else if (modelType == ModelType.CTMC) {
 			compDDs = combineCommandsStoch(m, numCommands, guardDDs, upDDs);
 		}
+		else if (modelType == ModelType.GSMP) {
+			throw new PrismException("GSMP models are only supported in the explicit engine."
+					+ " Please, switch to the explicit engine in the options menu");
+		}
 		else {
 			 throw new PrismException("Unknown model type");
 		}
