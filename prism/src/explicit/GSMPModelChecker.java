@@ -29,6 +29,8 @@ package explicit;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import explicit.rewards.ACTMCRewardsSimple;
 import explicit.rewards.GSMPRewards;
@@ -236,8 +238,33 @@ public class GSMPModelChecker extends ProbModelChecker
 	// ACTMC model checking functions (fast alternative for GSMPs that are ACTMCs)
 	
 	private StateValues computeSteadyStateACTMC(ACTMCSimple actmc, StateValues initDistr) throws PrismException {
-		// TODO MAJO - implement
-		throw new PrismNotSupportedException("Computing steady state-analysis for ACTMCs is not yet implemented!");
+		// First, reduce the ACTMC to a DTMC.
+		CTMCSimple ctmc = new CTMCSimple(actmc);
+		List<GSMPEvent> events = actmc.getEventList();
+		double uniformizationRate = ctmc.getDefaultUniformisationRate();
+		for (GSMPEvent event : events) {	
+			ACTMCPotatoData potatoData = new ACTMCPotatoData(actmc,
+					event,
+					null,
+					getTermCritParam());
+			Map<Integer, Double> meanTimesWithinPotato = potatoData.getMeanTimes();
+			Map<Integer, Distribution> meanDistrs = potatoData.getMeanDistributions();
+			
+			Set<Integer> potatoEntrances = potatoData.getEntrances();
+			for (int entrance : potatoEntrances) {
+				double meanTimeWithinPotato = meanTimesWithinPotato.get(entrance);
+				if ((1 / meanTimeWithinPotato) > uniformizationRate) {
+					uniformizationRate = 1 / meanTimeWithinPotato;
+				}
+				
+				ctmc.trans.set(entrance, meanDistrs.get(entrance));
+			}
+		}
+		DTMC dtmc = ctmc.buildImplicitUniformisedDTMC(uniformizationRate);
+		
+		// Lastly, call regular DTMC model checking method.
+		DTMCModelChecker mc = new DTMCModelChecker(this);
+		return mc.doSteadyState(dtmc, initDistr);
 	}
 	
 	private StateValues computeTransientACTMC(ACTMCSimple actmc, double time, StateValues initDistr) throws PrismException {

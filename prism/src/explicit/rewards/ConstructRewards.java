@@ -213,7 +213,7 @@ public class ConstructRewards
 	
 	/**
 	 * Construct the rewards for a GSMP from a model and reward structure. 
-	 * @param mdp The GSMP
+	 * @param gsmp The GSMP
 	 * @param rewStr The reward structure
 	 * @param constantValues Values for any undefined constants needed
 	 */

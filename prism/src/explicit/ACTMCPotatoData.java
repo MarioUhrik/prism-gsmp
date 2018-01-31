@@ -34,6 +34,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Vector;
 
 import explicit.rewards.ACTMCRewardsSimple;
 import prism.PrismException;
@@ -99,8 +100,8 @@ public class ACTMCPotatoData
 	private DTMCUniformisedSimple potatoDTMC = null;
 	/** Mapping from the state indices of {@code actmc} (K) to {@code potatoDTMC} (V)*/
 	private Map<Integer, Integer> ACTMCtoDTMC = new HashMap<Integer, Integer>();
-	/** Mapping from the state indices of {@code potatoDTMC} (K) to {@code actmc} (V) */
-	private Map<Integer, Integer> DTMCtoACTMC = new HashMap<Integer, Integer>();
+	/** Mapping from the state indices of {@code potatoDTMC} (index) to {@code actmc} (value) */
+	private Vector<Integer> DTMCtoACTMC = new Vector<Integer>();
 	private boolean potatoDTMCComputed = false;
 	
 	/**
@@ -128,13 +129,13 @@ public class ACTMCPotatoData
 	 * The only constructor
 	 * @param actmc Associated ACTMC model. Must not be null!
 	 * @param event Event belonging to the ACTMC. Must not be null!
-	 * @param error Termination epsilon (i.e. when probability gets smaller than this, stop)
 	 * @param rewards ACTMC Reward structure. May be null, but calls to {@code getMeanReward()}
 	 *        with null reward structure throws an exception!
+	 * @param error Termination epsilon (i.e. when probability gets smaller than this, stop)
 	 * @throws Exception if the arguments break the above rules
 	 */
 	public ACTMCPotatoData(ACTMCSimple actmc,
-			GSMPEvent event, double error, ACTMCRewardsSimple rewards) throws Exception {
+			GSMPEvent event, ACTMCRewardsSimple rewards, double error) throws PrismException {
 		if (actmc == null || event == null) {
 			throw new NullPointerException("ACTMCPotatoData constructor has received a null object!");
 		}
@@ -238,13 +239,13 @@ public class ACTMCPotatoData
 	
 	/**
 	 * Gets a mapping from the state indices of {@code potatoDTMC} to {@code actmc}.
-	 * I.e. {@code potatoDTMC} indices are keys, and {@code actmc} are values.
+	 * I.e. {@code potatoDTMC} indices are indices, and {@code actmc} are values.
 	 * <br>
 	 * This is a reverse mapping of {@code getMapACTMCtoDTMC()}.
 	 * <br>
 	 * If this is the first call, this method computes them before returning it.
 	 */
-	public Map<Integer, Integer> getMapDTMCtoACTMC() {
+	public Vector<Integer> getMapDTMCtoACTMC() {
 		if (!potatoDTMCComputed) {
 			computePotatoDTMC();
 		}
@@ -371,7 +372,7 @@ public class ACTMCPotatoData
 			int index = 0;
 			for (int s : potatoACTMCStates) {
 				ACTMCtoDTMC.put(s, index);
-				DTMCtoACTMC.put(index, s);
+				DTMCtoACTMC.add(index, s);
 				++index;
 			}
 		}

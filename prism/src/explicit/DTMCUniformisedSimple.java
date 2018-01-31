@@ -138,11 +138,25 @@ public class DTMCUniformisedSimple extends DTMCExplicit
 	{
 		return ctmc.getNumTransitions() + numExtraTransitions;
 	}
+	
+	/** Get an iterator over the successors of state s */
+	@Override
+	public Iterator<Integer> getSuccessorsIterator(final int s)
+	{
+		// TODO MAJO - I implemented this, but not sure if correctly!
+		return ctmc.trans.get(s).getSupport().iterator();
+	}
 
 	public SuccessorsIterator getSuccessors(final int s)
 	{
+		// TODO MAJO - I implemented this, but not sure if correctly!
+		// The commented out code below this was here previously.
+		return SuccessorsIterator.from(getSuccessorsIterator(s), true);
+		
+		/*
 		// TODO
-		throw new Error("Not yet supported");
+		//throw new Error("Not yet supported");
+		*/
 	}
 
 	public int getNumChoices(int s)
