@@ -57,7 +57,7 @@ public class ACTMCPotatoData
 	/** specific event of {@code actmc} this data is associated with */
 	private GSMPEvent event;
 	/** Reward structure of the {@code actmc}. May be null. */
-	private ACTMCRewardsSimple rewards;
+	private ACTMCRewardsSimple rewards = null;
 	/** termination epsilon (i.e. when probability gets smaller than this, stop) */
 	private double error;
 	
@@ -66,7 +66,7 @@ public class ACTMCPotatoData
 	 * <br>
 	 * I.e. such states of {@code actmc} where {@code event} is active.
 	 */
-	private Set<Integer> potato = new HashSet<Integer>((int)Math.round(event.getActive().cardinality() * 1.5));
+	private Set<Integer> potato = new HashSet<Integer>();
 	/** 
 	 * Subset of potato states that are acting as entrances into the potato.
 	 * <br>
@@ -623,8 +623,8 @@ public class ACTMCPotatoData
 			// We are done. 
 			// Convert the result to a distribution with original indexing and store it.
 			Distribution resultDistr = new Distribution();
-			for (int state : entrances) {
-				resultDistr.add(state, result[ACTMCtoDTMC.get(state)]);
+			for (int succState : successors) {
+				resultDistr.add(succState, result[ACTMCtoDTMC.get(succState)]);
 				// TODO MAJO - the distribution might not sum to 1 (imprecision)
 			}
 			meanDistributions.put(entrance, resultDistr);

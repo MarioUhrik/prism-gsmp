@@ -252,11 +252,19 @@ public class GSMPModelChecker extends ProbModelChecker
 			
 			Set<Integer> potatoEntrances = potatoData.getEntrances();
 			for (int entrance : potatoEntrances) {
+				// compute the rate
 				double meanTimeWithinPotato = meanTimesWithinPotato.get(entrance);
-				if ((1 / meanTimeWithinPotato) > uniformizationRate) {
-					uniformizationRate = 1 / meanTimeWithinPotato;
+				double meanRateWithinPotato = 1 / meanTimeWithinPotato;
+				if ((meanRateWithinPotato) > uniformizationRate) {
+					uniformizationRate = meanRateWithinPotato;
 				}
 				
+				// Weigh the distribution by the rate and assign it to the CTMC
+				Distribution meanDistr = new Distribution(meanDistrs.get(entrance));
+				Set<Integer> distrSupport = meanDistrs.get(entrance).getSupport();
+				for ( int s : distrSupport) {
+					meanDistr.set(s, meanDistr.get(s) * meanRateWithinPotato);
+				}
 				ctmc.trans.set(entrance, meanDistrs.get(entrance));
 			}
 		}

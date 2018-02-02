@@ -47,7 +47,9 @@ import prism.ModelType;
 public class ACTMCSimple extends CTMCSimple
 {
 	/** Mapping of non-exponential events onto states in which they are active. */
-	protected Map<Integer, GSMPEvent> events = new HashMap<Integer, GSMPEvent>();
+	protected Map<Integer, GSMPEvent> eventMap;
+	/** List of non-exponential events within {@code eventMap} (for efficiency) */
+	protected List<GSMPEvent> eventList;
 
 	/**
 	 * Constructor from an already created GSMP that has been verified
@@ -57,14 +59,16 @@ public class ACTMCSimple extends CTMCSimple
 	public ACTMCSimple(GSMPSimple gsmp) {
 		super(gsmp.generateCTMC());
 		copyFrom(gsmp);
-		this.events = new HashMap<Integer, GSMPEvent>(gsmp.getNumEvents());
+		this.eventMap = new HashMap<Integer, GSMPEvent>();
+		this.eventList = new ArrayList<GSMPEvent>();
 		List<GSMPEvent> allEvents = gsmp.getEventList();
 		for (int e = 0; e < allEvents.size(); ++e) {
 			if (!allEvents.get(e).isExponential()) {
 				GSMPEvent nonExpEvent = allEvents.get(e);
+				this.eventList.add(nonExpEvent);
 				BitSet activeStates = nonExpEvent.getActive();
 				for (int s = activeStates.nextSetBit(0); s >= 0; s = activeStates.nextSetBit(s+1)) {
-					this.events.put(s, nonExpEvent); // shallow copies
+					this.eventMap.put(s, nonExpEvent); // shallow copies
 				}
 			}
 		}
@@ -76,24 +80,25 @@ public class ACTMCSimple extends CTMCSimple
 	}
 
 	/**
-	 * Returns a mapping of non-exponential events within this ACTMC onto states in which they are active.
+	 * Returns a mapping of non-exponential events within this ACTMC
+	 * onto states in which they are active.
 	 */
 	public Map<Integer, GSMPEvent> getEventMap() {
-		return events;
+		return eventMap;
 	}
 	
 	/**
 	 * Returns a list of non-exponential events within this ACTMC.
 	 */
 	public List<GSMPEvent> getEventList() {
-		return (new ArrayList<GSMPEvent>(events.values()));
+		return eventList;
 	}
 
 	/**
 	 * @return The total number of non-exponential events within the ACTMC
 	 */
 	public int getNumEvents() {
-		return events.size();
+		return eventList.size();
 	}
 	
 	/**
@@ -101,7 +106,7 @@ public class ACTMCSimple extends CTMCSimple
 	 * @return The event active in the provided state, or null if none.
 	 */
 	public GSMPEvent getActiveEvent(int state) {
-		return events.get(state);
+		return eventMap.get(state);
 	}
 	
 	@Override
@@ -111,7 +116,7 @@ public class ACTMCSimple extends CTMCSimple
 		for (int i = 0; i < events.size(); i++) {
 			str += "\n" + events.get(i);
 		}
-		str += "Underlying CTMC :\n" + super.toString();
+		str += "\nUnderlying CTMC :\n" + super.toString();
  		return str;
 	}
 }
