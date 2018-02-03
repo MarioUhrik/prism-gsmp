@@ -96,10 +96,11 @@ public class ACTMCPotatoData
 	private boolean statesComputed = false;
 	
 	/**
-	 * Uniformized DTMC making up the part of {@code actmc} such that it only
+	 * DTMC making up the part of {@code actmc} such that it only
 	 * contains states that are the union of {@code potato} and {@code successors}.
 	 */
-	private DTMCUniformisedSimple potatoDTMC = null;
+	private DTMC potatoDTMC = null;
+	double uniformizationRate;
 	/** Mapping from the state indices of {@code actmc} (K) to {@code potatoDTMC} (V)*/
 	private Map<Integer, Integer> ACTMCtoDTMC = new HashMap<Integer, Integer>();
 	/** Mapping from the state indices of {@code potatoDTMC} (index) to {@code actmc} (value) */
@@ -217,7 +218,7 @@ public class ACTMCPotatoData
 	 * <br>
 	 * If this is the first call, this method computes them before returning it.
 	 */
-	public DTMCUniformisedSimple getPotatoCTMC() {
+	public DTMC getPotatoCTMC() {
 		if (!potatoDTMCComputed) {
 			computePotatoDTMC();
 		}
@@ -387,7 +388,7 @@ public class ACTMCPotatoData
 			}
 		}
 		
-		double uniformizationRate = actmc.getDefaultUniformisationRate();
+		double q = actmc.getDefaultUniformisationRate();
 		// Construct the transition matrix of the new CTMC
 		for (int s : potatoACTMCStates) {
 			if (potato.contains(s)) {
@@ -400,14 +401,16 @@ public class ACTMCPotatoData
 				}
 			} else {
 				// Else the state is a potato successor, so make it absorbing.
-				potatoCTMC.addToProbability(ACTMCtoDTMC.get(s), ACTMCtoDTMC.get(s), uniformizationRate);
+				potatoCTMC.addToProbability(ACTMCtoDTMC.get(s), ACTMCtoDTMC.get(s), q);
 			}
 		}
 		
 		// convert the CTMC to a DTMC and store the DTMC
-		potatoCTMC.uniformise(uniformizationRate);
-		double q = potatoCTMC.getMaxExitRate();
-		potatoDTMC = (DTMCUniformisedSimple) potatoCTMC.buildImplicitUniformisedDTMC(q);
+		potatoCTMC.uniformise(q);
+		q = potatoCTMC.getMaxExitRate();
+		uniformizationRate = q;
+		
+		potatoDTMC = new DTMCSimple(potatoCTMC.buildUniformisedDTMC(q));
 		
 		potatoDTMCComputed = true;
 	}
@@ -422,7 +425,7 @@ public class ACTMCPotatoData
 		// Different approach is required for each distribution type.
 		switch (event.getDistributionType().getEnum()) {
 		case DIRAC:
-			double fgRate = potatoDTMC.getUniformisationRate() * event.getFirstParameter();
+			double fgRate = uniformizationRate * event.getFirstParameter();
 			foxGlynn = new FoxGlynn(fgRate, 1e-300, 1e+300, error);
 			break;
 		case ERLANG:
@@ -462,7 +465,6 @@ public class ACTMCPotatoData
 			computeFoxGlynn();
 		}
 		
-		double uniformizationRate = potatoDTMC.getUniformisationRate();
 		int numStates = potatoDTMC.getNumStates();
 		
 		// Prepare the FoxGlynn data
@@ -530,7 +532,7 @@ public class ACTMCPotatoData
 		
 		// We are done. 
 		// Store the values for the entrances using the original indexing.
-		for (int entrance : entrances) {
+		for (int entrance : entrances) { // TODO MAJO - the results are innacurate !
 			meanTimes.put(entrance, result[ACTMCtoDTMC.get(entrance)]);
 		}
 		
@@ -558,14 +560,14 @@ public class ACTMCPotatoData
 			weights[i - left] /= totalWeight;
 		}
 		
-		// Prepare solution arrays
-		double[] initDist = new double[numStates];
-		double[] soln;
-		double[] soln2 = new double[numStates];
-		double[] result = new double[numStates];
-		double[] tmpsoln = new double[numStates];
-		
 		for (int entrance : entrances) {
+			
+			// Prepare solution arrays // TODO MAJO - optimize, reuse the arrays!
+			double[] initDist = new double[numStates];
+			double[] soln;
+			double[] soln2 = new double[numStates];
+			double[] result = new double[numStates];
+			double[] tmpsoln = new double[numStates];
 			
 			// Build the initial distribution for this potato entrance
 			for (int s = 0; s < numStates  ; ++s) {
@@ -660,7 +662,6 @@ public class ACTMCPotatoData
 			computeMeanDistributions();
 		}
 		
-		double uniformizationRate = potatoDTMC.getUniformisationRate();
 		int numStates = potatoDTMC.getNumStates();
 		
 		// Prepare the FoxGlynn data

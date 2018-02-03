@@ -268,8 +268,9 @@ public class GSMPModelChecker extends ProbModelChecker
 				ctmc.trans.set(entrance, meanDistr);
 			}
 		}
+		ctmc.uniformise(uniformizationRate); // TODO MAJO - is this necessary?
 		// Then, reduce the CTMC to a DTMC.
-		DTMC dtmc = ctmc.buildImplicitUniformisedDTMC(uniformizationRate);
+		DTMC dtmc = ctmc.buildUniformisedDTMC(uniformizationRate);
 		
 		// Lastly, call DTMC model checking method.
 		DTMCModelChecker mc = new DTMCModelChecker(this);
