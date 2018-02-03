@@ -238,7 +238,7 @@ public class GSMPModelChecker extends ProbModelChecker
 	// ACTMC model checking functions (fast alternative for GSMPs that are ACTMCs)
 	
 	private StateValues computeSteadyStateACTMC(ACTMCSimple actmc, StateValues initDistr) throws PrismException {
-		// First, reduce the ACTMC to a DTMC.
+		// First, reduce the ACTMC to a CTMC.
 		CTMCSimple ctmc = new CTMCSimple(actmc);
 		List<GSMPEvent> events = actmc.getEventList();
 		double uniformizationRate = ctmc.getDefaultUniformisationRate();
@@ -259,18 +259,19 @@ public class GSMPModelChecker extends ProbModelChecker
 					uniformizationRate = meanRateWithinPotato;
 				}
 				
-				// Weigh the distribution by the rate and assign it to the CTMC
+				// weigh the distribution by the rate and assign it to the CTMC
 				Distribution meanDistr = new Distribution(meanDistrs.get(entrance));
 				Set<Integer> distrSupport = meanDistrs.get(entrance).getSupport();
 				for ( int s : distrSupport) {
 					meanDistr.set(s, meanDistr.get(s) * meanRateWithinPotato);
 				}
-				ctmc.trans.set(entrance, meanDistrs.get(entrance));
+				ctmc.trans.set(entrance, meanDistr);
 			}
 		}
+		// Then, reduce the CTMC to a DTMC.
 		DTMC dtmc = ctmc.buildImplicitUniformisedDTMC(uniformizationRate);
 		
-		// Lastly, call regular DTMC model checking method.
+		// Lastly, call DTMC model checking method.
 		DTMCModelChecker mc = new DTMCModelChecker(this);
 		return mc.doSteadyState(dtmc, initDistr);
 	}

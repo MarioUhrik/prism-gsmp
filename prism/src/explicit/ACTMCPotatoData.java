@@ -76,7 +76,9 @@ public class ACTMCPotatoData
 	 * 1) reachable in a single exponential transition
 	 * from a state where {@code event} is not active, or
 	 * <br>
-	 * 2) reachable as a self-loop of {@code event}.
+	 * 2) reachable as a self-loop of {@code event},
+	 * <br>
+	 * 3) part of the initial distribution, i.e. it may be the initial state.
 	 */
 	private Set<Integer> entrances = new HashSet<Integer>();
 	/**
@@ -331,6 +333,14 @@ public class ACTMCPotatoData
 			}
 		}
 		
+		// Also, add all initial states within the potato.
+		for (int is : actmc.getInitialStates()) {
+			if (potato.contains(is)) {
+				entrances.add(is);
+				// TODO MAJO - what if we read the initial distribution from a file?
+			}
+		}
+		
 		// Lastly, check whether the event has a self-loop.
 		for (int ps : potato) {
 			Distribution distr = event.getTransitions(ps);
@@ -559,12 +569,9 @@ public class ACTMCPotatoData
 			
 			// Build the initial distribution for this potato entrance
 			for (int s = 0; s < numStates  ; ++s) {
-				if ( s == ACTMCtoDTMC.get(entrance)) {
-					initDist[s] = 1;
-				} else {
-					initDist[s] = 0;
-				}
+				initDist[s] = 0;
 			}
+			initDist[ACTMCtoDTMC.get(entrance)] = 1;
 			soln = initDist;
 
 			// Initialize the result array
@@ -608,23 +615,29 @@ public class ACTMCPotatoData
 			// these probabilities must be redistributed into the successor states
 			// using the event-defined distribution on states.
 			// (I.e. the actual event behavior is applied)
+			tmpsoln = result.clone();
+			for ( int ps : potato) {
+				result[ACTMCtoDTMC.get(ps)] = 0;
+			}
 			for ( int ps : potato) {
 				int psIndex = ACTMCtoDTMC.get(ps);
-				if (result[psIndex] >= error) { // TODO MAJO - >=error or >0 ???
+				if (tmpsoln[psIndex] > 0) { // TODO MAJO - >=error or >0 ???
 					Distribution distr = event.getTransitions(ps);
 					Set<Integer> distrSupport = distr.getSupport();
 					for ( int successor : distrSupport) {
-						result[ACTMCtoDTMC.get(successor)] += result[psIndex] * distr.get(successor);
+						result[ACTMCtoDTMC.get(successor)] += tmpsoln[psIndex] * distr.get(successor);
 					}
 				}
-				result[psIndex] = 0;
 			}
 			
 			// We are done. 
 			// Convert the result to a distribution with original indexing and store it.
 			Distribution resultDistr = new Distribution();
 			for (int succState : successors) {
-				resultDistr.add(succState, result[ACTMCtoDTMC.get(succState)]);
+				double prob = result[ACTMCtoDTMC.get(succState)];
+				if (prob > 0) {
+					resultDistr.add(succState, prob);
+				}
 				// TODO MAJO - the distribution might not sum to 1 (imprecision)
 			}
 			meanDistributions.put(entrance, resultDistr);
