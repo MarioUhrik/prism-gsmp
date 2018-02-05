@@ -118,11 +118,15 @@ public class ACTMCPotatoData
 	private Map<Integer, Double> meanRewards = new HashMap<Integer, Double>();
 	private boolean meanRewardsComputed = false;
 	
-	/** Mapping of expected times spent in the potato onto states used to enter the potato */
-	private Map<Integer, Double> meanTimes = new HashMap<Integer, Double>();
+	/** Mapping of expected times spent in individual states of the potato onto individual states
+	 * used to enter the potato before leaving the potato.
+	 * Sum of this distribution yields the total expected time spent within the potato. */
+	private Map<Integer, Distribution> meanTimes = new HashMap<Integer, Distribution>();
 	private boolean meanTimesComputed = false;
 	
-	/** Mapping of expected outcome state probability distributions onto states used to enter the potato */
+	/** Mapping of expected outcome state probability distributions onto states used to enter the potato.
+	 *  I.e. if we enter the potato using state {@code key}, then {@code value} is the distribution
+	 *  saying which states we are in after leaving the potato on average. */
 	private Map<Integer, Distribution> meanDistributions = new HashMap<Integer, Distribution>();
 	private Map<Integer, Double[]> meanDistributionsBeforeEvent = new HashMap<Integer, Double[]>();
 	private boolean meanDistributionsComputed = false;
@@ -271,12 +275,13 @@ public class ACTMCPotatoData
 	
 	/**
 	 * Gets a map where the keys are entrances into the potato, and
-	 * the values are mean times until leaving the potato
+	 * the values is a distribution of time spent within the states of the potato
+	 * until first leaving the potato.
 	 * if entered from state {@code key}.
 	 * <br>
 	 * If this is the first call, this method computes it before returning it.
 	 */
-	public Map<Integer, Double> getMeanTimes() throws PrismException {
+	public Map<Integer, Distribution> getMeanTimes() throws PrismException {
 		if (!meanTimesComputed) {
 			computeMeanTimes();
 		}
@@ -458,7 +463,7 @@ public class ACTMCPotatoData
 	 * For all potato entrances, computes the expected time spent within the potato
 	 * before leaving the potato, having entered from a particular entrance.
 	 * This is computed using the expected cumulative reward with reward 1
-	 * for states within the potato, and with a time bound given by the potato event.
+	 * for the potato entrances, and with a time bound given by the potato event.
 	 */
 	private void computeMeanTimes() throws PrismException {
 		if (!foxGlynnComputed) {
@@ -482,60 +487,65 @@ public class ACTMCPotatoData
 			weights[i - left] = (1 - weights[i - left]) / uniformizationRate;
 		}
 		
-		// Prepare solution arrays
-		double[] soln = new double[numStates];
-		double[] soln2 = new double[numStates];
-		double[] result = new double[numStates];
-		double[] tmpsoln = new double[numStates];
+		for (int entrance : entrances) {
+			
+			// Prepare solution arrays
+			double[] soln = new double[numStates];
+			double[] soln2 = new double[numStates];
+			double[] result = new double[numStates];
+			double[] tmpsoln = new double[numStates];
 
-		// Initialize the solution array by assigning reward
-		// 1 to each state within the potato, and 0 to all others.
-		for (int i = 0; i < numStates; i++) {
-			if (potato.contains(DTMCtoACTMC.get(i))) {
-				soln[i] = 1;
-			} else {
+			// Initialize the solution array by assigning reward
+			// 1 to the entrance and 0 to all others.
+			for (int i = 0; i < numStates; i++) {
 				soln[i] = 0;
 			}
-		}
+			soln[ACTMCtoDTMC.get(entrance)] = 1;
 
-		// do 0th element of summation (doesn't require any matrix powers)
-		result = new double[numStates];
-		if (left == 0) {
-			for (int i = 0; i < numStates; i++) {
-				result[i] += weights[0] * soln[i];
-			}
-		} else {
-			for (int i = 0; i < numStates; i++) {
-				result[i] += soln[i] / uniformizationRate;
-			}
-		}
-
-		// Start iterations
-		int iters = 1;
-		while (iters <= right) {
-			// Matrix-vector multiply
-			potatoDTMC.mvMult(soln, soln2, null, false);
-			// Swap vectors for next iter
-			tmpsoln = soln;
-			soln = soln2;
-			soln2 = tmpsoln;
-			// Add to sum
-			if (iters >= left) {
-				for (int i = 0; i < numStates; i++)
-					result[i] += weights[iters - left] * soln[i];
+			// do 0th element of summation (doesn't require any matrix powers)
+			result = new double[numStates];
+			if (left == 0) {
+				for (int i = 0; i < numStates; i++) {
+					result[i] += weights[0] * soln[i];
+				}
 			} else {
-				for (int i = 0; i < numStates; i++)
+				for (int i = 0; i < numStates; i++) {
 					result[i] += soln[i] / uniformizationRate;
+				}
 			}
-			iters++;
+
+			// Start iterations
+			int iters = 1;
+			while (iters <= right) {
+				// Matrix-vector multiply
+				potatoDTMC.vmMult(soln, soln2);
+				// Swap vectors for next iter
+				tmpsoln = soln;
+				soln = soln2;
+				soln2 = tmpsoln;
+				// Add to sum
+				if (iters >= left) {
+					for (int i = 0; i < numStates; i++)
+						result[i] += weights[iters - left] * soln[i];
+				} else {
+					for (int i = 0; i < numStates; i++)
+						result[i] += soln[i] / uniformizationRate;
+				}
+				iters++;
+			}
+			
+			// We are done. 
+			// Convert the result to a distribution with original indexing and store it.
+			Distribution resultDistr = new Distribution();
+			for (int ps : potato) {
+				double time = result[ACTMCtoDTMC.get(ps)];
+				if (time > 0) {
+					resultDistr.add(ps, time);
+				}
+				// TODO MAJO - imprecise results!
+			}
+			meanTimes.put(entrance, resultDistr);
 		}
-		
-		// We are done. 
-		// Store the values for the entrances using the original indexing.
-		for (int entrance : entrances) { // TODO MAJO - the results are innacurate !
-			meanTimes.put(entrance, result[ACTMCtoDTMC.get(entrance)]);
-		}
-		
 		meanTimesComputed = true;
 	}
 	
@@ -712,7 +722,7 @@ public class ACTMCPotatoData
 		int iters = 1;
 		while (iters <= right) {
 			// Matrix-vector multiply
-			potatoDTMC.mvMult(soln, soln2, null, false);
+			potatoDTMC.vmMult(soln, soln2);
 			// Swap vectors for next iter
 			tmpsoln = soln;
 			soln = soln2;

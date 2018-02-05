@@ -28,6 +28,7 @@ package explicit;
 
 import java.util.ArrayList;
 import java.util.BitSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -242,19 +243,23 @@ public class GSMPModelChecker extends ProbModelChecker
 		CTMCSimple ctmc = new CTMCSimple(actmc);
 		List<GSMPEvent> events = actmc.getEventList();
 		double uniformizationRate = ctmc.getDefaultUniformisationRate();
+		Map<Integer, Distribution> allTimesWithinPotato = new HashMap<Integer, Distribution>();
+		
 		for (GSMPEvent event : events) {	
 			ACTMCPotatoData potatoData = new ACTMCPotatoData(actmc,
 					event,
 					null,
 					getTermCritParam());
-			Map<Integer, Double> meanTimesWithinPotato = potatoData.getMeanTimes();
+			Map<Integer, Distribution> meanTimesWithinPotato = potatoData.getMeanTimes();
 			Map<Integer, Distribution> meanDistrs = potatoData.getMeanDistributions();
+			allTimesWithinPotato.putAll(meanTimesWithinPotato);
 			
 			Set<Integer> potatoEntrances = potatoData.getEntrances();
 			for (int entrance : potatoEntrances) {
 				// compute the rate
-				double meanTimeWithinPotato = meanTimesWithinPotato.get(entrance);
-				double meanRateWithinPotato = 1 / meanTimeWithinPotato;
+				Distribution potatoTimeDistr = meanTimesWithinPotato.get(entrance);
+				double theta = potatoTimeDistr.sum();
+				double meanRateWithinPotato = 1 / theta;
 				if ((meanRateWithinPotato) > uniformizationRate) {
 					uniformizationRate = meanRateWithinPotato;
 				}
@@ -272,9 +277,26 @@ public class GSMPModelChecker extends ProbModelChecker
 		// Then, reduce the CTMC to a DTMC.
 		DTMC dtmc = ctmc.buildUniformisedDTMC(uniformizationRate);
 		
-		// Lastly, call DTMC model checking method.
+		// Compute the steady-state distribution for the equivalent DTMC
 		DTMCModelChecker mc = new DTMCModelChecker(this);
-		return mc.doSteadyState(dtmc, initDistr);
+		StateValues result = mc.doSteadyState(dtmc, initDistr);
+		
+		// In order to reintroduce non-regenerative states to the result,
+		// the result is weighted by the average time spent in each state of the potato
+		// for each given entrance.
+		for (Map.Entry<Integer, Distribution> entry : allTimesWithinPotato.entrySet()) {
+			double prob = result.valuesD[entry.getKey()];
+			Distribution timeDistr = entry.getValue();
+			double theta = timeDistr.sum();
+			Set<Integer> distrSupport = timeDistr.getSupport();
+			
+			for ( int s : distrSupport) {
+				result.valuesD[s] += prob * (timeDistr.get(s) / theta);
+			}
+			result.valuesD[entry.getKey()] = prob * (timeDistr.get(entry.getKey()) / theta);
+		}
+		
+		return result;
 	}
 	
 	private StateValues computeTransientACTMC(ACTMCSimple actmc, double time, StateValues initDistr) throws PrismException {
