@@ -118,8 +118,8 @@ public class ACTMCPotatoData
 	private Map<Integer, Double> meanRewards = new HashMap<Integer, Double>();
 	private boolean meanRewardsComputed = false;
 	
-	/** Mapping of expected times spent in individual states of the potato onto individual states
-	 * used to enter the potato before leaving the potato.
+	/** Mapping of expected times spent in individual states of the potato before leaving the potato
+	 * onto individual states used to enter the potato.
 	 * Sum of this distribution yields the total expected time spent within the potato. */
 	private Map<Integer, Distribution> meanTimes = new HashMap<Integer, Distribution>();
 	private boolean meanTimesComputed = false;

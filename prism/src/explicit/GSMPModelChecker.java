@@ -284,17 +284,21 @@ public class GSMPModelChecker extends ProbModelChecker
 		// In order to reintroduce non-regenerative states to the result,
 		// the result is weighted by the average time spent in each state of the potato
 		// for each given entrance.
-		for (Map.Entry<Integer, Distribution> entry : allTimesWithinPotato.entrySet()) {
-			double prob = result.valuesD[entry.getKey()];
-			Distribution timeDistr = entry.getValue();
-			double theta = timeDistr.sum();
-			Set<Integer> distrSupport = timeDistr.getSupport();
-			
-			for ( int s : distrSupport) {
-				result.valuesD[s] += prob * (timeDistr.get(s) / theta);
+		double[] weightedResult = new double[dtmc.getNumStates()];
+		for (int s = 0 ; s < dtmc.getNumStates() ; ++s) {
+			Distribution timeDistr = allTimesWithinPotato.get(s);
+			if (timeDistr == null) {
+				weightedResult[s] += result.valuesD[s];
+			} else {
+				double prob = result.valuesD[s];
+				double theta = timeDistr.sum();
+				Set<Integer> distrSupport = timeDistr.getSupport();
+				for ( int t : distrSupport) {
+					weightedResult[t] += prob * (timeDistr.get(t) / theta);
+				}
 			}
-			result.valuesD[entry.getKey()] = prob * (timeDistr.get(entry.getKey()) / theta);
 		}
+		result.valuesD = weightedResult;
 		
 		return result;
 	}
