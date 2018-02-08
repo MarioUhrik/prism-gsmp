@@ -206,6 +206,8 @@ public class ACTMCRewardsSimple implements MCRewards
 	 */
 	public void processCTMCTransitionRewards(ACTMCSimple actmc) {
 		// TODO MAJO - make sure this is valid for reachability
+		// TODO MAJO - IMPORTANT: this should create a copy, not rewrite the existing object
+		// TODO MAJO - IMPORTANT: also, it is broken and inefficient. Reimplement it.
 		int numStates = actmc.getNumStates();
 		for (int s = 0; s < numStates ; ++s) {
 			// prepare transition rewards from state s
@@ -229,13 +231,8 @@ public class ACTMCRewardsSimple implements MCRewards
 		ctmcTransitionRewards.clear();
 	}
 
-	/**
-	 * This class is read only. Do not call this method.
-	 */
-	@Deprecated
-	@Override
 	public ACTMCRewardsSimple liftFromModel(Product<? extends Model> product) {
-		return null;
+		throw new UnsupportedOperationException("Not implemented!");
 	}
 
 	/**
