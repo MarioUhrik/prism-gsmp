@@ -136,8 +136,8 @@ public class ACTMCPotatoData
 	 * The only constructor
 	 * @param actmc Associated ACTMC model. Must not be null!
 	 * @param event Event belonging to the ACTMC. Must not be null!
-	 * @param rewards ACTMC Reward structure. May be null, but calls to {@code getMeanReward()}
-	 *        with null reward structure throws an exception!
+	 * @param rewards Optional ACTMC Reward structure. May be null, but calls to
+	 *        {@code getMeanReward()} with null reward structure throws an exception!
 	 * @param error Termination epsilon (i.e. when probability gets smaller than this, stop)
 	 * @throws Exception if the arguments break the above rules
 	 */
