@@ -107,7 +107,7 @@ public class GSMPModelChecker extends ProbModelChecker
 		if (isACTMC(gsmp) && gsmp instanceof GSMPSimple && rew instanceof GSMPRewardsSimple) {
 			ACTMCSimple actmc = new ACTMCSimple((GSMPSimple)gsmp);
 			ACTMCRewardsSimple actmcRew = new ACTMCRewardsSimple((GSMPRewardsSimple)rew, gsmp);
-			actmcRew.processCTMCTransitionRewards(actmc);// TODO MAJO - IMPORTANT: this should create a copy
+			actmcRew = actmcRew.mergeCTMCTransitionRewards(actmc);
 			return computeReachRewardsACTMC(actmc, actmcRew, target);
 		} else {
 			return computeReachRewardsGSMP(gsmp, rew, target);
@@ -124,7 +124,7 @@ public class GSMPModelChecker extends ProbModelChecker
 		if (isACTMC(gsmp) && gsmp instanceof GSMPSimple && rew instanceof GSMPRewardsSimple) {
 			ACTMCSimple actmc = new ACTMCSimple((GSMPSimple)gsmp);
 			ACTMCRewardsSimple actmcRew = new ACTMCRewardsSimple((GSMPRewardsSimple)rew, gsmp);
-			actmcRew.processCTMCTransitionRewards(actmc);// TODO MAJO - IMPORTANT: this should create a copy
+			actmcRew = actmcRew.mergeCTMCTransitionRewards(actmc);
 			return computeSteadyStateRewardsACTMC(actmc, actmcRew);
 		} else {
 			return computeSteadyStateRewardsGSMP(gsmp, rew);
@@ -352,7 +352,7 @@ public class GSMPModelChecker extends ProbModelChecker
 			timesWithinPotatoes.putAll(pdEntry.getValue().getMeanTimes());
 		}
 		
-		// First, reduce the ACTMC to an equivalent DTMC.
+		// Reduce the ACTMC to an equivalent DTMC.
 		DTMCSimple dtmc = reduceACTMCtoDTMC(actmc, pdMap);
 		
 		// Compute the steady-state distribution for the equivalent DTMC
@@ -394,6 +394,26 @@ public class GSMPModelChecker extends ProbModelChecker
 	private ModelCheckerResult computeSteadyStateRewardsACTMC(ACTMCSimple actmc, ACTMCRewardsSimple actmcRew) throws PrismException {
 		// TODO MAJO - implement
 		throw new PrismNotSupportedException("Computing steady-state rewards for ACTMCs is not yet implemented!");
+		
+		/*
+		// Initialize necessary data structures
+		Map<String, ACTMCPotatoData> pdMap = createPotatoDataMap(actmc, actmcRew);
+		Map<Integer, Distribution> timesWithinPotatoes = new HashMap<Integer, Distribution>();
+		for (Map.Entry<String, ACTMCPotatoData> pdEntry : pdMap.entrySet()) {
+			timesWithinPotatoes.putAll(pdEntry.getValue().getMeanTimes());
+		}
+		
+		// Reduce the ACTMC to an equivalent DTMC.
+		DTMCSimple dtmc = reduceACTMCtoDTMC(actmc, pdMap);
+		MCRewards rew = reduceACTMCRewtoDTMCRew(actmcRew, dtmc, pdMap);
+		
+		// Compute the steady-state rewards for the equivalent DTMC
+		DTMCModelChecker mc = new DTMCModelChecker(this);
+		BitSet target = new BitSet(dtmc.getNumStates()); //workaround - empty bitset
+		ModelCheckerResult result = mc.computeReachRewards(dtmc, rew, target);
+		
+		return result;
+		*/
 	}
 	
 	private ModelCheckerResult computeReachParameterSynthesisACTMC(ACTMCSimple actmc, ACTMCRewardsSimple actmcRew, BitSet target, boolean min, List<SynthParam> paramList) throws PrismException {

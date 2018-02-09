@@ -80,7 +80,7 @@ public class ACTMCRewardsSimple implements MCRewards
 	 */
 	public ACTMCRewardsSimple(GSMPRewardsSimple gsmpRew, GSMP gsmpModel) {
 		// TODO MAJO - confirm this is without bugs!
-		this.stateRewards = gsmpRew.getStateRewards();
+		this.stateRewards = new HashMap<Integer, Double>(gsmpRew.getStateRewards());
 		this.eventTransitionRewards = new HashMap<Integer, Map<Integer, Double>>();
 		this.ctmcTransitionRewards = new HashMap<Integer, Map<Integer, Double>>();
 		
@@ -135,6 +135,15 @@ public class ACTMCRewardsSimple implements MCRewards
 		
 	}
 	
+	/**
+	 * Copy constructor
+	 */
+	public ACTMCRewardsSimple(ACTMCRewardsSimple rews) {
+		this.stateRewards = new HashMap<Integer, Double>(rews.stateRewards);
+		this.eventTransitionRewards = new HashMap<Integer, Map<Integer, Double>>(rews.eventTransitionRewards);
+		this.ctmcTransitionRewards = new HashMap<Integer, Map<Integer, Double>>(rews.ctmcTransitionRewards);
+	}
+
 	public double getStateReward(int s) {
 		Double reward = stateRewards.get(s);
 		if (reward == null) {
@@ -197,26 +206,25 @@ public class ACTMCRewardsSimple implements MCRewards
 	}
 	
 	/**
-	 * Merge the transition rewards into the state rewards.
-	 * <br>
-	 * After calling this method, the state rewards may be increased to account
-	 * for the transition rewards, and the transition rewards are removed.
+	 * Creates new ACTMCRewardsSimple where the transition rewards are merged
+	 * into the state rewards. I.e. transition rewards no longer exist and state
+	 * rewards may be increased so that the reward structure remains equivalent.
 	 * @param actmc ACTMC model these rewards are created from.
 	 *              This is needed because the rates are required as weights.
+	 *              Assumes the {@code actmc} is uniformised!
 	 */
-	public void processCTMCTransitionRewards(ACTMCSimple actmc) {
+	public ACTMCRewardsSimple mergeCTMCTransitionRewards(ACTMCSimple actmc) {
 		// TODO MAJO - make sure this is valid for reachability
-		// TODO MAJO - IMPORTANT: this should create a copy, not rewrite the existing object
-		// TODO MAJO - IMPORTANT: also, it is broken and inefficient. Reimplement it.
-		int numStates = actmc.getNumStates();
-		for (int s = 0; s < numStates ; ++s) {
-			// prepare transition rewards from state s
-			Map<Integer, Double> rews = getTransitionRewards(s);
+		ACTMCRewardsSimple newRew = new ACTMCRewardsSimple(this);
+		
+		for (Map.Entry<Integer, Map<Integer,Double>> entry : newRew.ctmcTransitionRewards.entrySet()) {
+			int s = entry.getKey();
+			Map<Integer, Double> rews = entry.getValue();
 			Set<Integer> rewSet = rews.keySet();
 			
 			// prepare transition rates from state s
 			Distribution distr = actmc.getTransitions(s);
-			double rateSum = distr.sum();
+			double rateSum = distr.sumAllBut(s);
 			
 			double stateRewardAddition = 0;
 			// weight transitions rewards to state t by probabilities of it happening
@@ -225,10 +233,13 @@ public class ACTMCRewardsSimple implements MCRewards
 			}
 			
 			// add the computed value to the existing state reward
-			stateRewards.put(s, getStateReward(s) + stateRewardAddition);
+			if (stateRewardAddition > 0) {
+				newRew.stateRewards.put(s, newRew.getStateReward(s) + stateRewardAddition);
+			}
 		}
 		// when done, remove the transition rewards
-		ctmcTransitionRewards.clear();
+		newRew.ctmcTransitionRewards.clear();
+		return newRew;
 	}
 
 	public ACTMCRewardsSimple liftFromModel(Product<? extends Model> product) {
