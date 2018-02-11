@@ -1022,7 +1022,7 @@ public class ProbModelChecker extends NonProbModelChecker
 		switch (model.getModelType()) {
 		case GSMP:
 			if (minMax == null) {
-				// just expected steady-state
+				// just expected steady-state rewards
 				res = ((GSMPModelChecker) this).doSteadyStateRewards((GSMP) model, (GSMPRewards) modelRewards);
 			} else { // TODO MAJO - return values! are they correct?
 				// parameter synthesis via steady-state rewards

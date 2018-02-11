@@ -116,6 +116,7 @@ public class GSMPModelChecker extends ProbModelChecker
 
 	/**
 	 * Gateway method to initiate computation of expected steady-state rewards
+	 * Model default initial distribution is used!
 	 * @param gsmp the GSMP model
 	 * @param rew the rewards structure belonging to the model
 	 * @return expected long-run rewards
@@ -282,7 +283,7 @@ public class GSMPModelChecker extends ProbModelChecker
 	}
 	
 	/**
-	 * Converts ACTMCRewardsSimple {@code actmcRew} to equivalent MCRewards.
+	 * Uses ACTMCRewardsSimple {@code actmcRew} to create equivalent MCRewards.
 	 * Heavily relies on class {@link ACTMCPotatoData} for necessary computations.
 	 * @param actmcRew ACTMCRewardsSimple from which to construct MCRewards
 	 * @param dtmc DTMC equivalent to ACTMC which {@code actmcRew} belong to
@@ -345,6 +346,7 @@ public class GSMPModelChecker extends ProbModelChecker
 	// ACTMC model checking functions (fast alternative for GSMPs that are ACTMCs)
 	
 	private StateValues computeSteadyStateACTMC(ACTMCSimple actmc, StateValues initDistr) throws PrismException {
+		long reduceTime = System.currentTimeMillis();
 		// Initialize necessary data structures
 		Map<String, ACTMCPotatoData> pdMap = createPotatoDataMap(actmc, null);
 		Map<Integer, Distribution> timesWithinPotatoes = new HashMap<Integer, Distribution>();
@@ -354,6 +356,9 @@ public class GSMPModelChecker extends ProbModelChecker
 		
 		// Reduce the ACTMC to an equivalent DTMC.
 		DTMCSimple dtmc = reduceACTMCtoDTMC(actmc, pdMap);
+		
+		reduceTime = System.currentTimeMillis() - reduceTime;
+		long computeTime = System.currentTimeMillis();
 		
 		// Compute the steady-state distribution for the equivalent DTMC
 		DTMCModelChecker mc = new DTMCModelChecker(this);
@@ -378,6 +383,12 @@ public class GSMPModelChecker extends ProbModelChecker
 		}
 		result.valuesD = weightedResult;
 		
+		computeTime = System.currentTimeMillis() - computeTime;
+		mainLog.println("\nReducing ACTMC to equivalent DTMC "
+				+ "took " + reduceTime/1000.0 + " seconds.");
+		mainLog.println("Computing steady-state probabilities for the equivalent DTMC "
+				+ "took " + computeTime/1000.0 + " seconds.");
+		
 		return result;
 	}
 	
@@ -392,12 +403,9 @@ public class GSMPModelChecker extends ProbModelChecker
 	}
 	
 	private ModelCheckerResult computeSteadyStateRewardsACTMC(ACTMCSimple actmc, ACTMCRewardsSimple actmcRew) throws PrismException {
-		// TODO MAJO - implement
-		throw new PrismNotSupportedException("Computing steady-state rewards for ACTMCs is not yet implemented!");
-		
-		/*
+		long reduceTime = System.currentTimeMillis();
 		// Initialize necessary data structures
-		Map<String, ACTMCPotatoData> pdMap = createPotatoDataMap(actmc, actmcRew);
+		Map<String, ACTMCPotatoData> pdMap = createPotatoDataMap(actmc, null);
 		Map<Integer, Distribution> timesWithinPotatoes = new HashMap<Integer, Distribution>();
 		for (Map.Entry<String, ACTMCPotatoData> pdEntry : pdMap.entrySet()) {
 			timesWithinPotatoes.putAll(pdEntry.getValue().getMeanTimes());
@@ -405,15 +413,52 @@ public class GSMPModelChecker extends ProbModelChecker
 		
 		// Reduce the ACTMC to an equivalent DTMC.
 		DTMCSimple dtmc = reduceACTMCtoDTMC(actmc, pdMap);
-		MCRewards rew = reduceACTMCRewtoDTMCRew(actmcRew, dtmc, pdMap);
 		
-		// Compute the steady-state rewards for the equivalent DTMC
+		// Compute the new state reward values (including the event behavior)
+		MCRewards dtmcRew = reduceACTMCRewtoDTMCRew(actmcRew, dtmc, pdMap);
+		
+		reduceTime = System.currentTimeMillis() - reduceTime;
+		long computeTime = System.currentTimeMillis();
+		
+		// Compute the steady-state distribution for the equivalent DTMC
 		DTMCModelChecker mc = new DTMCModelChecker(this);
-		BitSet target = new BitSet(dtmc.getNumStates()); //workaround - empty bitset
-		ModelCheckerResult result = mc.computeReachRewards(dtmc, rew, target);
+		StateValues result = mc.doSteadyState(dtmc, buildInitialDistribution(dtmc));
 		
-		return result;
-		*/
+		// In order to reintroduce non-regenerative states to the result,
+		// the result is weighted by the average time spent in each state of the potato
+		// for each given entrance.
+		double[] weightedResult = new double[dtmc.getNumStates()];
+		for (int s = 0 ; s < dtmc.getNumStates() ; ++s) {
+			Distribution timeDistr = timesWithinPotatoes.get(s);
+			if (timeDistr == null) {
+				weightedResult[s] += result.valuesD[s];
+			} else {
+				double prob = result.valuesD[s];
+				double theta = timeDistr.sum();
+				Set<Integer> distrSupport = timeDistr.getSupport();
+				for ( int t : distrSupport) {
+					weightedResult[t] += prob * (timeDistr.get(t) / theta);
+				}
+			}
+		}
+		result.valuesD = weightedResult;
+		
+		// Weight the steady-state probabilities by the new state reward values
+		for (int s = 0; s < dtmc.getNumStates() ; ++s) {
+			result.valuesD[s] = result.valuesD[s] * dtmcRew.getStateReward(s);
+		}
+		
+		computeTime = System.currentTimeMillis() - computeTime;
+		mainLog.println("\nReducing ACTMC to equivalent DTMC "
+				+ "took " + reduceTime/1000.0 + "seconds.");
+		mainLog.println("Computing steady-state rewards for the equivalent DTMC "
+				+ "took " + computeTime/1000.0 + "seconds.");
+		
+		ModelCheckerResult res = new ModelCheckerResult();
+		res.soln = result.valuesD;
+		res.timePre = reduceTime/1000.0;
+		res.timeTaken = computeTime/1000.0;
+		return res;
 	}
 	
 	private ModelCheckerResult computeReachParameterSynthesisACTMC(ACTMCSimple actmc, ACTMCRewardsSimple actmcRew, BitSet target, boolean min, List<SynthParam> paramList) throws PrismException {
