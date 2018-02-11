@@ -542,7 +542,7 @@ public class ACTMCPotatoData
 				if (time > 0) {
 					resultDistr.add(ps, time);
 				}
-				// TODO MAJO - imprecise results!
+				// TODO MAJO -imprecise results, but probably not fixable (fg precision)
 			}
 			meanTimes.put(entrance, resultDistr);
 		}
@@ -633,7 +633,7 @@ public class ACTMCPotatoData
 			}
 			for ( int ps : potato) {
 				int psIndex = ACTMCtoDTMC.get(ps);
-				if (tmpsoln[psIndex] > 0) { // TODO MAJO - >=error or >0 ???
+				if (tmpsoln[psIndex] > 0) {
 					Distribution distr = event.getTransitions(ps);
 					Set<Integer> distrSupport = distr.getSupport();
 					for ( int successor : distrSupport) {
@@ -642,15 +642,19 @@ public class ACTMCPotatoData
 				}
 			}
 			
-			// We are done. 
+			// We are done.
+			// Normalize the result array (it may not sum to 1 due to inaccuracy).
+			double probSum = 0;
+			for (int succState : successors) {
+				probSum += result[ACTMCtoDTMC.get(succState)];
+			}
 			// Convert the result to a distribution with original indexing and store it.
 			Distribution resultDistr = new Distribution();
 			for (int succState : successors) {
 				double prob = result[ACTMCtoDTMC.get(succState)];
 				if (prob > 0) {
-					resultDistr.add(succState, prob);
+					resultDistr.add(succState, prob / probSum);
 				}
-				// TODO MAJO - the distribution might not sum to 1 (imprecision)
 			}
 			meanDistributions.put(entrance, resultDistr);
 		}
@@ -722,7 +726,7 @@ public class ACTMCPotatoData
 		int iters = 1;
 		while (iters <= right) {
 			// Matrix-vector multiply
-			potatoDTMC.vmMult(soln, soln2);
+			potatoDTMC.mvMult(soln, soln2, null, false);
 			// Swap vectors for next iter
 			tmpsoln = soln;
 			soln = soln2;

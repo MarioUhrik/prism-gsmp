@@ -226,7 +226,7 @@ public class ACTMCRewardsSimple implements MCRewards
 			Distribution distr = actmc.getTransitions(s);
 			
 			double stateRewardAddition = 0;
-			// weight transitions rewards to state t by probabilities of it happening
+			// multiply transitions rewards to state t by rates
 			for ( int t : rewSet) {
 				stateRewardAddition += rews.get(t) * distr.get(t);
 			}
