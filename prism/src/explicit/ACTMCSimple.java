@@ -58,7 +58,6 @@ public class ACTMCSimple extends CTMCSimple
 	 */
 	public ACTMCSimple(GSMPSimple gsmp) {
 		super(gsmp.generateCTMC());
-		copyFrom(gsmp);
 		this.eventMap = new HashMap<Integer, GSMPEvent>();
 		this.eventList = new ArrayList<GSMPEvent>();
 		List<GSMPEvent> allEvents = gsmp.getEventList();

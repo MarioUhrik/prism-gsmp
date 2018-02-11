@@ -6,11 +6,14 @@ gsmp
 
 const maxItem=12;
 
+rewards
+	items>0 : items;
+endrewards
 
 module Queue
 
 	event Prod_event = dirac(10);
-	event Serve_event = weibull(12,2.0);
+	event Serve_event = exponential(2.0);
 
 	items: [0..maxItem] init 0;
 

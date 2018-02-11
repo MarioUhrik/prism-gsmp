@@ -743,6 +743,9 @@ public class ACTMCPotatoData
 		for (int entrance : entrances) {
 			for (int ps : potato) {
 				Map<Integer, Double> rews = rewards.getEventTransitionRewards(ps);
+				if (rews == null) {
+					continue;
+				}
 				Set<Integer> rewSet = rews.keySet();
 				for (int succ : rewSet) {
 					double prob = event.getTransitions(ps).get(succ);

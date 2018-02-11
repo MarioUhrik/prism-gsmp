@@ -119,7 +119,7 @@ public class GSMPModelChecker extends ProbModelChecker
 	 * Model default initial distribution is used!
 	 * @param gsmp the GSMP model
 	 * @param rew the rewards structure belonging to the model
-	 * @return expected long-run rewards
+	 * @return expected long-run average reward
 	 */
 	public ModelCheckerResult doSteadyStateRewards(GSMP gsmp, GSMPRewards rew) throws PrismException {
 		if (isACTMC(gsmp) && gsmp instanceof GSMPSimple && rew instanceof GSMPRewardsSimple) {
@@ -405,7 +405,7 @@ public class GSMPModelChecker extends ProbModelChecker
 	private ModelCheckerResult computeSteadyStateRewardsACTMC(ACTMCSimple actmc, ACTMCRewardsSimple actmcRew) throws PrismException {
 		long reduceTime = System.currentTimeMillis();
 		// Initialize necessary data structures
-		Map<String, ACTMCPotatoData> pdMap = createPotatoDataMap(actmc, null);
+		Map<String, ACTMCPotatoData> pdMap = createPotatoDataMap(actmc, actmcRew);
 		Map<Integer, Distribution> timesWithinPotatoes = new HashMap<Integer, Distribution>();
 		for (Map.Entry<String, ACTMCPotatoData> pdEntry : pdMap.entrySet()) {
 			timesWithinPotatoes.putAll(pdEntry.getValue().getMeanTimes());
@@ -443,10 +443,23 @@ public class GSMPModelChecker extends ProbModelChecker
 		}
 		result.valuesD = weightedResult;
 		
+		double rewardSum = 0;
 		// Weight the steady-state probabilities by the new state reward values
 		for (int s = 0; s < dtmc.getNumStates() ; ++s) {
-			result.valuesD[s] = result.valuesD[s] * dtmcRew.getStateReward(s);
+			double reward = result.valuesD[s] * dtmcRew.getStateReward(s);
+			result.valuesD[s] = reward;
+			rewardSum += reward;
 		}
+		
+		//---------------------------------------------------------------
+		// TODO MAJO - ugly workaround!
+		// Since PRISM expects this method to return StateValues where
+		// there is only one element containing the expected reward, I fold
+		// the vector to compute the sum and then put this sum into each element.
+		for (int s = 0; s < dtmc.getNumStates() ; ++s) {
+			result.valuesD[s] = rewardSum;
+		}
+		//---------------------------------------------------------------
 		
 		computeTime = System.currentTimeMillis() - computeTime;
 		mainLog.println("\nReducing ACTMC to equivalent DTMC "
