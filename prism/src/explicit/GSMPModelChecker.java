@@ -308,7 +308,10 @@ public class GSMPModelChecker extends ProbModelChecker
 		
 		int numStates = dtmc.getNumStates();
 		for (int s = 0; s < numStates ; ++s) {
-			newRew.setStateReward(s, actmcRew.getStateReward(s));
+			double rew = actmcRew.getStateReward(s);
+			if (rew > 0) {
+				newRew.setStateReward(s, rew);
+			}
 		}
 		
 		Set<Integer> entrances = meanRewWithinPotatoesOverTime.keySet();
@@ -328,7 +331,8 @@ public class GSMPModelChecker extends ProbModelChecker
 	 * @param rew Optional rewards associated with {@code actmc}. May be null, but calls
 	 *            to {@code ACTMCPotatoData.getMeanReward()} will throw an exception!
 	 */
-	private Map<String, ACTMCPotatoData> createPotatoDataMap(ACTMCSimple actmc, ACTMCRewardsSimple rew) throws PrismException {
+	private Map<String, ACTMCPotatoData> createPotatoDataMap(ACTMCSimple actmc,
+			ACTMCRewardsSimple rew, BitSet target) throws PrismException {
 		Map<String, ACTMCPotatoData> pdMap = new HashMap<String, ACTMCPotatoData>();
 		List<GSMPEvent> events = actmc.getEventList();
 		double terminationEpsilon = getTermCritParam();
@@ -337,7 +341,8 @@ public class GSMPModelChecker extends ProbModelChecker
 			ACTMCPotatoData potatoData = new ACTMCPotatoData(actmc,
 					event,
 					rew,
-					terminationEpsilon);
+					terminationEpsilon,
+					target);
 			pdMap.put(event.getIdentifier(), potatoData);
 		}
 		return pdMap;
@@ -348,7 +353,7 @@ public class GSMPModelChecker extends ProbModelChecker
 	private StateValues computeSteadyStateACTMC(ACTMCSimple actmc, StateValues initDistr) throws PrismException {
 		long reduceTime = System.currentTimeMillis();
 		// Initialize necessary data structures
-		Map<String, ACTMCPotatoData> pdMap = createPotatoDataMap(actmc, null);
+		Map<String, ACTMCPotatoData> pdMap = createPotatoDataMap(actmc, null, null);
 		Map<Integer, Distribution> timesWithinPotatoes = new HashMap<Integer, Distribution>();
 		for (Map.Entry<String, ACTMCPotatoData> pdEntry : pdMap.entrySet()) {
 			timesWithinPotatoes.putAll(pdEntry.getValue().getMeanTimes());
@@ -398,14 +403,36 @@ public class GSMPModelChecker extends ProbModelChecker
 	}
 	
 	private ModelCheckerResult computeReachRewardsACTMC(ACTMCSimple actmc, ACTMCRewardsSimple actmcRew, BitSet target) throws PrismException {
-		// TODO MAJO - implement
-		throw new PrismNotSupportedException("Computing reachability rewards for ACTMCs is not yet implemented!");
+		long reduceTime = System.currentTimeMillis();
+		// Initialize necessary data structures
+		Map<String, ACTMCPotatoData> pdMap = createPotatoDataMap(actmc, actmcRew, target);
+		
+		// Reduce the ACTMC to an equivalent DTMC.
+		DTMCSimple dtmc = reduceACTMCtoDTMC(actmc, pdMap);
+		
+		// Compute the new state reward values (including the event behavior)
+		MCRewards dtmcRew = reduceACTMCRewtoDTMCRew(actmcRew, dtmc, pdMap);
+		
+		reduceTime = System.currentTimeMillis() - reduceTime;
+		
+		// Compute the reachability rewards for the equivalent DTMC
+		DTMCModelChecker mc = new DTMCModelChecker(this);
+		ModelCheckerResult result = mc.computeReachRewards(dtmc, dtmcRew, target);
+		
+		result.timeTaken += result.timePre;
+		result.timePre = reduceTime/1000.0;
+		mainLog.println("\nReducing ACTMC to equivalent DTMC "
+				+ "took " + result.timePre/1000.0 + "seconds.");
+		mainLog.println("Computing reachability rewards for the equivalent DTMC "
+				+ "took " + result.timeTaken/1000.0 + "seconds.");
+		
+		return result;
 	}
 	
 	private ModelCheckerResult computeSteadyStateRewardsACTMC(ACTMCSimple actmc, ACTMCRewardsSimple actmcRew) throws PrismException {
 		long reduceTime = System.currentTimeMillis();
 		// Initialize necessary data structures
-		Map<String, ACTMCPotatoData> pdMap = createPotatoDataMap(actmc, actmcRew);
+		Map<String, ACTMCPotatoData> pdMap = createPotatoDataMap(actmc, actmcRew, null);
 		Map<Integer, Distribution> timesWithinPotatoes = new HashMap<Integer, Distribution>();
 		for (Map.Entry<String, ACTMCPotatoData> pdEntry : pdMap.entrySet()) {
 			timesWithinPotatoes.putAll(pdEntry.getValue().getMeanTimes());

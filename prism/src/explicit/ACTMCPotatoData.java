@@ -60,18 +60,21 @@ public class ACTMCPotatoData
 	private ACTMCRewardsSimple rewards = null;
 	/** termination epsilon (i.e. when probability gets smaller than this, stop) */
 	private double error;
+	/** Bitset of target states for reachability analysis. May be null. */
+	private BitSet target = null;
 	
 	/**
-	 * Set of states that belong to the potato.
+	 * Set of states that belong to the potato, but are not reachability targets.
 	 * <br>
-	 * I.e. such states of {@code actmc} where {@code event} is active.
+	 * I.e. such states of {@code actmc} that are not in {@code target} and 
+	 * where {@code event} is active.
 	 */
 	private Set<Integer> potato = new HashSet<Integer>();
 	/** 
-	 * Subset of potato states that are acting as entrances into the potato.
+	 * Subset of {@code potato} states that are acting as entrances into the potato.
 	 * <br>
 	 * I.e. such states of {@code actmc} where {@code event} is active,
-	 * and at the same time they are:
+	 * they are not reachability targets, and at the same time they are:
 	 * <br>
 	 * 1) reachable in a single exponential transition
 	 * from a state where {@code event} is not active, or
@@ -82,7 +85,7 @@ public class ACTMCPotatoData
 	 */
 	private Set<Integer> entrances = new HashSet<Integer>();
 	/**
-	 * Set of states that are successors of the potato states.
+	 * Set of states that are successors of the potato states, or reachability targets.
 	 * <br>
 	 * I.e. the states of the {@code actmc} that are:
 	 * <br>
@@ -90,7 +93,9 @@ public class ACTMCPotatoData
 	 * the potato in a single transition, or
 	 * <br>
 	 * 2) inside the potato and reachable from within
-	 * the potato as a self-loop of {@code event}.
+	 * the potato as a self-loop of {@code event}, or
+	 * <br>
+	 * 3) target states that would otherwise be within the potato.
 	 */
 	private Set<Integer> successors = new HashSet<Integer>();
 	private boolean statesComputed = false;
@@ -141,8 +146,8 @@ public class ACTMCPotatoData
 	 * @param error Termination epsilon (i.e. when probability gets smaller than this, stop)
 	 * @throws Exception if the arguments break the above rules
 	 */
-	public ACTMCPotatoData(ACTMCSimple actmc,
-			GSMPEvent event, ACTMCRewardsSimple rewards, double error) throws PrismException {
+	public ACTMCPotatoData(ACTMCSimple actmc, GSMPEvent event, 
+			ACTMCRewardsSimple rewards, double error, BitSet target) throws PrismException {
 		if (actmc == null || event == null) {
 			throw new NullPointerException("ACTMCPotatoData constructor has received a null object!");
 		}
@@ -157,6 +162,7 @@ public class ACTMCPotatoData
 		this.event = event;
 		this.rewards = rewards;
 		this.error = error;
+		this.target = target;
 	}
 	
 	/** Gets the actmc model associated with this object */
@@ -306,6 +312,7 @@ public class ACTMCPotatoData
 		computePotato();
 		computeEntrances();
 		computeSuccessors();
+		processTargets();
 		statesComputed = true;
 	}
 	
@@ -339,6 +346,24 @@ public class ACTMCPotatoData
 			}
 		}
 		
+		// Check for non-exponential transitions into the potato (from other potatoes)
+		List<GSMPEvent> events = actmc.getEventList();
+		for (GSMPEvent e : events) {
+			if (e == this.event) {
+				continue; // consider only other events for now
+			}
+			BitSet eActStates = e.getActive();
+			for (int s = eActStates.nextSetBit(0); s >= 0; s = eActStates.nextSetBit(s+1)) {
+			     Distribution eDistr = e.getTransitions(s);
+			     Set<Integer> eDistrSupport = eDistr.getSupport();
+			     for (int t : eDistrSupport) {
+			    	 if (potato.contains(t)) {
+			    		 entrances.add(t);
+			    	 }
+			     }
+			}
+		}
+		
 		// Also, add all initial states within the potato.
 		for (int is : actmc.getInitialStates()) {
 			if (potato.contains(is)) {
@@ -368,6 +393,20 @@ public class ACTMCPotatoData
 			Set<Integer> support = new HashSet<Integer>(actmc.getTransitions(ps).getSupport());
 			support.removeIf( s -> potato.contains(s));
 			successors.addAll(support);
+		}
+	}
+	
+	/** Assumes that {@code computeSuccessors()} has been called already. */
+	private void processTargets() {
+		if (target == null) {
+			return;
+		}
+		// Move all target states outside the potato, but consider them successors
+		for (int s = target.nextSetBit(0); s >= 0; s = target.nextSetBit(s+1)) {
+		     if (potato.remove(s)) {
+		    	 entrances.remove(s);
+		    	 successors.add(s);
+		     }
 		}
 	}
 	
@@ -424,14 +463,15 @@ public class ACTMCPotatoData
 		if (!potatoDTMCComputed) {
 			computePotatoDTMC();
 		}
-		// TODO MAJO - should this foxGynn have accuracy =error, or better ?
+		// TODO MAJO - foxGynn needs accuracy = kappa. implement it.
+		// TODO MAJO - for now, I use constant 1e-10.
 		
 		// Using class FoxGlynn to pre-compute the Poisson distribution.
 		// Different approach is required for each distribution type.
 		switch (event.getDistributionType().getEnum()) {
 		case DIRAC:
 			double fgRate = uniformizationRate * event.getFirstParameter();
-			foxGlynn = new FoxGlynn(fgRate, 1e-300, 1e+300, error);
+			foxGlynn = new FoxGlynn(fgRate, 1e-300, 1e+300, 1e-10);
 			break;
 		case ERLANG:
 			throw new UnsupportedOperationException("ACTMCPotatoData does not yet support the Erlang distribution!");

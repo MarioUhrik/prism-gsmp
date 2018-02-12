@@ -89,11 +89,20 @@ public class StateRewardsSimple extends StateRewards
 	@Override
 	public double getStateReward(int s)
 	{
+		// TODO MAJO - Note: I reimplemented this
+		if (stateRewards.size() > s) {
+			return stateRewards.get(s);
+		} else {
+			return 0.0;
+		}
+		
+		/*
 		try {
 			return stateRewards.get(s);
 		} catch (ArrayIndexOutOfBoundsException e) {
 			return 0.0;
 		}
+		*/
 	}
 
 	// Converters
