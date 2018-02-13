@@ -224,11 +224,11 @@ public class ACTMCPotatoData
 	 * It is a sub-model mimicking the potato behavior of the underlying DTMC.
 	 * <br>
 	 * WARNING: this DTMC uses a different state indexing to that of the {@code actmc}.
-	 * Use maps from {@code getMapCTMCtoACTMC()} and {@code getMapACTMCtoCTMC()}.
+	 * Use maps from {@code getMapDTMCtoACTMC()} and {@code getMapACTMCtoDTMC()}.
 	 * <br>
 	 * If this is the first call, this method computes them before returning it.
 	 */
-	public DTMC getPotatoCTMC() {
+	public DTMC getPotatoDTMC() {
 		if (!potatoDTMCComputed) {
 			computePotatoDTMC();
 		}

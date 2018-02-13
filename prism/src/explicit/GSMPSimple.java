@@ -349,7 +349,7 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 			     }
 			 }
 		}
-		ctmc.uniformise(ctmc.getDefaultUniformisationRate());
+		ctmc.uniformise(ctmc.getMaxExitRate());
 		return ctmc;
 	}
 	

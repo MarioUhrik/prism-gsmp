@@ -227,7 +227,7 @@ public class GSMPModelChecker extends ProbModelChecker
 				if (event.getIdentifier().contains(param.getEventName())) {
 					param.setEventName(event.getIdentifier()); // update the event name, as they change during build time
 					
-					// TODO MAJO - should we restrict ACTMC synthesis parameters to non-exponential events?
+					// TODO MAJO - fix this! exponential events should be allowed for synthesis!
 					if (isACTMC && event.getDistributionType() instanceof TypeDistributionExponential) {
 						throw new PrismException("ACTMC optimal parameter synthesis - all events in the list of parameters must be non-exponential!");
 					}
@@ -249,7 +249,7 @@ public class GSMPModelChecker extends ProbModelChecker
 	 */
 	private DTMCSimple reduceACTMCtoDTMC(ACTMCSimple actmc, Map<String, ACTMCPotatoData> potatoDataMap) throws PrismException {
 		CTMCSimple ctmc = new CTMCSimple(actmc);
-		double uniformizationRate = ctmc.getDefaultUniformisationRate();
+		double uniformizationRate = ctmc.getMaxExitRate();
 		
 		for (Map.Entry<String, ACTMCPotatoData> pdEntry : potatoDataMap.entrySet()) {
 			ACTMCPotatoData potatoData = pdEntry.getValue();
