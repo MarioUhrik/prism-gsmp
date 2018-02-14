@@ -432,7 +432,7 @@ public class ACTMCPotatoData
 			}
 		}
 		
-		double q = actmc.getDefaultUniformisationRate();
+		uniformizationRate = actmc.getMaxExitRate();
 		// Construct the transition matrix of the new CTMC
 		for (int s : potatoACTMCStates) {
 			if (potato.contains(s)) {
@@ -445,16 +445,13 @@ public class ACTMCPotatoData
 				}
 			} else {
 				// Else the state is a potato successor, so make it absorbing.
-				potatoCTMC.addToProbability(ACTMCtoDTMC.get(s), ACTMCtoDTMC.get(s), q);
+				potatoCTMC.addToProbability(ACTMCtoDTMC.get(s), ACTMCtoDTMC.get(s), uniformizationRate);
 			}
 		}
 		
 		// convert the CTMC to a DTMC and store the DTMC
-		potatoCTMC.uniformise(q);
-		q = potatoCTMC.getMaxExitRate();
-		uniformizationRate = q;
-		
-		potatoDTMC = new DTMCSimple(potatoCTMC.buildUniformisedDTMC(q));
+		potatoCTMC.uniformise(uniformizationRate);
+		potatoDTMC = potatoCTMC.buildUniformisedDTMC(uniformizationRate);
 		
 		potatoDTMCComputed = true;
 	}
