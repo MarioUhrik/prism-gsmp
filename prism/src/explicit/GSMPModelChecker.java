@@ -283,8 +283,10 @@ public class GSMPModelChecker extends ProbModelChecker
 	}
 	
 	/**
-	 * Uses ACTMCRewardsSimple {@code actmcRew} to create equivalent MCRewards.
+	 * Uses ACTMCRewardsSimple {@code actmcRew} to create equivalent MCRewards for {@code dtmc}.
 	 * Heavily relies on class {@link ACTMCPotatoData} for necessary computations.
+	 * The rewards are also adjusted to {@code dtmc.uniformizationRate}.
+	 * In order to skip this, please set it to 1.
 	 * @param actmcRew ACTMCRewardsSimple from which to construct MCRewards
 	 * @param dtmc DTMC equivalent to ACTMC which {@code actmcRew} belong to
 	 * @param potatoDataMap reusable storage of ACTMCPotatoData structures.
@@ -310,17 +312,16 @@ public class GSMPModelChecker extends ProbModelChecker
 		for (int s = 0; s < numStates ; ++s) {
 			double rew = actmcRew.getStateReward(s);
 			if (rew > 0) {
-				newRew.setStateReward(s, rew);
+				newRew.setStateReward(s, rew / dtmc.uniformizationRate);
 			}
 		}
 		
 		Set<Integer> entrances = meanRewWithinPotatoesOverTime.keySet();
 		for (int entrance : entrances) {
-			newRew.setStateReward(entrance, meanRewWithinPotatoesOverTime.get(entrance));
+			newRew.setStateReward(entrance, meanRewWithinPotatoesOverTime.get(entrance) / dtmc.uniformizationRate);
 		}
 		
 		return newRew;
-		// TODO MAJO - make sure this method works
 	}
 	
 	/**
@@ -442,6 +443,7 @@ public class GSMPModelChecker extends ProbModelChecker
 		DTMCSimple dtmc = reduceACTMCtoDTMC(actmc, pdMap);
 		
 		// Compute the new state reward values (including the event behavior)
+		dtmc.uniformizationRate = 1;
 		MCRewards dtmcRew = reduceACTMCRewtoDTMCRew(actmcRew, dtmc, pdMap);
 		
 		reduceTime = System.currentTimeMillis() - reduceTime;

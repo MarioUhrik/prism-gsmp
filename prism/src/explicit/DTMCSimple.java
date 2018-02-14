@@ -42,6 +42,9 @@ public class DTMCSimple extends DTMCExplicit implements ModelSimple
 
 	// Other statistics
 	protected int numTransitions;
+	/** Optionally, if created from a CTMC, stores the uniformization rate of the CTMC.
+	 *  I.e. each step of the DTMC corresponds to 1/uniformizationRate time. */
+	protected double uniformizationRate;
 
 	// Constructors
 

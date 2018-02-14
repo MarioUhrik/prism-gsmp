@@ -209,6 +209,7 @@ public class CTMCSimple extends DTMCSimple implements CTMC
 		int i;
 		double d;
 		dtmc = new DTMCSimple(numStates);
+		dtmc.uniformizationRate = q;
 		for (int in : getInitialStates()) {
 			dtmc.addInitialState(in);
 		}
