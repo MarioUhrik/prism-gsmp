@@ -27,12 +27,12 @@
 
 /**
  * This is a library for finding roots of polynomials created by Adrian Elgyutt in 2017
- * as the objective of his Master's thesis (see {@link https://is.muni.cz/th/396222/fi_m/}).
- * It was inserted into PRISM by Mario Uhrik in 2018. 
+ * as the objective of his Master's thesis.
+ * With the author's permission, it was inserted into PRISM by Mario Uhrik in 2018. 
  * <br>
- * As for now, there are some Slovak comments in the code.
- * Mostly, the relevant files have been copy-pasted as they were,
- * with only slight modifications for cleaner integration.
+ * For the most part, the relevant files have been copy-pasted as they were.
+ * However, some small changes were made in order to better
+ * integrate the library into PRISM codebase.
  * 
  * @author Adrian Elgyutt <396222@mail.muni.cz> (Masaryk University)
  * @author Mario Uhrik <433501@mail.muni.cz> (Masaryk University)

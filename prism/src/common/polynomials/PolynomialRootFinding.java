@@ -2,7 +2,7 @@
 //	
 //	Copyright (c) 2017-
 //	Authors:
-//  Adrian Elgyutt <396222@mail.muni.cz> (Masaryk University)
+//  * Adrian Elgyutt <396222@mail.muni.cz> (Masaryk University)
 //	
 //------------------------------------------------------------------------------
 //	
@@ -52,12 +52,12 @@ public class PolynomialRootFinding {
 	/**
 	 * Calculates number of roots in interval using sturm method
 	 * @param p0		polynomial to find roots
-	 * @param start		start of interval
+	 * @param start		start of interval (less than {@code end})
 	 * @param end		end of interval
 	 * @param divisionScale		division scale
 	 * @return			number of roots in (start,end)
 	 */
-	public static int sturm(Polynomial p0, BigDecimal start, BigDecimal end, int divisionScale){//start by mal byt mensi nez end..
+	public static int sturm(Polynomial p0, BigDecimal start, BigDecimal end, int divisionScale){
 		RoundingMode rounding1 = RoundingMode.DOWN;
 		RoundingMode rounding2 = RoundingMode.DOWN;
 		int startSignChanges = 0;
@@ -257,7 +257,7 @@ public class PolynomialRootFinding {
 			intervals.add(ab);
 			return intervals;
 		}
-		if((ab.getKey().subtract(ab.getValue())).abs().compareTo(BigDecimal.ONE.divide(new BigDecimal("10").pow(dScale))) <= 0){//ochrana kvoli zacykleniu pri nasobnom koreni
+		if((ab.getKey().subtract(ab.getValue())).abs().compareTo(BigDecimal.ONE.divide(new BigDecimal("10").pow(dScale))) <= 0){//infinite loop prevention
 			intervals.add(ab);//careful, could be more roots, multiple root or no root, could be false positive
 			return intervals;//need to check with newton
 		}
@@ -335,7 +335,7 @@ public class PolynomialRootFinding {
 			if(rootBeginInterval.compareTo(rootEndInterval) == 0){
 				root = PolynomialRootApproximation.findRootNewtonInInterval(p, decimalPrecision, rootBeginInterval.subtract(decimalPrecision), rootEndInterval.add(decimalPrecision.multiply(TWO)), true);
 			}
-			if(!root.getValue() && rootBeginInterval.compareTo(rootEndInterval) == 0) continue;//ochrana proti zacykleniu pri nasobnom koreni
+			if(!root.getValue() && rootBeginInterval.compareTo(rootEndInterval) == 0) continue;//infinite loop prevention
 			while(!root.getValue()){
 				BigDecimal intervalHalf = ((rootEndInterval.subtract(rootBeginInterval)).divide(new BigDecimal("2"), decimalPrecision.scale(), RoundingMode.HALF_UP)).add(rootBeginInterval);
 				int signBegin = p.value(rootBeginInterval).signum();
@@ -485,7 +485,7 @@ public class PolynomialRootFinding {
 				}
 			}
 			Pair<BigDecimal, Boolean> root = PolynomialRootApproximation.findRootNewtonInInterval(p, decimalPrecision, rootBeginInterval, rootEndInterval, true);
-			if(!root.getValue() && rootBeginInterval.compareTo(rootEndInterval) == 0) continue;//ochrana proti zacykleniu pri nasobnom koreni
+			if(!root.getValue() && rootBeginInterval.compareTo(rootEndInterval) == 0) continue;//infinite loop prevention
 			while(!root.getValue()){
 				BigDecimal intervalHalf = ((rootEndInterval.subtract(rootBeginInterval)).divide(new BigDecimal("2"), decimalPrecision.scale(), RoundingMode.HALF_UP)).add(rootBeginInterval);
 				int signBegin = p.value(rootBeginInterval).signum();
@@ -530,7 +530,7 @@ public class PolynomialRootFinding {
 		if(b.compareTo(BigDecimal.ZERO) < 0) return BigDecimal.ZERO;
 		Polynomial p = new Polynomial("x^" + n + "-" + b.toString());
 		BigDecimal startpoint = BigDecimal.ONE;
-		while(p.value(startpoint).compareTo(BigDecimal.ZERO) < 0) startpoint = startpoint.multiply(THREE);//OVELA RYCHLEJSIE nez 1
+		while(p.value(startpoint).compareTo(BigDecimal.ZERO) < 0) startpoint = startpoint.multiply(THREE);//much faster than 1
 		return PolynomialRootApproximation.findRootHalleyInInterval(p, BigDecimal.ONE.divide(BigDecimal.TEN.pow(scale)), startpoint, startpoint, false).getKey();
 	}
 }

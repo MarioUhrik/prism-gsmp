@@ -2,7 +2,7 @@
 //	
 //	Copyright (c) 2017-
 //	Authors:
-//  Adrian Elgyutt <396222@mail.muni.cz> (Masaryk University)
+//  * Adrian Elgyutt <396222@mail.muni.cz> (Masaryk University)
 //	
 //------------------------------------------------------------------------------
 //	
@@ -43,7 +43,7 @@ public class Bounds {
 	 * @param dScale	division scale
 	 * @return			upper bound on roots
 	 */
-	public static BigDecimal rootBound(Polynomial p, int dScale){//z pdfka co mi poslal matik
+	public static BigDecimal rootBound(Polynomial p, int dScale){
 		BigDecimal max = BigDecimal.ZERO;
 		if(p.coeffs.get(0).compareTo(BigDecimal.ZERO) == 0) return max;
 		for(int i = 1; i <= p.degree(); i++){
@@ -111,7 +111,7 @@ public class Bounds {
 	 * @param scale	required decimal digits
 	 * @return		upper bounds on positive roots of p
 	 */
-	public static BigDecimal vigklasBound2(Polynomial p, int scale){//z phd thesis
+	public static BigDecimal vigklasBound2(Polynomial p, int scale){
 		boolean changed = false;
 		if (p.getHighestCoeff().compareTo(BigDecimal.ZERO) < 0){
 			p.multiplyWithScalar(BigDecimal.ONE.negate());

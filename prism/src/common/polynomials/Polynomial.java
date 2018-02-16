@@ -2,7 +2,7 @@
 //	
 //	Copyright (c) 2017-
 //	Authors:
-//  Adrian Elgyutt <396222@mail.muni.cz> (Masaryk University)
+//  * Adrian Elgyutt <396222@mail.muni.cz> (Masaryk University)
 //	
 //------------------------------------------------------------------------------
 //	
@@ -45,7 +45,7 @@ public class Polynomial {
 	/**
 	 * Coefficients, coeff.get(i) represents coefficients of x^i
 	 */
-	public List<BigDecimal> coeffs;//malo by by from lowest to highest
+	public List<BigDecimal> coeffs;//should be from lowest to highest (but not guaranteed)
 	/**
 	 * Derivative of this polynomial
 	 */
@@ -75,7 +75,7 @@ public class Polynomial {
 	 * @param	s	string must be format ax^n+bx^m+..+cx+d, exponent must be positive int
 	 */
 	public Polynomial(String s){
-		//zaporne exponenty sposobia fail
+		//negative exponents cause failure
 		ArrayList<String> splitNegative = new ArrayList<>();		
 		for(String curString : s.split("(?<![E])-")){
 			if(curString.isEmpty()) continue;
@@ -99,7 +99,7 @@ public class Polynomial {
 			if(parseString.startsWith("x")) parseString = "1"+parseString;
 			Pattern p = Pattern.compile("(-?(\\d*\\.)?\\d+)?(E(\\+|-)\\d+)?x(\\^(-?(\\d*\\.)?\\d+))?");
 			Matcher m = p.matcher(parseString);
-			if(!m.find()){//ziadne x nenajdene, takze je to absolutny clen
+			if(!m.find()){//no "x" found, so this is the x^0 element
 				newCoefs.set(0, new BigDecimal(parseString));
 			}else{
 				int exponent = new BigDecimal(m.group(6) == null ? "1" : m.group(6)).intValue();
@@ -160,7 +160,7 @@ public class Polynomial {
 	 * @param	other	other polynomial
 	 * @return 	-1 if this  &lt; other, 0 if this == other, 1 if this  &gt; other
 	 */
-	public int compareTo(Polynomial other){	//return -1 ak this < other, 0 ak su rovne, 1 ak this > other//bolo zmenene z term na coeffs, malo by uz fungovat spravne
+	public int compareTo(Polynomial other){	//return -1 if this < other, 0 if equal, 1 if this > other
 		if(coeffs.size() > other.coeffs.size()){
 			for(int i = other.coeffs.size(); i < coeffs.size(); i++)
 				if(coeffs.get(i).compareTo(BigDecimal.ZERO) != 0) return 1;

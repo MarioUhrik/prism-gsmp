@@ -2,7 +2,7 @@
 //	
 //	Copyright (c) 2017-
 //	Authors:
-//  Adrian Elgyutt <396222@mail.muni.cz> (Masaryk University)
+//  * Adrian Elgyutt <396222@mail.muni.cz> (Masaryk University)
 //	
 //------------------------------------------------------------------------------
 //	

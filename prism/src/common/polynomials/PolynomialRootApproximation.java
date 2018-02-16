@@ -2,7 +2,7 @@
 //	
 //	Copyright (c) 2017-
 //	Authors:
-//  Adrian Elgyutt <396222@mail.muni.cz> (Masaryk University)
+//  * Adrian Elgyutt <396222@mail.muni.cz> (Masaryk University)
 //	
 //------------------------------------------------------------------------------
 //	
@@ -48,9 +48,9 @@ public class PolynomialRootApproximation {
 	 */
 	public static BigDecimal bisection(Polynomial p, BigDecimal a, BigDecimal b, BigDecimal eps){
 		BigDecimal c = a.add(b).divide(PolynomialRootFinding.TWO, eps.scale()+1, RoundingMode.HALF_UP);
-		System.out.print(" & " +c.subtract(a).setScale(eps.scale(), RoundingMode.HALF_UP).toString() + " & ");
-		System.out.print(c.setScale(eps.scale(), RoundingMode.HALF_UP).toString() + " & ");
-		System.out.println(p.value(c).setScale(eps.scale(), RoundingMode.HALF_UP) + " \\\\");
+		//System.out.print(" & " +c.subtract(a).setScale(eps.scale(), RoundingMode.HALF_UP).toString() + " & ");
+		//System.out.print(c.setScale(eps.scale(), RoundingMode.HALF_UP).toString() + " & ");
+		//System.out.println(p.value(c).setScale(eps.scale(), RoundingMode.HALF_UP) + " \\\\");
 		if(c.subtract(a).compareTo(eps) < 0) return c;
 		if(p.value(a).multiply(p.value(c)).compareTo(BigDecimal.ZERO) < 0){
 			return bisection(p, a, c, eps);
@@ -89,7 +89,7 @@ public class PolynomialRootApproximation {
 				success = true;
 				break;  
 			}
-			if(x1.compareTo(begin) < 0 || x1.compareTo(end) > 0 && needsToBeInside) return new Pair<>(x1, success);//dolezite, kvoli root skippingu!
+			if(x1.compareTo(begin) < 0 || x1.compareTo(end) > 0 && needsToBeInside) return new Pair<>(x1, success);//important because of root skipping!
 	    	x0 = x1;
 		}
 		return new Pair<>(x1.setScale(precision.scale(), RoundingMode.HALF_UP), success);
@@ -127,7 +127,7 @@ public class PolynomialRootApproximation {
 				success = true;
 				break;  
 			}
-			if(x1.compareTo(begin) < 0 || x1.compareTo(end) > 0 && needsToBeInside) return new Pair<>(x1, success);//dolezite, kvoli root skippingu!
+			if(x1.compareTo(begin) < 0 || x1.compareTo(end) > 0 && needsToBeInside) return new Pair<>(x1, success);//important because of root skipping!
 	    	x0 = x1;
 		}
 		return new Pair<>(x1.setScale(precision.scale() + 1, RoundingMode.HALF_UP), success);
