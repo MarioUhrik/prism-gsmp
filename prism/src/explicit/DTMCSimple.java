@@ -259,6 +259,34 @@ public class DTMCSimple extends DTMCExplicit implements ModelSimple
 				throw new PrismException("DTMC has a deadlock in state " + i);
 		}
 	}
+	
+	/**
+	 * Finds and returns the minimum probability within this DTMC.
+	 * I.e. returns the lowest existing P(s,t) out of all states s and t.
+	 * For DTMC with no transitions, this should return 0.
+	 */
+	public double getMinimumProbability()
+	{
+		double minProb = Double.MAX_VALUE;
+		
+		for (Distribution distr : trans) {
+			int distrMinIndex = distr.min();
+			if (distrMinIndex == -1) {
+				continue;
+			} 
+			
+			double distrMin = distr.get(distrMinIndex);
+			if (distrMin < minProb) {
+				minProb = distrMin;
+			}
+		}
+		
+		if (minProb == Double.MAX_VALUE) {
+			minProb = 0.0;
+		}
+		
+		return minProb;
+	}
 
 	// Accessors (for DTMC)
 

@@ -102,7 +102,7 @@ public class ACTMCPotatoData
 	 * DTMC making up the part of {@code actmc} such that it only
 	 * contains states that are the union of {@code potato} and {@code successors}.
 	 */
-	private DTMC potatoDTMC = null;
+	private DTMCSimple potatoDTMC = null;
 	double uniformizationRate;
 	/** Mapping from the state indices of {@code actmc} (K) to {@code potatoDTMC} (V)*/
 	private Map<Integer, Integer> ACTMCtoDTMC = new HashMap<Integer, Integer>();
@@ -441,7 +441,7 @@ public class ACTMCPotatoData
 			}
 		}
 		
-		uniformizationRate = actmc.getMaxExitRate();
+		uniformizationRate = actmc.getMaxExitRate(); // TODO MAJO - maxExitRate of the potatoCTMC is enough!!!
 		// Construct the transition matrix of the new CTMC
 		for (int s : potatoACTMCStates) {
 			if (potato.contains(s)) {
@@ -473,6 +473,8 @@ public class ACTMCPotatoData
 		for (int entrance : entrances) {
 			// Using class FoxGlynn to pre-compute the Poisson distribution.
 			// Different approach is required for each distribution type.
+			
+			// TODO MAJO - uncomment this when computeKappa is ready
 			//double accuracy = computeKappa(entrance); // compute the required accuracy for this entrance
 			double accuracy = 1e-10;
 			if (accuracy < mostPreciseAccuracy) {
@@ -514,6 +516,25 @@ public class ACTMCPotatoData
 		foxGlynnMapComputed = true;
 	}
 	
+	/**
+	 * Computes the kappa error bound for the given potato entrance and just returns it.
+	 * This method assumes {@code computePotatoDTMC()} has been already called!
+	 * @param entrance Potato entrance, i.e. element of {@code entrances}.
+	 * @return kappa error bound for this potato entrance, i.e. the accuracy with which
+	 *         all other data (such as {@code computeMeanDistributions()}) are computed.
+	 */
+	private double computeKappa(int entrance) {
+		// TODO MAJO - under development, does not yet work!
+		
+		// TODO MAJO - shitty variable names - do something about it!
+		double baseEpsilon = 1.0;
+		double baseKappaOne = potatoDTMC.getMinimumProbability() / 2;
+		
+		// TODO MAJO - continue the implementation by step 3 of the first algorithm.
+		
+		return 0; // TODO MAJO - temporary line
+	}
+
 	/**
 	 * For all potato entrances, computes the expected time spent within the potato
 	 * before leaving the potato, having entered from a particular entrance.
