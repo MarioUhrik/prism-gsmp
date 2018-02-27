@@ -58,8 +58,6 @@ public class ACTMCPotatoData
 	private GSMPEvent event;
 	/** Reward structure of the {@code actmc}. May be null. */
 	private ACTMCRewardsSimple rewards = null;
-	/** termination epsilon (i.e. when probability gets smaller than this, stop) */
-	private double error;
 	/** Bitset of target states for reachability analysis. May be null. */
 	private BitSet target = null;
 	
@@ -113,11 +111,26 @@ public class ACTMCPotatoData
 	private boolean potatoDTMCComputed = false;
 	
 	/**
-	 * Poisson distribution values for this potato,
+	 * Poisson distribution values for each entrance of this potato,
 	 * computed and stored by class FoxGlynn.
+	 * I.e. keys are potato entrances, and values are Poisson distribution values.
 	 */
-	private FoxGlynn foxGlynn = null;
-	private boolean foxGlynnComputed = false;
+	private Map<Integer, FoxGlynn> foxGlynnMap = null;
+	/**
+	 * While computing the {@code foxGlynnMap}, the most accurate accuracy (kappa)
+	 * is detected and stored here.
+	 * I.e. {@code foxGlynnMap.get(mostPreciseAccuracyEntrance)} contains the most accurate
+	 * Poisson probabilities, computed with precision {@code mostPreciseAccuracy}.
+	 */
+	private double mostPreciseAccuracy = Double.MAX_VALUE;
+	/**
+	 * While computing the {@code foxGlynnMap}, the potato entrance with the highest
+	 * required accuracy (kappa) is detected and stored here.
+	 * I.e. {@code foxGlynnMap.get(mostPreciseAccuracyEntrance)} contains the most accurate
+	 * Poisson probabilities, computed with precision {@code mostPreciseAccuracy}.
+	 */
+	private int mostPreciseAccuracyEntrance;
+	private boolean foxGlynnMapComputed = false;
 	
 	/** Mapping of expected accumulated rewards until leaving the potato onto states used to enter the potato */
 	private Map<Integer, Double> meanRewards = new HashMap<Integer, Double>();
@@ -143,25 +156,21 @@ public class ACTMCPotatoData
 	 * @param event Event belonging to the ACTMC. Must not be null!
 	 * @param rewards Optional ACTMC Reward structure. May be null, but calls to
 	 *        {@code getMeanReward()} with null reward structure throws an exception!
-	 * @param error Termination epsilon (i.e. when probability gets smaller than this, stop)
+	 * @param target Bitset of target states (if doing reachability).
 	 * @throws Exception if the arguments break the above rules
 	 */
 	public ACTMCPotatoData(ACTMCSimple actmc, GSMPEvent event, 
-			ACTMCRewardsSimple rewards, double error, BitSet target) throws PrismException {
+			ACTMCRewardsSimple rewards, BitSet target) throws PrismException {
 		if (actmc == null || event == null) {
 			throw new NullPointerException("ACTMCPotatoData constructor has received a null object!");
 		}
 		if (!actmc.getEventList().contains(event)) {
 			throw new IllegalArgumentException("ACTMCPotatoData received arguments (actmc,event) where event does not belong to actmc!");
 		}
-		if (error <= 0.0 || error >= 0.5) { // TODO MAJO - can we force the error to be exactly 0? I guess not.
-			throw new IllegalArgumentException("ACTMCPotatoData received an inappropriate termination error bound " + error);
-		}
 		
 		this.actmc = actmc;
 		this.event = event;
 		this.rewards = rewards;
-		this.error = error;
 		this.target = target;
 	}
 	
@@ -460,40 +469,49 @@ public class ACTMCPotatoData
 		if (!potatoDTMCComputed) {
 			computePotatoDTMC();
 		}
-		// TODO MAJO - foxGynn needs accuracy = kappa. implement it.
-		// TODO MAJO - for now, I use constant 1e-10.
 		
-		// Using class FoxGlynn to pre-compute the Poisson distribution.
-		// Different approach is required for each distribution type.
-		switch (event.getDistributionType().getEnum()) {
-		case DIRAC:
-			double fgRate = uniformizationRate * event.getFirstParameter();
-			foxGlynn = new FoxGlynn(fgRate, 1e-300, 1e+300, 1e-10);
-			break;
-		case ERLANG:
-			throw new UnsupportedOperationException("ACTMCPotatoData does not yet support the Erlang distribution!");
-			// TODO MAJO - implement erlang distributed event support
-			//break;
-		case EXPONENTIAL:
-			throw new PrismException("ACTMCPotatoData received an event with exponential distribution!");
-			// TODO MAJO - implement exponentially distributed event support
-			//break;
-		case UNIFORM:
-			throw new UnsupportedOperationException("ACTMCPotatoData does not yet support the uniform distribution!");
-			// TODO MAJO - implement uniformly distributed event support
-			//break;
-		case WEIBULL:
-			throw new UnsupportedOperationException("ACTMCPotatoData does not yet support the Weibull distribution!");
-			// TODO MAJO - implement weibull distributed event support
-			//break;
-		default:
-			throw new PrismException("ACTMCPotatoData received an event with unrecognized distribution!");
-		}
-		if (foxGlynn.getRightTruncationPoint() < 0) {
-			throw new PrismException("Overflow in Fox-Glynn computation of the Poisson distribution!");
+		for (int entrance : entrances) {
+			// Using class FoxGlynn to pre-compute the Poisson distribution.
+			// Different approach is required for each distribution type.
+			//double accuracy = computeKappa(entrance); // compute the required accuracy for this entrance
+			double accuracy = 1e-10;
+			if (accuracy < mostPreciseAccuracy) {
+				mostPreciseAccuracy = accuracy;
+				mostPreciseAccuracyEntrance = entrance;
+			}
+			FoxGlynn fg;
+			
+			switch (event.getDistributionType().getEnum()) {
+			case DIRAC:
+				double fgRate = uniformizationRate * event.getFirstParameter();
+				fg = new FoxGlynn(fgRate, 1e-300, 1e+300, accuracy);
+				foxGlynnMap.put(entrance, fg);
+				break;
+			case ERLANG:
+				throw new UnsupportedOperationException("ACTMCPotatoData does not yet support the Erlang distribution!");
+				// TODO MAJO - implement erlang distributed event support
+				//break;
+			case EXPONENTIAL:
+				throw new PrismException("ACTMCPotatoData received an event with exponential distribution!");
+				// TODO MAJO - implement exponentially distributed event support
+				//break;
+			case UNIFORM:
+				throw new UnsupportedOperationException("ACTMCPotatoData does not yet support the uniform distribution!");
+				// TODO MAJO - implement uniformly distributed event support
+				//break;
+			case WEIBULL:
+				throw new UnsupportedOperationException("ACTMCPotatoData does not yet support the Weibull distribution!");
+				// TODO MAJO - implement weibull distributed event support
+				//break;
+			default:
+				throw new PrismException("ACTMCPotatoData received an event with unrecognized distribution!");
+			}
+			if (fg.getRightTruncationPoint() < 0) {
+				throw new PrismException("Overflow in Fox-Glynn computation of the Poisson distribution!");
+			}
 		}
 		
-		foxGlynnComputed = true;
+		foxGlynnMapComputed = true;
 	}
 	
 	/**
@@ -503,28 +521,29 @@ public class ACTMCPotatoData
 	 * for the potato entrances, and with a time bound given by the potato event.
 	 */
 	private void computeMeanTimes() throws PrismException {
-		if (!foxGlynnComputed) {
+		if (!foxGlynnMapComputed) {
 			computeFoxGlynn();
 		}
 		
 		int numStates = potatoDTMC.getNumStates();
 		
-		// Prepare the FoxGlynn data
-		int left = foxGlynn.getLeftTruncationPoint();
-		int right = foxGlynn.getRightTruncationPoint();
-		double[] weights = foxGlynn.getWeights().clone();
-		double totalWeight = foxGlynn.getTotalWeight();
-		for (int i = left; i <= right; i++) {
-			weights[i - left] /= totalWeight;
-		}
-		for (int i = left+1; i <= right; i++) {
-			weights[i - left] += weights[i - 1 - left];
-		}
-		for (int i = left; i <= right; i++) {
-			weights[i - left] = (1 - weights[i - left]) / uniformizationRate;
-		}
-		
 		for (int entrance : entrances) {
+			
+			// Prepare the FoxGlynn data
+			FoxGlynn fg = foxGlynnMap.get(entrance);
+			int left = fg.getLeftTruncationPoint();
+			int right = fg.getRightTruncationPoint();
+			double[] weights = fg.getWeights().clone();
+			double totalWeight = fg.getTotalWeight();
+			for (int i = left; i <= right; i++) {
+				weights[i - left] /= totalWeight;
+			}
+			for (int i = left+1; i <= right; i++) {
+				weights[i - left] += weights[i - 1 - left];
+			}
+			for (int i = left; i <= right; i++) {
+				weights[i - left] = (1 - weights[i - left]) / uniformizationRate;
+			}
 			
 			// Prepare solution arrays
 			double[] soln = new double[numStates];
@@ -592,22 +611,23 @@ public class ACTMCPotatoData
 	 * I.e., on average, where does the ACTMC end up when it happens to enter a potato.
 	 */
 	private void computeMeanDistributions() throws PrismException {
-		if (!foxGlynnComputed) {
+		if (!foxGlynnMapComputed) {
 			computeFoxGlynn();
 		}
 		
 		int numStates = potatoDTMC.getNumStates();
-
-		// Prepare the FoxGlynn data
-		int left = foxGlynn.getLeftTruncationPoint();
-		int right = foxGlynn.getRightTruncationPoint();
-		double[] weights = foxGlynn.getWeights().clone();
-		double totalWeight = foxGlynn.getTotalWeight();
-		for (int i = left; i <= right; i++) {
-			weights[i - left] /= totalWeight;
-		}
 		
 		for (int entrance : entrances) {
+			
+			// Prepare the FoxGlynn data
+			FoxGlynn fg = foxGlynnMap.get(entrance);
+			int left = fg.getLeftTruncationPoint();
+			int right = fg.getRightTruncationPoint();
+			double[] weights = fg.getWeights().clone();
+			double totalWeight = fg.getTotalWeight();
+			for (int i = left; i <= right; i++) {
+				weights[i - left] /= totalWeight;
+			}
 			
 			// Prepare solution arrays // TODO MAJO - optimize, reuse the arrays!
 			double[] initDist = new double[numStates];
@@ -716,10 +736,11 @@ public class ACTMCPotatoData
 		int numStates = potatoDTMC.getNumStates();
 		
 		// Prepare the FoxGlynn data
-		int left = foxGlynn.getLeftTruncationPoint();
-		int right = foxGlynn.getRightTruncationPoint();
-		double[] weights = foxGlynn.getWeights().clone();
-		double totalWeight = foxGlynn.getTotalWeight();
+		FoxGlynn fg = foxGlynnMap.get(mostPreciseAccuracyEntrance);
+		int left = fg.getLeftTruncationPoint();
+		int right = fg.getRightTruncationPoint();
+		double[] weights = fg.getWeights().clone();
+		double totalWeight = fg.getTotalWeight();
 		for (int i = left; i <= right; i++) {
 			weights[i - left] /= totalWeight;
 		}
@@ -793,7 +814,6 @@ public class ACTMCPotatoData
 					double weight = meanDistributionsBeforeEvent.get(entrance)[ACTMCtoDTMC.get(ps)];
 					double eventRew = rews.get(succ);
 					result[ACTMCtoDTMC.get(entrance)] += prob * weight * eventRew;
-					// TODO MAJO - uncertain about this
 				}
 			}
 			

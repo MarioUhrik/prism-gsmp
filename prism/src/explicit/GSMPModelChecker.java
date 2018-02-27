@@ -275,7 +275,10 @@ public class GSMPModelChecker extends ProbModelChecker
 				ctmc.trans.set(entrance, meanDistr);
 			}
 		}
-		ctmc.uniformise(uniformizationRate); // TODO MAJO - is this necessary?
+		ctmc.uniformise(uniformizationRate); // TODO MAJO - is this necessary? // TODO - no its not
+		
+		// TODO MAJO - remove unreachable states
+		
 		// Then, reduce the CTMC to a DTMC.
 		DTMCSimple dtmc = ctmc.buildUniformisedDTMC(uniformizationRate);
 		
@@ -336,13 +339,11 @@ public class GSMPModelChecker extends ProbModelChecker
 			ACTMCRewardsSimple rew, BitSet target) throws PrismException {
 		Map<String, ACTMCPotatoData> pdMap = new HashMap<String, ACTMCPotatoData>();
 		List<GSMPEvent> events = actmc.getEventList();
-		double terminationEpsilon = getTermCritParam();
 		
 		for (GSMPEvent event: events) {
 			ACTMCPotatoData potatoData = new ACTMCPotatoData(actmc,
 					event,
 					rew,
-					terminationEpsilon,
 					target);
 			pdMap.put(event.getIdentifier(), potatoData);
 		}
