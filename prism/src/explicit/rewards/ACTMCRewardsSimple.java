@@ -27,6 +27,7 @@
 package explicit.rewards;
 
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -243,6 +244,26 @@ public class ACTMCRewardsSimple implements MCRewards
 
 	public ACTMCRewardsSimple liftFromModel(Product<? extends Model> product) {
 		throw new UnsupportedOperationException("Not implemented!");
+	}
+	
+	/**
+	 * Find a maximum state reward from within a set of states represented by {@code bs}.
+	 * Returns 0 if none are found.
+	 * @param bs set of states
+	 */
+	public double getMax(BitSet bs) {
+		double max = Double.MIN_VALUE;
+		for (int i = bs.nextSetBit(0); i >= 0; i = bs.nextSetBit(i+1)) {
+			double rew = stateRewards.get(i);
+			if (rew > max) {
+				max = rew;
+			}
+		}
+		
+		if (max == Double.MIN_VALUE) {
+			max = 0;
+		}
+		return max;
 	}
 
 	/**

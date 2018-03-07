@@ -115,7 +115,6 @@ public class ACTMCPotatoData
 	 * I.e. each key is a potato entrance, and the value is the required precision.
 	 */
 	private Map<Integer, Double> kappaMap = new HashMap<Integer, Double>();
-	private boolean kappaMapComputed = false;
 	
 	/**
 	 * Poisson distribution values for each entrance of this potato,
@@ -192,8 +191,6 @@ public class ACTMCPotatoData
 	 */
 	public void setKappaMap(Map<Integer, Double> kappaMap) {
 		this.kappaMap = kappaMap;
-		// prevent this class from recomputing and overwriting inserted kappa values
-		kappaMapComputed = true;
 		// force this class to recompute all data with the new kappa values
 		foxGlynnMapComputed = false;
 		meanTimesComputed = false;
@@ -264,11 +261,19 @@ public class ACTMCPotatoData
 	 * <br>
 	 * If this is the first call, this method computes them before returning it.
 	 */
-	public DTMC getPotatoDTMC() {
+	public DTMCSimple getPotatoDTMC() {
 		if (!potatoDTMCComputed) {
 			computePotatoDTMC();
 		}
 		return potatoDTMC;
+	}
+	
+	/**
+	 * Gets a mapping where the keys are entrances into the potato,
+	 * and the values are current kappa error bounds.
+	 */
+	public Map<Integer, Double> getKappaMap() {
+		return kappaMap;
 	}
 	
 	/**
@@ -492,51 +497,19 @@ public class ACTMCPotatoData
 		potatoDTMCComputed = true;
 	}
 	
-	/**
-	 * Computes the kappa error bound for each potato entrance
-	 * and stores it into {@code kappaMap}.
-	 */
-	private void computeKappa() throws PrismException {
+	private void computeFoxGlynn() throws PrismException {
 		if (!potatoDTMCComputed) {
 			computePotatoDTMC();
-		}
-		kappaMapComputed = true;
-		
-		// TODO MAJO - under development, does not yet work!
-		double baseEpsilon = 1.0;
-		
-		// Precomputation phase 1 (inaccurate kappaOne)
-		for (int entrance : entrances) {
-			// TODO MAJO - shitty variable names - do something about it!
-			BitSet reachableStates = potatoDTMC.getReachableStates(ACTMCtoDTMC.get(entrance));
-			reachableStates.andNot(target); // TODO MAJO - Optimize by doing them per entire bitset!
-			
-			double baseKappaOne = potatoDTMC.getMinimumProbability(reachableStates) / 2;
-			int n = reachableStates.cardinality(); // amount of non-target states
-			double maxExpectedSteps = n / Math.pow(baseKappaOne, n);
-			double a = baseKappaOne;
-			double b = 1 / (2 * maxExpectedSteps * n);
-			double c = baseEpsilon / ((2 * maxExpectedSteps) * (1 + maxExpectedSteps * n));
-			double kappaOne = Math.min(a, Math.min(b, c));
-			kappaMap.put(entrance, kappaOne);
-		}
-		computeMeanDistributions();
-		
-		
-		// TODO MAJO - continue the implementation by step 5 of the first algorithm.
-	}
-	
-	private void computeFoxGlynn() throws PrismException {
-		if (!kappaMapComputed) {
-			computeKappa();
 		}
 		
 		for (int entrance : entrances) {
 			// Using class FoxGlynn to pre-compute the Poisson distribution.
 			// Different approach is required for each distribution type.
 			
-			double accuracy = kappaMap.get(entrance); //get the computed required accuracy
-			//double accuracy = 1e-10; //hardcoded alternative
+			Double accuracy = kappaMap.get(entrance); //get the preset required accuracy
+			if (accuracy == null) {
+				accuracy = 1e-10; //if none is preset, then use a default one
+			}
 			if (accuracy < mostPreciseAccuracy) {
 				mostPreciseAccuracy = accuracy;
 				mostPreciseAccuracyEntrance = entrance;

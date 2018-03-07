@@ -30,9 +30,12 @@ import java.util.BitSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.Vector;
 
 import explicit.rewards.ACTMCRewardsSimple;
 import explicit.rewards.MCRewards;
+import explicit.rewards.StateRewardsSimple;
 import prism.PrismException;
 
 /**
@@ -60,6 +63,9 @@ public class ACTMCReduction
 	private DTMCSimple dtmc = null;
 	private MCRewards dtmcRew = null;
 	
+	/** Default first stage accuracy for computing kappa */
+	private static double epsilon = 1;
+	
 	/**
 	 * The only constructor
 	 * @param actmc Associated ACTMC model. Must not be null!
@@ -77,26 +83,188 @@ public class ACTMCReduction
 		this.pdMap = createPotatoDataMap(actmc, actmcRew, target);
 	}
 	
-	public DTMCSimple getDTMC() {
+	public DTMCSimple getDTMC() throws PrismException {
 		if (dtmc == null) {
 			computeEquivalentDTMC();
 		}
 		return dtmc;
 	}
 	
-	private void computeEquivalentDTMC() {
+	private void computeEquivalentDTMC() throws PrismException {
 		// TODO MAJO - think of better names
-		// TODO MAJO - continue here!
-		/*
-		computeKappaOne();
-		computeKappaTwo();
-		computeKappa();
 		
-		constructEquivalentDTMC();
-		constructEquivalentDTMCRew();
-		*/
+		Map<Integer, Double> kappaOne = computeKappaOne();
+		DTMCSimple kappaOneDTMC = constructDTMC();
+		
+		Map<Integer, Double> kappaTwo = computeKappaTwo();
+		DTMCSimple kappaTwoDTMC = constructDTMC();
+		MCRewards kappaTwoDTMCRew = constructDTMCRew();
+		// TODO MAJO - continue by step 6 of both algorithms
+		
+		//Map<Integer, Double> kappa = computeKappa();
+		
+		///constructEquivalentDTMC();
+		//constructEquivalentDTMCRew();
+	}
+
+	private Map<Integer, Double> computeKappaOne() throws PrismException {
+		Map<Integer, Double> kappaMap = new HashMap<Integer, Double>();
+		
+		for (Map.Entry<String, ACTMCPotatoData> pdEntry : pdMap.entrySet()) {
+			ACTMCPotatoData pd = pdEntry.getValue();
+			Set<Integer> entrances = pd.getEntrances();
+			DTMCSimple potatoDTMC = pd.getPotatoDTMC();
+			Map<Integer, Integer> ACTMCtoDTMC = pd.getMapACTMCtoDTMC();
+			Map<Integer, Double> kappaPotatoMap = new HashMap<Integer, Double>();
+			
+			for (int entrance : entrances) {
+				// TODO MAJO - shitty variable names - do something about it!
+				BitSet reachableStates = potatoDTMC.getReachableStates(ACTMCtoDTMC.get(entrance));
+				reachableStates.andNot(target); // TODO MAJO - Optimize by doing them per entire bitset!
+				
+				double baseKappaOne = potatoDTMC.getMinimumProbability(reachableStates) / 2;
+				int n = reachableStates.cardinality(); // amount of non-target states
+				double maxExpectedSteps = n / Math.pow(baseKappaOne, n);
+				double a = baseKappaOne;
+				double b = 1 / (2 * maxExpectedSteps * n);
+				double c = epsilon / ((2 * maxExpectedSteps) * (1 + maxExpectedSteps * n));
+				double kappaOne = Math.min(a, Math.min(b, c));
+				kappaPotatoMap.put(entrance, kappaOne);
+			}
+			pd.setKappaMap(kappaPotatoMap);
+			kappaMap.putAll(kappaPotatoMap);
+		}
+		return kappaMap;
 	}
 	
+	private Map<Integer, Double> computeKappaTwo() {
+		Map<Integer, Double> kappaMap = new HashMap<Integer, Double>();
+		
+		for (Map.Entry<String, ACTMCPotatoData> pdEntry : pdMap.entrySet()) {
+			ACTMCPotatoData pd = pdEntry.getValue();
+			Set<Integer> entrances = pd.getEntrances();
+			DTMCSimple potatoDTMC = pd.getPotatoDTMC();
+			Map<Integer, Integer> ACTMCtoDTMC = pd.getMapACTMCtoDTMC();
+			Vector<Integer> DTMCtoACTMC = pd.getMapDTMCtoACTMC();
+			Map<Integer, Double> kappaPotatoMap = new HashMap<Integer, Double>();
+			
+			for (int entrance : entrances) {
+				// TODO MAJO - shitty variable names - do something about it!
+				BitSet reachableStates = potatoDTMC.getReachableStates(ACTMCtoDTMC.get(entrance));
+				reachableStates.andNot(target); // TODO MAJO - Optimize by doing them per entire bitset!
+				BitSet reachableStatesPermut = new BitSet(actmc.getNumStates());
+				for (int i = reachableStates.nextSetBit(0); i >= 0; i = reachableStates.nextSetBit(i+1)) {
+					reachableStatesPermut.set(DTMCtoACTMC.get(i));
+				}
+
+				double minProb = potatoDTMC.getMinimumProbability(reachableStates) / 2;
+				double maxRew = actmcRew.getMax(reachableStatesPermut);
+				double baseKappaTwo = Math.min(minProb, maxRew);
+				int n = reachableStates.cardinality(); // amount of non-target states
+				double maxExpectedSteps = n / Math.pow(baseKappaTwo, n);
+				double maxExpectedTR = maxExpectedSteps * maxRew;
+				double a = baseKappaTwo;
+				double b = 1 / (2 * maxExpectedSteps * n);
+				double c = epsilon / ((2 * maxExpectedSteps) * (1 + maxExpectedTR * n));
+				double kappaTwo = Math.min(a, Math.min(b, c));
+				kappaPotatoMap.put(entrance, kappaTwo);
+			}
+			pd.setKappaMap(kappaPotatoMap);
+			kappaMap.putAll(kappaPotatoMap);
+		}
+		return kappaMap;
+	}
+	
+	private void computeKappa() {
+		// TODO Auto-generated method stub
+		
+	}
+	
+	/**
+	 * Uses {@code actmc} and current {@code pdMap} to construct
+	 * equivalent {@code dtmc}.
+	 * @return {@code dtmc} equivalent to {@code actmc} according to the current {@code pdMap}
+	 */
+	private DTMCSimple constructDTMC() throws PrismException {
+		CTMCSimple ctmc = new CTMCSimple(actmc);
+		double uniformizationRate = ctmc.getMaxExitRate();
+		
+		for (Map.Entry<String, ACTMCPotatoData> pdEntry : pdMap.entrySet()) {
+			ACTMCPotatoData potatoData = pdEntry.getValue();
+			Map<Integer, Distribution> meanTimesWithinPotato = potatoData.getMeanTimes();
+			Map<Integer, Distribution> meanDistrs = potatoData.getMeanDistributions();
+			
+			Set<Integer> potatoEntrances = potatoData.getEntrances();
+			for (int entrance : potatoEntrances) {
+				// compute the rate
+				Distribution potatoTimeDistr = meanTimesWithinPotato.get(entrance);
+				double theta = potatoTimeDistr.sum();
+				double meanRateWithinPotato = 1 / theta;
+				if ((meanRateWithinPotato) > uniformizationRate) {
+					uniformizationRate = meanRateWithinPotato;
+				}
+				
+				// weigh the distribution by the rate and assign it to the CTMC
+				Distribution meanDistr = new Distribution(meanDistrs.get(entrance));
+				Set<Integer> distrSupport = meanDistrs.get(entrance).getSupport();
+				for ( int s : distrSupport) {
+					meanDistr.set(s, meanDistr.get(s) * meanRateWithinPotato);
+				}
+				ctmc.trans.set(entrance, meanDistr);
+			}
+		}
+		ctmc.uniformise(uniformizationRate); // TODO MAJO - is this necessary? // TODO - no its not
+		
+		// TODO MAJO - remove unreachable states
+		
+		// Then, reduce the CTMC to a DTMC.
+		DTMCSimple dtmc = ctmc.buildUniformisedDTMC(uniformizationRate);
+		
+		return dtmc;
+	}
+	
+	/**
+	 * Uses {@code actmc}, {@code actmcRew} and current {@code pdMap} to construct
+	 * equivalent {@code mcRewards} for {@code dtmc}.
+	 * <br>
+	 * The rewards are also adjusted to {@code dtmc.uniformizationRate}.
+	 * In order to skip this, please set it to 1.
+	 * @return {@code MCRewards} equivalent to actmcRew
+	 */
+	private MCRewards constructDTMCRew() throws PrismException {
+		StateRewardsSimple newRew = new StateRewardsSimple();
+		if (actmcRew == null) {
+			return newRew; // TODO MAJO - is this ok?
+		}
+		
+		Map<Integer, Double> meanRewWithinPotatoesOverTime = new HashMap<Integer, Double>();
+		for (Map.Entry<String, ACTMCPotatoData> pdEntry : pdMap.entrySet()) {
+			ACTMCPotatoData potatoData = pdEntry.getValue();
+			Set<Integer> entrances = potatoData.getEntrances();
+			for (int entrance : entrances) {
+				double rew = potatoData.getMeanRewards().get(entrance);
+				double theta = potatoData.getMeanTimes().get(entrance).sum();
+				double meanRew = rew / theta;//average reward over average time spent within
+				meanRewWithinPotatoesOverTime.put(entrance, meanRew);
+			}
+		}
+		
+		int numStates = dtmc.getNumStates();
+		for (int s = 0; s < numStates ; ++s) {
+			double rew = actmcRew.getStateReward(s);
+			if (rew > 0) {
+				newRew.setStateReward(s, rew / dtmc.uniformizationRate);
+			}
+		}
+		
+		Set<Integer> entrances = meanRewWithinPotatoesOverTime.keySet();
+		for (int entrance : entrances) {
+			newRew.setStateReward(entrance, meanRewWithinPotatoesOverTime.get(entrance) / dtmc.uniformizationRate);
+		}
+		
+		return newRew;
+	}
+
 	/**
 	 * Creates a map where the keys are string identifiers of the GSMPEvents,
 	 * and the values are corresponding ACTMCPotatoData structures.
