@@ -40,12 +40,12 @@ import explicit.rewards.ACTMCRewardsSimple;
 import prism.PrismException;
 
 /**
- * Class for storage and computation of potato-related data for ACTMCs.
+ * Class for storage and computation of single potato-related data for ACTMCs.
  * <br>
  * Potato is a subset of states of an ACTMC in which a given event is active.
  * <br><br>
  * This data is fundamental for ACTMC model checking methods based on reduction
- * of ACTMC to CTMC. The reduction works by pre-computing the expected behavior
+ * of ACTMC to DTMC. The reduction works by pre-computing the expected behavior
  * (rewards, spent time, resulting distribution...) occurring between
  * entering and leaving a potato. Then, these expected values are used in
  * regular CTMC/DTMC model checking methods.
@@ -163,7 +163,7 @@ public class ACTMCPotatoData
 	 * @param event Event belonging to the ACTMC. Must not be null!
 	 * @param rewards Optional ACTMC Reward structure. May be null, but calls to
 	 *        {@code getMeanReward()} with null reward structure throws an exception!
-	 * @param target Bitset of target states (if doing reachability).
+	 * @param target Bitset of target states (if doing reachability). May be null.
 	 * @throws Exception if the arguments break the above rules
 	 */
 	public ACTMCPotatoData(ACTMCSimple actmc, GSMPEvent event, 
@@ -179,6 +179,26 @@ public class ACTMCPotatoData
 		this.event = event;
 		this.rewards = rewards;
 		this.target = target;
+	}
+	
+	/**
+	 * This method allows external insertion of custom kappa error bounds.
+	 * Kappa is the required accuracy for computation of each potato entrance.
+	 * @param kappaMap kappa values for each potato entrance
+	 * I.e. each key of the map is a potato entrance, and the value is the required precision.
+	 * {@code kappaMap} is not verified in any way, so make sure it is correct!
+	 * Particularly, all keys must be entrances and all entrances must be present.
+	 * Formally, {@code kappaMap.keySet()} should be equal to {@code this.getEntrances()}.
+	 */
+	public void setKappaMap(Map<Integer, Double> kappaMap) {
+		this.kappaMap = kappaMap;
+		// prevent this class from recomputing and overwriting inserted kappa values
+		kappaMapComputed = true;
+		// force this class to recompute all data with the new kappa values
+		foxGlynnMapComputed = false;
+		meanTimesComputed = false;
+		meanDistributionsComputed = false;
+		meanRewardsComputed = false;
 	}
 	
 	/** Gets the actmc model associated with this object */
@@ -485,6 +505,7 @@ public class ACTMCPotatoData
 		// TODO MAJO - under development, does not yet work!
 		double baseEpsilon = 1.0;
 		
+		// Precomputation phase 1 (inaccurate kappaOne)
 		for (int entrance : entrances) {
 			// TODO MAJO - shitty variable names - do something about it!
 			BitSet reachableStates = potatoDTMC.getReachableStates(ACTMCtoDTMC.get(entrance));
@@ -493,19 +514,16 @@ public class ACTMCPotatoData
 			double baseKappaOne = potatoDTMC.getMinimumProbability(reachableStates) / 2;
 			int n = reachableStates.cardinality(); // amount of non-target states
 			double maxExpectedSteps = n / Math.pow(baseKappaOne, n);
-			double kappaOne;
-			{ //compute kappaOne
 			double a = baseKappaOne;
 			double b = 1 / (2 * maxExpectedSteps * n);
 			double c = baseEpsilon / ((2 * maxExpectedSteps) * (1 + maxExpectedSteps * n));
-			kappaOne = Math.min(a, Math.min(b, c));
-			}
-			
+			double kappaOne = Math.min(a, Math.min(b, c));
 			kappaMap.put(entrance, kappaOne);
-			
 		}
-		// TODO MAJO - continue the implementation by step 5 of the first algorithm.
+		computeMeanDistributions();
 		
+		
+		// TODO MAJO - continue the implementation by step 5 of the first algorithm.
 	}
 	
 	private void computeFoxGlynn() throws PrismException {
