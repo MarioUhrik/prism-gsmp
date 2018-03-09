@@ -65,6 +65,7 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize!
 	 *  Initially null.*/
 	private DTMCSimple dtmc = null;
 	private MCRewards dtmcRew = null;
+	private boolean divideByUniformizationRate;
 	
 	/** Default first stage accuracy for computing kappa */
 	private static final double epsilon = 1;
@@ -103,11 +104,21 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize!
 	/**
 	 * Get a DTMC reward structure for {@code dtmc} fully equivalent to {@code actmc}.
 	 * Computed values are accurate up to error {@literal kappa} computed by this class.
+	 * @param divideByUniformizationRate is true if the computed rewards should be divided
+	 * by the {@code dtmc} uniformization rate. Commonly, this should true when computing
+	 * steady-state rewards, and false when computing reachability rewards.
 	 */
-	public MCRewards getDTMCRew() throws PrismException {
-		if (dtmcRew == null) {
+	public MCRewards getDTMCRew(boolean divideByUniformizationRate) throws PrismException {
+		if (dtmc == null) {
 			computeEquivalentDTMC();
 		}
+		if (this.divideByUniformizationRate == divideByUniformizationRate) {
+			if (dtmcRew != null) {
+				return dtmcRew;
+			}
+		}
+		this.divideByUniformizationRate = divideByUniformizationRate;
+		computeEquivalentDTMCRew();
 		return dtmcRew;
 	}
 	
@@ -125,6 +136,13 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize!
 	private void computeEquivalentDTMC() throws PrismException {
 		computeKappa();
 		dtmc = constructDTMC();
+		dtmcRew = constructDTMCRew();
+	}
+	
+	private void computeEquivalentDTMCRew() throws PrismException {
+		if (dtmc == null) {
+			computeEquivalentDTMC();
+		}
 		dtmcRew = constructDTMCRew();
 	}
 	
@@ -301,6 +319,11 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize!
 			return newRew;
 		}
 		
+		double uniformizationRate = dtmc.uniformizationRate;
+		if (!divideByUniformizationRate) {
+			dtmc.uniformizationRate = 1;
+		}
+		
 		Map<Integer, Double> meanRewWithinPotatoesOverTime = new HashMap<Integer, Double>();
 		for (Map.Entry<String, ACTMCPotatoData> pdEntry : pdMap.entrySet()) {
 			ACTMCPotatoData potatoData = pdEntry.getValue();
@@ -326,6 +349,7 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize!
 			newRew.setStateReward(entrance, meanRewWithinPotatoesOverTime.get(entrance) / dtmc.uniformizationRate);
 		}
 		
+		dtmc.uniformizationRate = uniformizationRate;
 		return newRew;
 	}
 
