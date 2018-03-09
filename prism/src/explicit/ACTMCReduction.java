@@ -48,7 +48,7 @@ import prism.PrismException;
  * but on the scope of the entire ACTMC, whereas the scope of {@code ACTMCPotatoData}
  * only encompasses a single event.
  */
-public class ACTMCReduction extends PrismComponent
+public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize!
 {
 	/** ACTMC model this class is associated with */
 	private ACTMCSimple actmc;
@@ -67,13 +67,15 @@ public class ACTMCReduction extends PrismComponent
 	private MCRewards dtmcRew = null;
 	
 	/** Default first stage accuracy for computing kappa */
-	private static double epsilon = 1;
+	private static final double epsilon = 1;
 	
 	/**
 	 * The only constructor
 	 * @param actmc Associated ACTMC model. Must not be null!
 	 * @param actmcRew Optional reward structure associated with {@code actmc}. May be null.
 	 * @param target Optional bitset of target states (if doing reachability). May be null.
+	 * @param parent PrismComponent, presumably a model checker.
+	 * Used only to pass to DTMCModelChecker when computing reachability rewards for kappa.
 	 * @throws Exception if the arguments break the above rules
 	 */
 	public ACTMCReduction(ACTMCSimple actmc, ACTMCRewardsSimple actmcRew, BitSet target, PrismComponent parent) throws PrismException {
@@ -121,61 +123,19 @@ public class ACTMCReduction extends PrismComponent
 	}
 	
 	private void computeEquivalentDTMC() throws PrismException {
-		// TODO MAJO - think of better names
-		
-		Map<Integer, Double> kappaOne = computeKappaOne();
-		DTMCSimple kappaOneDTMC = constructDTMC();
-		MCRewards kappaOneDTMCRew = new StateRewardsConstant(1);
-		
-		Map<Integer, Double> kappaTwo = computeKappaTwo();
-		DTMCSimple kappaTwoDTMC = constructDTMC();
-		MCRewards kappaTwoDTMCRew = constructDTMCRew();
-		
-		DTMCModelChecker mc1 = new DTMCModelChecker(this);
-		ModelCheckerResult kappaOneTR = mc1.computeReachRewards(kappaOneDTMC, kappaOneDTMCRew, target);
-		double maxSteps = findMaxTR(kappaOneTR.soln) + epsilon;
-		
-		DTMCModelChecker mc2 = new DTMCModelChecker(this);
-		ModelCheckerResult kappaTwoTR = mc2.computeReachRewards(kappaTwoDTMC, kappaTwoDTMCRew, target);
-		double maxTR = findMaxTR(kappaTwoTR.soln) + epsilon;
-		
-		computeKappa(kappaOne, kappaTwo, maxSteps, maxTR);
+		computeKappa();
 		dtmc = constructDTMC();
 		dtmcRew = constructDTMCRew();
 	}
-
-	private Map<Integer, Double> computeKappaOne() throws PrismException {
-		Map<Integer, Double> kappaMap = new HashMap<Integer, Double>();
-		
-		for (Map.Entry<String, ACTMCPotatoData> pdEntry : pdMap.entrySet()) {
-			ACTMCPotatoData pd = pdEntry.getValue();
-			Set<Integer> entrances = pd.getEntrances();
-			DTMCSimple potatoDTMC = pd.getPotatoDTMC();
-			Map<Integer, Integer> ACTMCtoDTMC = pd.getMapACTMCtoDTMC();
-			Map<Integer, Double> kappaPotatoMap = new HashMap<Integer, Double>();
-			
-			for (int entrance : entrances) {
-				// TODO MAJO - shitty variable names - do something about it!
-				BitSet reachableStates = potatoDTMC.getReachableStates(ACTMCtoDTMC.get(entrance));
-				reachableStates.andNot(target); // TODO MAJO - Optimize by doing them per entire bitset!
-				
-				double baseKappaOne = potatoDTMC.getMinimumProbability(reachableStates) / 2;
-				int n = reachableStates.cardinality(); // amount of non-target states
-				double maxExpectedSteps = n / Math.pow(baseKappaOne, n);
-				double a = baseKappaOne;
-				double b = 1 / (2 * maxExpectedSteps * n);
-				double c = epsilon / ((2 * maxExpectedSteps) * (1 + maxExpectedSteps * n));
-				double kappaOne = Math.min(a, Math.min(b, c));
-				kappaPotatoMap.put(entrance, kappaOne);
-			}
-			pd.setKappaMap(kappaPotatoMap);
-			kappaMap.putAll(kappaPotatoMap);
-		}
-		return kappaMap;
-	}
 	
-	private Map<Integer, Double> computeKappaTwo() { // TODO MAJO - reuse values from computing kappaOne!
-		Map<Integer, Double> kappaMap = new HashMap<Integer, Double>();
+	/**
+	 * Computes the kappa error bounds and assigns it to the {@code pdMap}.
+	 */
+	private Map<Integer, Double> computeKappa() throws PrismException {
+		
+		Map<Integer, Double> kappaOneMap = new HashMap<Integer, Double>();
+		Map<Integer, Double> kappaTwoMap = new HashMap<Integer, Double>();
+		Map<Integer, Integer> nMap = new HashMap<Integer, Integer>();
 		
 		for (Map.Entry<String, ACTMCPotatoData> pdEntry : pdMap.entrySet()) {
 			ACTMCPotatoData pd = pdEntry.getValue();
@@ -183,7 +143,6 @@ public class ACTMCReduction extends PrismComponent
 			DTMCSimple potatoDTMC = pd.getPotatoDTMC();
 			Map<Integer, Integer> ACTMCtoDTMC = pd.getMapACTMCtoDTMC();
 			Vector<Integer> DTMCtoACTMC = pd.getMapDTMCtoACTMC();
-			Map<Integer, Double> kappaPotatoMap = new HashMap<Integer, Double>();
 			
 			for (int entrance : entrances) {
 				// TODO MAJO - shitty variable names - do something about it!
@@ -193,25 +152,69 @@ public class ACTMCReduction extends PrismComponent
 				for (int i = reachableStates.nextSetBit(0); i >= 0; i = reachableStates.nextSetBit(i+1)) {
 					reachableStatesPermut.set(DTMCtoACTMC.get(i));
 				}
-
-				double minProb = potatoDTMC.getMinimumProbability(reachableStates) / 2;
+				
+				double minProb = potatoDTMC.getMinimumProbability(reachableStates);
 				double maxRew = actmcRew.getMax(reachableStatesPermut);
-				double baseKappaTwo = Math.min(minProb, maxRew);
+				double baseKappaOne = minProb / 2;
+				double baseKappaTwo = Math.min(baseKappaOne, maxRew);
 				int n = reachableStates.cardinality(); // amount of non-target states
-				double maxExpectedSteps = n / Math.pow(baseKappaTwo, n);
+				nMap.put(entrance, n);
+				double maxExpectedSteps = n / Math.pow(baseKappaOne, n);
 				double maxExpectedTR = maxExpectedSteps * maxRew;
-				double a = baseKappaTwo;
 				double b = 1 / (2 * maxExpectedSteps * n);
-				double c = epsilon / ((2 * maxExpectedSteps) * (1 + maxExpectedTR * n));
-				double kappaTwo = Math.min(a, Math.min(b, c));
-				kappaPotatoMap.put(entrance, kappaTwo);
+				double kappaOne; {
+					double c = epsilon / ((2 * maxExpectedSteps) * (1 + maxExpectedSteps * n));
+					kappaOne = Math.min(baseKappaOne, Math.min(b, c));
+				}
+				double kappaTwo; {
+					double c = epsilon / ((2 * maxExpectedSteps) * (1 + maxExpectedTR * n));
+					kappaTwo = Math.min(baseKappaTwo, Math.min(b, c));
+				}
+				kappaOneMap.put(entrance, kappaOne);
+				kappaTwoMap.put(entrance, kappaTwo);
 			}
-			pd.setKappaMap(kappaPotatoMap);
-			kappaMap.putAll(kappaPotatoMap);
+			pd.setKappaMap(kappaOneMap);
 		}
+		
+		DTMCSimple kappaOneDTMC = constructDTMC();
+		MCRewards kappaOneDTMCRew = new StateRewardsConstant(1);
+		DTMCModelChecker mc1 = new DTMCModelChecker(this);
+		ModelCheckerResult kappaOneTR = mc1.computeReachRewards(kappaOneDTMC, kappaOneDTMCRew, target);
+		double maxSteps = findMaxTR(kappaOneTR.soln) + epsilon;
+		
+		for (Map.Entry<String, ACTMCPotatoData> pdEntry : pdMap.entrySet()) {
+			pdEntry.getValue().setKappaMap(kappaTwoMap);
+		}
+		DTMCSimple kappaTwoDTMC = constructDTMC();
+		MCRewards kappaTwoDTMCRew = constructDTMCRew();
+		DTMCModelChecker mc2 = new DTMCModelChecker(this);
+		ModelCheckerResult kappaTwoTR = mc2.computeReachRewards(kappaTwoDTMC, kappaTwoDTMCRew, target);
+		double maxTR = findMaxTR(kappaTwoTR.soln) + epsilon;
+		
+		Map<Integer, Double> kappaMap = new HashMap<Integer, Double>();
+		for (Map.Entry<Integer, Double> entry : kappaOneMap.entrySet()) {
+			int entrance = entry.getKey();
+			double kappaOne = entry.getValue();
+			double kappaTwo = kappaTwoMap.get(entrance);
+			int n = nMap.get(entrance);
+			double a = 1 / (2 * n * maxSteps);
+			double b = epsilon / (2 * maxSteps * (1 + maxTR * n));
+			
+			double kappa = Math.min(kappaOne, Math.min(kappaTwo, Math.min(a, b)));
+			kappaMap.put(entrance, kappa);
+		}
+		
+		for (Map.Entry<String, ACTMCPotatoData> pdEntry : pdMap.entrySet()) {
+			pdEntry.getValue().setKappaMap(kappaMap);
+		}
+		
 		return kappaMap;
 	}
 	
+	/**
+	 * Finds the maximum element of the array, but only considers indices
+	 * that are either potato entrances or outside the potato.
+	 */
 	private double findMaxTR(double[] soln) {
 		// find relevant states
 		Set<Integer> potatoes = new HashSet<Integer>();
@@ -239,21 +242,6 @@ public class ACTMCReduction extends PrismComponent
 		}
 		
 		return max;
-	}
-	
-	private Map<Integer, Double> computeKappa(Map<Integer, Double> kappaOne, Map<Integer, Double> kappaTwo,
-			double maxSteps, double maxTR) {
-		Map<Integer, Double> kappaMap = new HashMap<Integer, Double>();
-		for (Map.Entry<Integer, Double> entry : kappaOne.entrySet()) {
-			int s = entry.getKey(); //entrance state
-			double kappa;
-			kappa = Math.min(kappaOne.get(s), Math.min(kappaTwo.get(s), Math.min(maxSteps, maxTR)));
-			kappaMap.put(s, kappa);
-		}
-		for (Map.Entry<String, ACTMCPotatoData> pdEntry : pdMap.entrySet()) {
-			pdEntry.getValue().setKappaMap(kappaMap);
-		}
-		return kappaMap;
 	}
 	
 	/**
