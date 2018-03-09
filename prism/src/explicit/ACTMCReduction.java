@@ -28,6 +28,7 @@ package explicit;
 
 import java.util.BitSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -35,7 +36,9 @@ import java.util.Vector;
 
 import explicit.rewards.ACTMCRewardsSimple;
 import explicit.rewards.MCRewards;
+import explicit.rewards.StateRewardsConstant;
 import explicit.rewards.StateRewardsSimple;
+import prism.PrismComponent;
 import prism.PrismException;
 
 /**
@@ -45,7 +48,7 @@ import prism.PrismException;
  * but on the scope of the entire ACTMC, whereas the scope of {@code ACTMCPotatoData}
  * only encompasses a single event.
  */
-public class ACTMCReduction
+public class ACTMCReduction extends PrismComponent
 {
 	/** ACTMC model this class is associated with */
 	private ACTMCSimple actmc;
@@ -73,7 +76,8 @@ public class ACTMCReduction
 	 * @param target Optional bitset of target states (if doing reachability). May be null.
 	 * @throws Exception if the arguments break the above rules
 	 */
-	public ACTMCReduction(ACTMCSimple actmc, ACTMCRewardsSimple actmcRew, BitSet target) throws PrismException {
+	public ACTMCReduction(ACTMCSimple actmc, ACTMCRewardsSimple actmcRew, BitSet target, PrismComponent parent) throws PrismException {
+		super(parent);
 		if (actmc == null) {
 			throw new NullPointerException("ACTMCReduction constructor has received a null actmc!");
 		}
@@ -83,6 +87,10 @@ public class ACTMCReduction
 		this.pdMap = createPotatoDataMap(actmc, actmcRew, target);
 	}
 	
+	/**
+	 * Get a DTMC fully equivalent to {@code actmc}.
+	 * Computed DTMC is accurate up to error {@literal kappa} computed by this class.
+	 */
 	public DTMCSimple getDTMC() throws PrismException {
 		if (dtmc == null) {
 			computeEquivalentDTMC();
@@ -90,21 +98,50 @@ public class ACTMCReduction
 		return dtmc;
 	}
 	
+	/**
+	 * Get a DTMC reward structure for {@code dtmc} fully equivalent to {@code actmc}.
+	 * Computed values are accurate up to error {@literal kappa} computed by this class.
+	 */
+	public MCRewards getDTMCRew() throws PrismException {
+		if (dtmcRew == null) {
+			computeEquivalentDTMC();
+		}
+		return dtmcRew;
+	}
+	
+	/**
+	 * Get {@code ACTMCPotatoData} used to create equivalent DTMC.
+	 * Computed values are accurate up to error {@literal kappa} computed by this class.
+	 */
+	public Map<String, ACTMCPotatoData> getPotatoData() throws PrismException {
+		if (dtmc == null) {
+			computeEquivalentDTMC();
+		}
+		return pdMap;
+	}
+	
 	private void computeEquivalentDTMC() throws PrismException {
 		// TODO MAJO - think of better names
 		
 		Map<Integer, Double> kappaOne = computeKappaOne();
 		DTMCSimple kappaOneDTMC = constructDTMC();
+		MCRewards kappaOneDTMCRew = new StateRewardsConstant(1);
 		
 		Map<Integer, Double> kappaTwo = computeKappaTwo();
 		DTMCSimple kappaTwoDTMC = constructDTMC();
 		MCRewards kappaTwoDTMCRew = constructDTMCRew();
-		// TODO MAJO - continue by step 6 of both algorithms
 		
-		//Map<Integer, Double> kappa = computeKappa();
+		DTMCModelChecker mc1 = new DTMCModelChecker(this);
+		ModelCheckerResult kappaOneTR = mc1.computeReachRewards(kappaOneDTMC, kappaOneDTMCRew, target);
+		double maxSteps = findMaxTR(kappaOneTR.soln) + epsilon;
 		
-		///constructEquivalentDTMC();
-		//constructEquivalentDTMCRew();
+		DTMCModelChecker mc2 = new DTMCModelChecker(this);
+		ModelCheckerResult kappaTwoTR = mc2.computeReachRewards(kappaTwoDTMC, kappaTwoDTMCRew, target);
+		double maxTR = findMaxTR(kappaTwoTR.soln) + epsilon;
+		
+		computeKappa(kappaOne, kappaTwo, maxSteps, maxTR);
+		dtmc = constructDTMC();
+		dtmcRew = constructDTMCRew();
 	}
 
 	private Map<Integer, Double> computeKappaOne() throws PrismException {
@@ -137,7 +174,7 @@ public class ACTMCReduction
 		return kappaMap;
 	}
 	
-	private Map<Integer, Double> computeKappaTwo() {
+	private Map<Integer, Double> computeKappaTwo() { // TODO MAJO - reuse values from computing kappaOne!
 		Map<Integer, Double> kappaMap = new HashMap<Integer, Double>();
 		
 		for (Map.Entry<String, ACTMCPotatoData> pdEntry : pdMap.entrySet()) {
@@ -175,9 +212,48 @@ public class ACTMCReduction
 		return kappaMap;
 	}
 	
-	private void computeKappa() {
-		// TODO Auto-generated method stub
+	private double findMaxTR(double[] soln) {
+		// find relevant states
+		Set<Integer> potatoes = new HashSet<Integer>();
+		Set<Integer> entrances = new HashSet<Integer>();
+		for (Map.Entry<String, ACTMCPotatoData> pdEntry : pdMap.entrySet()) {
+			entrances.addAll(pdEntry.getValue().getEntrances());
+			entrances.addAll(pdEntry.getValue().getPotato());
+		}
+		Set<Integer> relevantStates = new HashSet<Integer>();
+		for (int i = 0; i < actmc.getNumStates() ; ++i) {
+			relevantStates.add(i);
+		}
+		relevantStates.removeAll(potatoes);
+		relevantStates.addAll(entrances);
 		
+		// find maximum of the relevant states
+		double max = Double.MIN_VALUE;
+		for (int relevantState : relevantStates) {
+			if (soln[relevantState] > max) {
+				max = soln[relevantState];
+			}
+		}
+		if (max == Double.MIN_VALUE) {
+			max = 0.0; // TODO MAJO - can this happen? shouldnt it be an error?
+		}
+		
+		return max;
+	}
+	
+	private Map<Integer, Double> computeKappa(Map<Integer, Double> kappaOne, Map<Integer, Double> kappaTwo,
+			double maxSteps, double maxTR) {
+		Map<Integer, Double> kappaMap = new HashMap<Integer, Double>();
+		for (Map.Entry<Integer, Double> entry : kappaOne.entrySet()) {
+			int s = entry.getKey(); //entrance state
+			double kappa;
+			kappa = Math.min(kappaOne.get(s), Math.min(kappaTwo.get(s), Math.min(maxSteps, maxTR)));
+			kappaMap.put(s, kappa);
+		}
+		for (Map.Entry<String, ACTMCPotatoData> pdEntry : pdMap.entrySet()) {
+			pdEntry.getValue().setKappaMap(kappaMap);
+		}
+		return kappaMap;
 	}
 	
 	/**
@@ -234,7 +310,7 @@ public class ACTMCReduction
 	private MCRewards constructDTMCRew() throws PrismException {
 		StateRewardsSimple newRew = new StateRewardsSimple();
 		if (actmcRew == null) {
-			return newRew; // TODO MAJO - is this ok?
+			return newRew;
 		}
 		
 		Map<Integer, Double> meanRewWithinPotatoesOverTime = new HashMap<Integer, Double>();
