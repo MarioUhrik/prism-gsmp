@@ -45,6 +45,7 @@ import prism.PrismNotSupportedException;
 
 /**
  * Explicit-state model checker for generalized semi-Markov processes (GSMPs).
+ * ACTMCs are treated as special cases, and solved differently.
  */
 public class GSMPModelChecker extends ProbModelChecker
 {

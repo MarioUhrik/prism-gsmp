@@ -254,7 +254,7 @@ public class ACTMCRewardsSimple implements MCRewards
 	public double getMax(BitSet bs) {
 		double max = Double.MIN_VALUE;
 		for (int i = bs.nextSetBit(0); i >= 0; i = bs.nextSetBit(i+1)) {
-			double rew = stateRewards.get(i);
+			double rew = getStateReward(i);
 			if (rew > max) {
 				max = rew;
 			}

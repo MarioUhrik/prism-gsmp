@@ -53,6 +53,7 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize!
 	/** ACTMC model this class is associated with */
 	private ACTMCSimple actmc;
 	/** Optional reward structure associated with {@code actmc}.
+	 *  The CTMC transition rewards are already expected to have been converted to state rewards.
 	 *  May be null if rewards are not of interest for given model checking method.*/
 	private ACTMCRewardsSimple actmcRew = null;
 	/** Optional bitset of target states (for reachability) */
@@ -87,6 +88,9 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize!
 		this.actmc = actmc;
 		this.actmcRew = actmcRew;
 		this.target = target;
+		if (this.target == null) {
+			this.target = new BitSet(actmc.getNumStates());
+		}
 		this.pdMap = createPotatoDataMap(actmc, actmcRew, target);
 	}
 	
@@ -136,14 +140,13 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize!
 	private void computeEquivalentDTMC() throws PrismException {
 		computeKappa();
 		dtmc = constructDTMC();
-		dtmcRew = constructDTMCRew();
 	}
 	
 	private void computeEquivalentDTMCRew() throws PrismException {
 		if (dtmc == null) {
 			computeEquivalentDTMC();
 		}
-		dtmcRew = constructDTMCRew();
+		dtmcRew = constructDTMCRew(dtmc, divideByUniformizationRate);
 	}
 	
 	/**
@@ -153,11 +156,15 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize!
 		
 		Map<Integer, Double> kappaOneMap = new HashMap<Integer, Double>();
 		Map<Integer, Double> kappaTwoMap = new HashMap<Integer, Double>();
+		Map<Integer, Double> maxStepsMap = new HashMap<Integer, Double>();
+		Map<Integer, Double> maxTRMap = new HashMap<Integer, Double>();
 		Map<Integer, Integer> nMap = new HashMap<Integer, Integer>();
+		Set<Integer> allEntrances = new HashSet<Integer>();
 		
 		for (Map.Entry<String, ACTMCPotatoData> pdEntry : pdMap.entrySet()) {
 			ACTMCPotatoData pd = pdEntry.getValue();
 			Set<Integer> entrances = pd.getEntrances();
+			allEntrances.addAll(entrances);
 			DTMCSimple potatoDTMC = pd.getPotatoDTMC();
 			Map<Integer, Integer> ACTMCtoDTMC = pd.getMapACTMCtoDTMC();
 			Vector<Integer> DTMCtoACTMC = pd.getMapDTMCtoACTMC();
@@ -172,7 +179,12 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize!
 				}
 				
 				double minProb = potatoDTMC.getMinimumProbability(reachableStates);
-				double maxRew = actmcRew.getMax(reachableStatesPermut);
+				double maxRew;
+				if (actmcRew != null) {
+					maxRew = actmcRew.getMax(reachableStatesPermut);
+				} else {
+					maxRew = 0;
+				}
 				double baseKappaOne = minProb / 2;
 				double baseKappaTwo = Math.min(baseKappaOne, maxRew);
 				int n = reachableStates.cardinality(); // amount of non-target states
@@ -193,27 +205,43 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize!
 			}
 			pd.setKappaMap(kappaOneMap);
 		}
-		
+
 		DTMCSimple kappaOneDTMC = constructDTMC();
 		MCRewards kappaOneDTMCRew = new StateRewardsConstant(1);
 		DTMCModelChecker mc1 = new DTMCModelChecker(this);
-		ModelCheckerResult kappaOneTR = mc1.computeReachRewards(kappaOneDTMC, kappaOneDTMCRew, target);
-		double maxSteps = findMaxTR(kappaOneTR.soln) + epsilon;
+		for (int entrance : allEntrances ) {
+			boolean isEntranceTarget = target.get(entrance);
+			target.set(entrance);
+			ModelCheckerResult kappaOneTR = mc1.computeReachRewards(kappaOneDTMC, kappaOneDTMCRew, target);
+			target.set(entrance, isEntranceTarget);
+			
+			double max = findMaxTR(kappaOneTR.soln);
+			maxStepsMap.put(entrance, max + epsilon);
+		}
 		
 		for (Map.Entry<String, ACTMCPotatoData> pdEntry : pdMap.entrySet()) {
 			pdEntry.getValue().setKappaMap(kappaTwoMap);
 		}
 		DTMCSimple kappaTwoDTMC = constructDTMC();
-		MCRewards kappaTwoDTMCRew = constructDTMCRew();
+		MCRewards kappaTwoDTMCRew = constructDTMCRew(kappaTwoDTMC, false);
 		DTMCModelChecker mc2 = new DTMCModelChecker(this);
-		ModelCheckerResult kappaTwoTR = mc2.computeReachRewards(kappaTwoDTMC, kappaTwoDTMCRew, target);
-		double maxTR = findMaxTR(kappaTwoTR.soln) + epsilon;
+		for (int entrance : allEntrances ) {
+			boolean isEntranceTarget = target.get(entrance);
+			target.set(entrance);
+			ModelCheckerResult kappaTwoTR = mc2.computeReachRewards(kappaTwoDTMC, kappaTwoDTMCRew, target);
+			target.set(entrance, isEntranceTarget);
+			
+			double max = findMaxTR(kappaTwoTR.soln);
+			maxTRMap.put(entrance, max + epsilon);
+		}
 		
 		Map<Integer, Double> kappaMap = new HashMap<Integer, Double>();
 		for (Map.Entry<Integer, Double> entry : kappaOneMap.entrySet()) {
 			int entrance = entry.getKey();
 			double kappaOne = entry.getValue();
 			double kappaTwo = kappaTwoMap.get(entrance);
+			double maxSteps = maxStepsMap.get(entrance);
+			double maxTR = maxTRMap.get(entrance);
 			int n = nMap.get(entrance);
 			double a = 1 / (2 * n * maxSteps);
 			double b = epsilon / (2 * maxSteps * (1 + maxTR * n));
@@ -239,7 +267,7 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize!
 		Set<Integer> entrances = new HashSet<Integer>();
 		for (Map.Entry<String, ACTMCPotatoData> pdEntry : pdMap.entrySet()) {
 			entrances.addAll(pdEntry.getValue().getEntrances());
-			entrances.addAll(pdEntry.getValue().getPotato());
+			potatoes.addAll(pdEntry.getValue().getPotato());
 		}
 		Set<Integer> relevantStates = new HashSet<Integer>();
 		for (int i = 0; i < actmc.getNumStates() ; ++i) {
@@ -309,11 +337,11 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize!
 	 * Uses {@code actmc}, {@code actmcRew} and current {@code pdMap} to construct
 	 * equivalent {@code mcRewards} for {@code dtmc}.
 	 * <br>
-	 * The rewards are also adjusted to {@code dtmc.uniformizationRate}.
-	 * In order to skip this, please set it to 1.
+	 * Iff {@code divideByUniformizationRate} is true,
+	 * rewards are also adjusted to {@code dtmc.uniformizationRate}.
 	 * @return {@code MCRewards} equivalent to actmcRew
 	 */
-	private MCRewards constructDTMCRew() throws PrismException {
+	private MCRewards constructDTMCRew(DTMCSimple dtmc, boolean divideByUniformizationRate) throws PrismException {
 		StateRewardsSimple newRew = new StateRewardsSimple();
 		if (actmcRew == null) {
 			return newRew;

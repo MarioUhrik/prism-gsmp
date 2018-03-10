@@ -56,7 +56,8 @@ public class ACTMCPotatoData
 	private ACTMCSimple actmc;
 	/** specific event of {@code actmc} this data is associated with */
 	private GSMPEvent event;
-	/** Reward structure of the {@code actmc}. May be null. */
+	/** Reward structure of the {@code actmc}. May be null.
+	 *  The CTMC transition rewards are expected to have already been converted to state rewards only. */
 	private ACTMCRewardsSimple rewards = null;
 	/** Bitset of target states for reachability analysis. May be null. */
 	private BitSet target = null;
@@ -633,7 +634,6 @@ public class ACTMCPotatoData
 				if (time > 0) {
 					resultDistr.add(ps, time);
 				}
-				// TODO MAJO -imprecise results, but probably not fixable (fg precision)
 			}
 			meanTimes.put(entrance, resultDistr);
 		}
