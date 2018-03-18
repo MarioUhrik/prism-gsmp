@@ -297,7 +297,7 @@ public class GSMPModelChecker extends ProbModelChecker
 	private ModelCheckerResult computeReachRewardsACTMC(ACTMCSimple actmc, ACTMCRewardsSimple actmcRew, BitSet target) throws PrismException {
 		long reduceTime = System.currentTimeMillis();
 		// Initialize necessary data structures
-		ACTMCReduction reduction = new ACTMCReduction(actmc, actmcRew, null, this);
+		ACTMCReduction reduction = new ACTMCReduction(actmc, actmcRew, target, this);
 		
 		// Reduce the ACTMC to an equivalent DTMC.
 		DTMCSimple dtmc = reduction.getDTMC();

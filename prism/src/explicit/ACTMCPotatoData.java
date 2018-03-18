@@ -492,7 +492,7 @@ public class ACTMCPotatoData
 		}
 		
 		// convert the CTMC to a DTMC and store the DTMC
-		potatoCTMC.uniformise(uniformizationRate);
+		//potatoCTMC.uniformise(uniformizationRate); // TODO MAJO - make 100% sure this can be deleted
 		potatoDTMC = potatoCTMC.buildUniformisedDTMC(uniformizationRate);
 		
 		potatoDTMCComputed = true;

@@ -267,6 +267,16 @@ public class DTMCSimple extends DTMCExplicit implements ModelSimple
 	 */
 	public BitSet getReachableStates(int s)
 	{
+		return getReachableStates(s, null);
+	}
+	
+	/**
+	 * Finds and returns a bitset of states reachable from state {@code s}
+	 * (including {@code s} itself). Passage through or into
+	 * bitset of states {@code target} is not allowed.
+	 */
+	public BitSet getReachableStates(int s, BitSet target)
+	{
 		BitSet reach = new BitSet(numStates);
 		BitSet newReach = new BitSet(numStates);
 		BitSet oldReach = new BitSet(numStates);
@@ -282,6 +292,9 @@ public class DTMCSimple extends DTMCExplicit implements ModelSimple
 			    		 newReach.set(k);
 			    	 }
 			     }
+			}
+			if (target != null) {
+				newReach.andNot(target);
 			}
 			reach.or(newReach);
 			oldReach.clear();

@@ -91,7 +91,7 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize!
 		if (this.target == null) {
 			this.target = new BitSet(actmc.getNumStates());
 		}
-		this.pdMap = createPotatoDataMap(actmc, actmcRew, target);
+		this.pdMap = createPotatoDataMap(this.actmc, this.actmcRew, this.target);
 	}
 	
 	/**
@@ -169,19 +169,24 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize!
 			Map<Integer, Integer> ACTMCtoDTMC = pd.getMapACTMCtoDTMC();
 			Vector<Integer> DTMCtoACTMC = pd.getMapDTMCtoACTMC();
 			
+			BitSet targetPermut = new BitSet(actmc.getNumStates());
+			for (int i = target.nextSetBit(0); i >= 0; i = target.nextSetBit(i+1)) {
+				targetPermut.set(ACTMCtoDTMC.get(i));
+			}
+			
 			for (int entrance : entrances) {
 				// TODO MAJO - shitty variable names - do something about it!
-				BitSet reachableStates = potatoDTMC.getReachableStates(ACTMCtoDTMC.get(entrance));
-				reachableStates.andNot(target); // TODO MAJO - Optimize by doing them per entire bitset!
-				BitSet reachableStatesPermut = new BitSet(actmc.getNumStates());
-				for (int i = reachableStates.nextSetBit(0); i >= 0; i = reachableStates.nextSetBit(i+1)) {
-					reachableStatesPermut.set(DTMCtoACTMC.get(i));
+				BitSet reachableStatesPermut = potatoDTMC.getReachableStates(ACTMCtoDTMC.get(entrance), targetPermut);
+				// TODO MAJO - Optimize by doing them per entire bitset!
+				BitSet reachableStates = new BitSet(actmc.getNumStates());
+				for (int i = reachableStatesPermut.nextSetBit(0); i >= 0; i = reachableStatesPermut.nextSetBit(i+1)) {
+					reachableStates.set(DTMCtoACTMC.get(i));
 				}
 				
-				double minProb = potatoDTMC.getMinimumProbability(reachableStates);
+				double minProb = potatoDTMC.getMinimumProbability(reachableStatesPermut);
 				double maxRew;
 				if (actmcRew != null) {
-					maxRew = actmcRew.getMax(reachableStatesPermut);
+					maxRew = actmcRew.getMax(reachableStates);
 				} else {
 					maxRew = 0;
 				}
@@ -323,7 +328,7 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize!
 				ctmc.trans.set(entrance, meanDistr);
 			}
 		}
-		ctmc.uniformise(uniformizationRate); // TODO MAJO - is this necessary? // TODO - no its not
+		//ctmc.uniformise(uniformizationRate); // TODO MAJO - make 100% sure this can be deleted
 		
 		// TODO MAJO - remove unreachable states
 		
