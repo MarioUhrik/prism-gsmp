@@ -297,10 +297,43 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize!
 	
 	/**
 	 * Uses {@code actmc} and current {@code pdMap} to construct
-	 * equivalent {@code dtmc}.
+	 * an equivalent {@code dtmc}.
 	 * @return {@code dtmc} equivalent to {@code actmc} according to the current {@code pdMap}
 	 */
 	private DTMCSimple constructDTMC() throws PrismException {
+		CTMCSimple ctmc = new CTMCSimple(actmc);
+		double uniformizationRate = ctmc.getMaxExitRate();
+		//ctmc.uniformise(uniformizationRate); // TODO MAJO - make 100% sure this can be deleted
+		DTMCSimple dtmc = ctmc.buildUniformisedDTMC(uniformizationRate);
+		
+		for (Map.Entry<String, ACTMCPotatoData> pdEntry : pdMap.entrySet()) {
+			ACTMCPotatoData potatoData = pdEntry.getValue();
+			Map<Integer, Distribution> meanDistrs = potatoData.getMeanDistributions();
+			
+			Set<Integer> potatoEntrances = potatoData.getEntrances();
+			for (int entrance : potatoEntrances) {
+				// assign the computed distribution the CTMC
+				Distribution meanDistr = new Distribution(meanDistrs.get(entrance));
+				Set<Integer> distrSupport = meanDistrs.get(entrance).getSupport();
+				for ( int s : distrSupport) {
+					meanDistr.set(s, meanDistr.get(s));
+				}
+				dtmc.trans.set(entrance, meanDistr);
+			}
+		}
+		
+		return dtmc;
+	}
+	
+	/**
+	 * Uses {@code actmc} and current {@code pdMap} to construct
+	 * equivalent uniformized {@code dtmc}. The DTMC is uniformized according to how much
+	 * time is spent within each potato having entered from a particular entrance.
+	 * This tends to introduce a lot of unnecessary loops!
+	 * @return {@code dtmc} equivalent to {@code actmc} according to the current {@code pdMap}
+	 */
+	@Deprecated
+	private DTMCSimple constructUniformizedDTMC() throws PrismException {
 		CTMCSimple ctmc = new CTMCSimple(actmc);
 		double uniformizationRate = ctmc.getMaxExitRate();
 		
@@ -328,13 +361,10 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize!
 				ctmc.trans.set(entrance, meanDistr);
 			}
 		}
-		//ctmc.uniformise(uniformizationRate); // TODO MAJO - make 100% sure this can be deleted
-		
-		// TODO MAJO - remove unreachable states
 		
 		// Then, reduce the CTMC to a DTMC.
+		ctmc.uniformise(uniformizationRate); // TODO MAJO - this doesnt need to be here
 		DTMCSimple dtmc = ctmc.buildUniformisedDTMC(uniformizationRate);
-		
 		return dtmc;
 	}
 	
@@ -347,6 +377,47 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize!
 	 * @return {@code MCRewards} equivalent to actmcRew
 	 */
 	private MCRewards constructDTMCRew(DTMCSimple dtmc, boolean divideByUniformizationRate) throws PrismException {
+		StateRewardsSimple newRew = new StateRewardsSimple();
+		if (actmcRew == null) {
+			return newRew;
+		}
+		
+		double uniformizationRate = dtmc.uniformizationRate;
+		if (!divideByUniformizationRate) {
+			dtmc.uniformizationRate = 1;
+		}
+		
+		int numStates = dtmc.getNumStates();
+		for (int s = 0; s < numStates ; ++s) {
+			double rew = actmcRew.getStateReward(s);
+			if (rew > 0) {
+				newRew.setStateReward(s, rew / dtmc.uniformizationRate);
+			}
+		}
+		
+		for (Map.Entry<String, ACTMCPotatoData> pdEntry : pdMap.entrySet()) {
+			ACTMCPotatoData potatoData = pdEntry.getValue();
+			Set<Integer> entrances = potatoData.getEntrances();
+			for (int entrance : entrances) {
+				double rew = potatoData.getMeanRewards().get(entrance);
+				newRew.setStateReward(entrance, rew / dtmc.uniformizationRate);
+			}
+		}
+		
+		dtmc.uniformizationRate = uniformizationRate;
+		return newRew;
+	}
+	
+	/**
+	 * Uses {@code actmc}, {@code actmcRew} and current {@code pdMap} to construct
+	 * equivalent {@code mcRewards} for uniformized {@code dtmc} (created by {@code constructUniformizedDTMC()}.
+	 * <br>
+	 * Iff {@code divideByUniformizationRate} is true,
+	 * rewards are also adjusted to {@code dtmc.uniformizationRate}.
+	 * @return {@code MCRewards} equivalent to actmcRew
+	 */
+	@Deprecated
+	private MCRewards constructUniformizedDTMCRew(DTMCSimple dtmc, boolean divideByUniformizationRate) throws PrismException {
 		StateRewardsSimple newRew = new StateRewardsSimple();
 		if (actmcRew == null) {
 			return newRew;
