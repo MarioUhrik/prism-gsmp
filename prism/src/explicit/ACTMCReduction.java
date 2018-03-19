@@ -34,11 +34,13 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Vector;
 
+import explicit.ProbModelChecker.LinEqMethod;
 import explicit.rewards.ACTMCRewardsSimple;
 import explicit.rewards.MCRewards;
 import explicit.rewards.StateRewardsConstant;
 import explicit.rewards.StateRewardsSimple;
 import prism.PrismComponent;
+import prism.PrismDevNullLog;
 import prism.PrismException;
 
 /**
@@ -214,6 +216,10 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize!
 		DTMCSimple kappaOneDTMC = constructDTMC();
 		MCRewards kappaOneDTMCRew = new StateRewardsConstant(1);
 		DTMCModelChecker mc1 = new DTMCModelChecker(this);
+		mc1.termCritParam = epsilon;
+		mc1.linEqMethod = LinEqMethod.GAUSS_SEIDEL; // TODO MAJO - maybe this can go away, but reliability is priority!
+		mc1.maxIters = 250000;
+		mc1.setLog(new PrismDevNullLog()); // mute the reachability computation log messages
 		for (int entrance : allEntrances ) {
 			boolean isEntranceTarget = target.get(entrance);
 			target.set(entrance);
@@ -230,6 +236,10 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize!
 		DTMCSimple kappaTwoDTMC = constructDTMC();
 		MCRewards kappaTwoDTMCRew = constructDTMCRew(kappaTwoDTMC, false);
 		DTMCModelChecker mc2 = new DTMCModelChecker(this);
+		mc2.termCritParam = epsilon;
+		mc2.linEqMethod = LinEqMethod.GAUSS_SEIDEL; // TODO MAJO - maybe this can go away, but reliability is priority!
+		mc2.maxIters = 250000;
+		mc2.setLog(new PrismDevNullLog()); // mute the reachability computation log messages
 		for (int entrance : allEntrances ) {
 			boolean isEntranceTarget = target.get(entrance);
 			target.set(entrance);
