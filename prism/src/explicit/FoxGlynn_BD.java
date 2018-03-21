@@ -47,7 +47,8 @@ public final class FoxGlynn_BD
 	MathContext ceil;
 	
 	// constructor parameters
-	private BigDecimal underflow, overflow, accuracy;
+	//private BigDecimal underflow;
+	private BigDecimal overflow, accuracy;
 	private BigDecimal q_tmax;
 
 	// returned values
@@ -59,7 +60,7 @@ public final class FoxGlynn_BD
 	{
 		q_tmax = qtmax;
 		q_tmax.setScale(acc.scale());
-		underflow = uf;
+		//underflow = uf;
 		overflow = of;
 		accuracy = acc;
 		// TODO MAJO - maybe just use scale instead?
@@ -225,6 +226,7 @@ public final class FoxGlynn_BD
 		}
 	}
 
+	/*
 	public static void test()
 	{
 		BigDecimal[] weights;
@@ -245,5 +247,6 @@ public final class FoxGlynn_BD
 		totalWeight = w.getTotalWeight();
 		w = null;
 	}
+	*/
 
 }
