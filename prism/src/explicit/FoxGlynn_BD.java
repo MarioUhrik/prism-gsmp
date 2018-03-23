@@ -58,15 +58,15 @@ public final class FoxGlynn_BD
 
 	public FoxGlynn_BD(BigDecimal qtmax, BigDecimal uf, BigDecimal of, BigDecimal acc) throws PrismException
 	{
+		int decimalPrecision = BigDecimalUtils.decimalDigitsPrecision(acc);
+		
 		q_tmax = qtmax;
-		q_tmax.setScale(acc.scale());
+		q_tmax = q_tmax.setScale(decimalPrecision);
 		//underflow = uf;
 		overflow = of;
 		accuracy = acc;
-		// TODO MAJO - maybe just use scale instead?
-		int precision = BigDecimalUtils.decimalDigitsPrecision(acc);
-		mc = new MathContext(precision, RoundingMode.HALF_UP);
-		ceil = new MathContext(precision, RoundingMode.CEILING);
+		mc = new MathContext(decimalPrecision, RoundingMode.HALF_UP);
+		ceil = new MathContext(decimalPrecision, RoundingMode.CEILING);
 		run();
 	}
 
@@ -101,7 +101,7 @@ public final class FoxGlynn_BD
 			int k; //denotes that we work with event "k steps occur"
 			BigDecimal lastval; //(probability that exactly k events occur)/expcoef
 			BigDecimal accum; //(probability that 0 to k events occur)/expcoef
-			BigDecimal desval = accuracy.divide(new BigDecimal("2.0")).negate().add(BigDecimal.ONE).divide(expcoef); //value that we want to accumulate in accum before we stop
+			BigDecimal desval = accuracy.divide(new BigDecimal("2.0"), mc).negate().add(BigDecimal.ONE).divide(expcoef, mc); //value that we want to accumulate in accum before we stop
 			java.util.Vector<BigDecimal> w = new java.util.Vector<BigDecimal>(); //stores weights computed so far.
 			
 			//k=0 is simple
@@ -112,7 +112,7 @@ public final class FoxGlynn_BD
 			//add further steps until you have accumulated enough
 			k = 1;
 			do {
-				lastval = lastval.multiply(q_tmax.divide(new BigDecimal(k))); // invariant: lastval = q_tmax^k / k!
+				lastval = lastval.multiply(q_tmax.divide(new BigDecimal(k), mc), mc); // invariant: lastval = q_tmax^k / k!
 				accum = accum.add(lastval);
 				w.add(lastval.multiply(expcoef));
 				k++;
@@ -226,27 +226,63 @@ public final class FoxGlynn_BD
 		}
 	}
 
-	/*
-	public static void test()
+	/**
+	 * Testing method for comparison with double-precision {@link FoxGlynn}.
+	 */
+	public static void main(String args[])
 	{
-		BigDecimal[] weights;
-		BigDecimal totalWeight = BigDecimal.ZERO;
-		int left, right;
-
-		FoxGlynn_BD w = null;
+		
+		FoxGlynn_BD fg_BD = null;
+		FoxGlynn fg = null;
+		long stopwatch_fg_BD = 0;
+		long stopwatch_fg = 0;
 		try {
 			// q = maxDiagRate, time = time parameter (a U<time b)
-			double q = 1, time = 1;
-			w = new FoxGlynn_BD(new BigDecimal(q * time), new BigDecimal(1.0e-300), new BigDecimal(1.0e+300), new BigDecimal(1.0e-6));
+			double q = 2, time = 150;
+			double uf = 1.0e-300;
+			double of = 1.0e-300;
+			double acc = 1.0e-30;
+			
+			stopwatch_fg_BD = System.currentTimeMillis();
+			fg_BD = new FoxGlynn_BD(
+						new BigDecimal(q * time),
+						new BigDecimal(uf),
+						new BigDecimal(of),
+						new BigDecimal(acc));
+			stopwatch_fg_BD = System.currentTimeMillis() - stopwatch_fg_BD;
+			
+			stopwatch_fg = System.currentTimeMillis();
+			fg = new FoxGlynn(q*time, uf, of, acc);
+			stopwatch_fg = System.currentTimeMillis() - stopwatch_fg;
+			
 		} catch (PrismException e) {
 			// ...
 		}
-		weights = w.getWeights();
-		left = w.getLeftTruncationPoint();
-		right = w.getRightTruncationPoint();
-		totalWeight = w.getTotalWeight();
-		w = null;
+		
+		BigDecimal sum_BD = BigDecimal.ZERO;
+		Double sum_Double = 0.0;
+		
+		System.out.println("BigDecimal Weights:");
+		for (int i = fg_BD.getLeftTruncationPoint(); i <= fg_BD.getRightTruncationPoint()  ; ++i) {
+			System.out.println(fg_BD.getWeights()[i]);
+			sum_BD = sum_BD.add(fg_BD.getWeights()[i]);
+		}
+		System.out.println("---------------------------------------------");
+		System.out.println("---------------------------------------------");
+		System.out.println("---------------------------------------------");
+		System.out.println("Double Weights:");
+		for (int i = fg.getLeftTruncationPoint(); i <= fg.getRightTruncationPoint()  ; ++i) {
+			System.out.println(fg.getWeights()[i]);
+			sum_Double = sum_Double + fg.getWeights()[i];
+		}
+		System.out.println("---------------------------------------------");
+		System.out.println("---------------------------------------------");
+		System.out.println("---------------------------------------------");
+		System.out.println("BigDecimal time taken: " + stopwatch_fg_BD/1000.0 + " seconds.");
+		System.out.println("Double time taken: " + stopwatch_fg/1000.0 + " seconds.");
+		System.out.println("BigDecimal weight sum:\n" + sum_BD);
+		System.out.println("Double weight sum:\n" + sum_Double);
 	}
-	*/
+	
 
 }

@@ -59,13 +59,13 @@ public class BigDecimalUtils {
 	
 	/**
 	 * Compute the number of decimal digits corresponding to floating point {@code precision}.
-	 * This number is increased by 4 to provide extra accuracy when the requested precision
+	 * This number is increased by 2 to provide extra accuracy when the requested precision
 	 * is very low.
 	 */
 	public static int decimalDigitsPrecision(BigDecimal precision) {
 		BigDecimal inverse = BigDecimal.ONE.divide(precision, RoundingMode.UP);
 		BigInteger inverseInt = inverse.toBigInteger();
-		int decimalDigits = 4;
+		int decimalDigits = 2;
 		for (  ; inverseInt.compareTo(BigInteger.ONE) >= 0 ; ++decimalDigits) {
 			inverseInt = inverseInt.divide(BigInteger.TEN);
 		}
