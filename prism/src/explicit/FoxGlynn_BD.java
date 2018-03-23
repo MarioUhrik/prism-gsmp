@@ -45,6 +45,7 @@ public final class FoxGlynn_BD
 	// Math context for specifying BigDecimal accuracy
 	MathContext mc;
 	MathContext ceil;
+	int decimalPrecision;
 	
 	// constructor parameters
 	//private BigDecimal underflow;
@@ -58,7 +59,7 @@ public final class FoxGlynn_BD
 
 	public FoxGlynn_BD(BigDecimal qtmax, BigDecimal uf, BigDecimal of, BigDecimal acc) throws PrismException
 	{
-		int decimalPrecision = BigDecimalUtils.decimalDigitsPrecision(acc);
+		decimalPrecision = BigDecimalUtils.decimalDigitsPrecision(acc);
 		
 		q_tmax = qtmax;
 		q_tmax = q_tmax.setScale(decimalPrecision);
@@ -138,14 +139,14 @@ public final class FoxGlynn_BD
 			//run FINDER to get left, right and weight[m]
 			{
 				final BigDecimal sqrtpi = BigDecimalMath.sqrt(BigDecimalMath.pi(mc)); //square root of PI
-				final BigDecimal sqrt2 = BigDecimalMath.sqrt(new BigDecimal("2.0")); //square root of 2
+				final BigDecimal sqrt2 = BigDecimalMath.sqrt((new BigDecimal("2.0")).setScale(decimalPrecision)); //square root of 2
 				final BigDecimal sqrtq = BigDecimalMath.sqrt(q_tmax);
-				final BigDecimal aq = (BigDecimal.ONE.add(BigDecimal.ONE.divide(q_tmax))).multiply(BigDecimalMath.exp(new BigDecimal("0.0625").setScale(accuracy.scale())).multiply(sqrt2)); //a_\lambda from the paper			
-				final BigDecimal bq = (BigDecimal.ONE.add(BigDecimal.ONE.divide(q_tmax))).multiply(BigDecimalMath.exp(new BigDecimal("0.125").divide(q_tmax))); //b_\lambda from the paper
+				final BigDecimal aq = (BigDecimal.ONE.add(BigDecimal.ONE.divide(q_tmax, mc))).multiply(BigDecimalMath.exp(new BigDecimal("0.0625").setScale(decimalPrecision)).multiply(sqrt2)); //a_\lambda from the paper			
+				final BigDecimal bq = (BigDecimal.ONE.add(BigDecimal.ONE.divide(q_tmax, mc))).multiply(BigDecimalMath.exp(new BigDecimal("0.125").divide(q_tmax, mc))); //b_\lambda from the paper
 
 				//use Corollary 1 to find right truncation point
-				final BigDecimal lower_k_1 = BigDecimal.ONE.divide(sqrt2.multiply(q_tmax).multiply(new BigDecimal("2.0"))); //lower bound on k from Corollary 1
-				final BigDecimal upper_k_1 = sqrtq.divide(sqrt2.multiply(new BigDecimal("2.0"))); //upper bound on k from Corollary 1
+				final BigDecimal lower_k_1 = BigDecimal.ONE.divide(sqrt2.multiply(q_tmax).multiply(new BigDecimal("2.0")), mc); //lower bound on k from Corollary 1
+				final BigDecimal upper_k_1 = sqrtq.divide(sqrt2.multiply(new BigDecimal("2.0")), mc); //upper bound on k from Corollary 1
 				BigDecimal k;
 
 				//justification for increment is in the paper:
@@ -153,9 +154,9 @@ public final class FoxGlynn_BD
 				for(k=lower_k_1; k.compareTo(upper_k_1) <= 0;
 					k=(k.compareTo(lower_k_1) == 0)? k.add(new BigDecimal("4.0")) : k.add(BigDecimal.ONE) )
 				{
-					BigDecimal dkl = BigDecimal.ONE.divide(BigDecimal.ONE.subtract(BigDecimalMath.exp((new BigDecimal("2.0").divide(new BigDecimal("9.0"))).multiply((k.multiply(sqrt2).multiply(sqrtq).add(new BigDecimal("1.5")))).negate()))); //d(k,\lambda) from the paper
-					BigDecimal res = aq.multiply(dkl).multiply(BigDecimalMath.exp(k.multiply(k).divide(new BigDecimal("2.0")).negate())).divide(k.multiply(sqrt2).multiply(sqrtpi)); //right hand side of the equation in Corollary 1
-					if (res.compareTo(accuracy.divide(new BigDecimal("2.0"))) <= 0)
+					BigDecimal dkl = BigDecimal.ONE.divide(BigDecimal.ONE.subtract(BigDecimalMath.exp((new BigDecimal("2.0").divide(new BigDecimal("9.0"), mc)).multiply((k.multiply(sqrt2, mc).multiply(sqrtq, mc).add(new BigDecimal("1.5"))), mc).negate())), mc); //d(k,\lambda) from the paper
+					BigDecimal res = aq.multiply(dkl, mc).multiply(BigDecimalMath.exp(k.multiply(k, mc).divide(new BigDecimal("2.0"), mc).negate()), mc).divide(k.multiply(sqrt2, mc).multiply(sqrtpi, mc), mc); //right hand side of the equation in Corollary 1
+					if (res.compareTo(accuracy.divide(new BigDecimal("2.0"), mc)) <= 0)
 					{
 						break;
 					}
@@ -169,16 +170,16 @@ public final class FoxGlynn_BD
 				//use Corollary 2 to find left truncation point
 				//NOTE: the original implementation used some upper bound on k,
 				//      however, I didn't find it in the paper and I think it is not needed
-				final BigDecimal lower_k_2 = BigDecimal.ONE.divide(sqrt2.multiply(sqrtq)); //lower bound on k from Corollary 2
+				final BigDecimal lower_k_2 = BigDecimal.ONE.divide(sqrt2.multiply(sqrtq), mc); //lower bound on k from Corollary 2
 
 				BigDecimal res;
 				k=lower_k_2;
 				do
 				{
-					res = bq.multiply(BigDecimalMath.exp(k.multiply(k).divide(new BigDecimal("2.0"))).divide(k.multiply(sqrt2).multiply(sqrtpi))); //right hand side of the equation in Corollary 2
-					k.add(BigDecimal.ONE);			
+					res = bq.multiply(BigDecimalMath.exp(k.multiply(k).divide(new BigDecimal("2.0"), mc).negate()), mc).divide(k.multiply(sqrt2, mc).multiply(sqrtpi, mc), mc); //right hand side of the equation in Corollary 2
+					k = k.add(BigDecimal.ONE);			
 				}
-				while (res.compareTo(accuracy.divide(new BigDecimal("2.0"))) > 0);
+				while (res.compareTo(accuracy.divide(new BigDecimal("2.0"), mc)) > 0);
 				
 				this.left = m - (k.multiply(sqrtq).subtract(new BigDecimal("1.5")).intValue());
 				
@@ -186,7 +187,7 @@ public final class FoxGlynn_BD
 				//However, it seems that for no reasonable values this can happen.
 				//And neither the original implementation checked it
 				
-				BigDecimal wm = overflow.divide(factor.multiply(new BigDecimal(this.right - this.left)));
+				BigDecimal wm = overflow.divide(factor.multiply(new BigDecimal(this.right - this.left)), mc);
 
 				this.weights = new BigDecimal[(this.right-this.left+1)];
 				this.weights[m-this.left] = wm;
@@ -198,10 +199,10 @@ public final class FoxGlynn_BD
 			
 			//Down from m
 			for(int j=m; j>this.left; j--)
-				this.weights[j-1-this.left] = (new BigDecimal(j).divide(q_tmax)).multiply(this.weights[j-this.left]);
+				this.weights[j-1-this.left] = (new BigDecimal(j).divide(q_tmax, mc)).multiply(this.weights[j-this.left], mc);
 			//Up from m
 			for(int j=m; j<this.right; j++)
-				this.weights[j+1-this.left] = (q_tmax.divide(new BigDecimal(j+1))).multiply(this.weights[j-this.left]);
+				this.weights[j+1-this.left] = (q_tmax.divide(new BigDecimal(j+1), mc)).multiply(this.weights[j-this.left], mc);
 
 			//Compute totalWeight (i.e. W in the paper)
 			//instead of summing from left to right, start from smallest
@@ -213,16 +214,16 @@ public final class FoxGlynn_BD
 			{
 				if(this.weights[s - this.left].compareTo(this.weights[t - this.left]) <= 0)
 				{
-					this.totalWeight = this.totalWeight.add(this.weights[s-this.left]);
+					this.totalWeight = this.totalWeight.add(this.weights[s-this.left], mc);
 					s++;
 				}
 				else
 				{
-					this.totalWeight = this.totalWeight.add(this.weights[t-this.left]);
+					this.totalWeight = this.totalWeight.add(this.weights[t-this.left], mc);
 					t--;
 				}
 			}
-			this.totalWeight = this.totalWeight.add(this.weights[s-this.left]);
+			this.totalWeight = this.totalWeight.add(this.weights[s-this.left], mc);
 		}
 	}
 
@@ -234,14 +235,16 @@ public final class FoxGlynn_BD
 		
 		FoxGlynn_BD fg_BD = null;
 		FoxGlynn fg = null;
+		MathContext mc = null;
 		long stopwatch_fg_BD = 0;
 		long stopwatch_fg = 0;
 		try {
 			// q = maxDiagRate, time = time parameter (a U<time b)
-			double q = 2, time = 150;
-			double uf = 1.0e-300;
-			double of = 1.0e-300;
-			double acc = 1.0e-30;
+			double q = 4, time = 101; // ADJUST AT WILL!
+			double uf = 1.0e-300; // ADJUST AT WILL!
+			double of = 1.0e-300; // ADJUST AT WILL!
+			double acc = 1.0e-5; // ADJUST AT WILL!
+			mc = new MathContext(BigDecimalUtils.decimalDigitsPrecision(new BigDecimal(acc)), RoundingMode.HALF_UP);
 			
 			stopwatch_fg_BD = System.currentTimeMillis();
 			fg_BD = new FoxGlynn_BD(
@@ -259,29 +262,44 @@ public final class FoxGlynn_BD
 			// ...
 		}
 		
-		BigDecimal sum_BD = BigDecimal.ZERO;
-		Double sum_Double = 0.0;
+		BigDecimal probSum_BD = BigDecimal.ZERO;
+		Double probSum_Double = 0.0;
 		
-		System.out.println("BigDecimal Weights:");
-		for (int i = fg_BD.getLeftTruncationPoint(); i <= fg_BD.getRightTruncationPoint()  ; ++i) {
-			System.out.println(fg_BD.getWeights()[i]);
-			sum_BD = sum_BD.add(fg_BD.getWeights()[i]);
+		System.out.println("BigDecimal Poisson probs:");
+		for (int i = 0; i <= fg_BD.getRightTruncationPoint() - fg_BD.getLeftTruncationPoint() ; ++i) {
+			BigDecimal prob = fg_BD.getWeights()[i].divide(fg_BD.getTotalWeight(), mc);
+			System.out.println(prob);
+			probSum_BD = probSum_BD.add(prob, mc);
 		}
-		System.out.println("---------------------------------------------");
-		System.out.println("---------------------------------------------");
-		System.out.println("---------------------------------------------");
-		System.out.println("Double Weights:");
-		for (int i = fg.getLeftTruncationPoint(); i <= fg.getRightTruncationPoint()  ; ++i) {
-			System.out.println(fg.getWeights()[i]);
-			sum_Double = sum_Double + fg.getWeights()[i];
+		if (fg != null) {
+			System.out.println("---------------------------------------------");
+			System.out.println("---------------------------------------------");
+			System.out.println("---------------------------------------------");
+			System.out.println("Double Poisson probs:");
+			for (int i = 0; i <= fg.getRightTruncationPoint() - fg.getLeftTruncationPoint()  ; ++i) {
+				double prob = fg.getWeights()[i] / fg.getTotalWeight();
+				System.out.println(prob);
+				probSum_Double = probSum_Double + prob;
+			}
 		}
 		System.out.println("---------------------------------------------");
 		System.out.println("---------------------------------------------");
 		System.out.println("---------------------------------------------");
 		System.out.println("BigDecimal time taken: " + stopwatch_fg_BD/1000.0 + " seconds.");
-		System.out.println("Double time taken: " + stopwatch_fg/1000.0 + " seconds.");
-		System.out.println("BigDecimal weight sum:\n" + sum_BD);
-		System.out.println("Double weight sum:\n" + sum_Double);
+		if (fg != null) {
+			System.out.println("Double time taken: " + stopwatch_fg/1000.0 + " seconds.");
+		}
+		System.out.println("BigDecimal total weight:\n" + fg_BD.getTotalWeight());
+		if (fg != null) {
+			System.out.println("Double total weight:\n" + fg.getTotalWeight());
+		}
+		System.out.println("BigDecimal sum of probabilities:\n" + probSum_BD);
+		if (fg != null) {
+			System.out.println("Double sum of probabilities:\n" + probSum_Double);
+		}
+		if (fg == null) {
+			System.out.println("Double precision FoxGlynn failed completely!");
+		}
 	}
 	
 
