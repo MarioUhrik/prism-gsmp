@@ -68,7 +68,12 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize!
 	 *  Initially null.*/
 	private DTMCSimple dtmc = null;
 	private MCRewards dtmcRew = null;
-	private boolean divideByUniformizationRate;
+	/** If this is true, the resulting dtmc and rewards are uniformized so that
+	 *  each step of the dtmc corresponds to the same real time unit,
+	 *  precisely 1/dtmc.uniformizationRate.
+	 *  Generally, this should be true for Total Reward/Reachability reward
+	 *  kind of computations, and false for Steady-state probabilities/rewards.*/
+	private boolean uniformize;
 	
 	/** Default first stage accuracy for computing kappa */
 	private static final double epsilon = 1;
@@ -77,18 +82,24 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize!
 	 * The only constructor
 	 * @param actmc Associated ACTMC model. Must not be null!
 	 * @param actmcRew Optional reward structure associated with {@code actmc}. May be null.
+	 * @param uniformize If this is true, the resulting dtmc and rewards are uniformized so that
+	 *  				 each step of the dtmc corresponds to the same real time unit,
+	 *  				 precisely 1/dtmc.uniformizationRate.
+	 *  				 Generally, this should be true for Total Reward/Reachability reward
+	 *  				 kind of computations, and false for Steady-state probabilities/rewards.
 	 * @param target Optional bitset of target states (if doing reachability). May be null.
 	 * @param parent PrismComponent, presumably a model checker.
 	 * Used only to pass to DTMCModelChecker when computing reachability rewards for kappa.
 	 * @throws Exception if the arguments break the above rules
 	 */
-	public ACTMCReduction(ACTMCSimple actmc, ACTMCRewardsSimple actmcRew, BitSet target, PrismComponent parent) throws PrismException {
+	public ACTMCReduction(ACTMCSimple actmc, ACTMCRewardsSimple actmcRew, boolean uniformize, BitSet target, PrismComponent parent) throws PrismException {
 		super(parent);
 		if (actmc == null) {
 			throw new NullPointerException("ACTMCReduction constructor has received a null actmc!");
 		}
 		this.actmc = actmc;
 		this.actmcRew = actmcRew;
+		this.uniformize = uniformize;
 		this.target = target;
 		if (this.target == null) {
 			this.target = new BitSet(actmc.getNumStates());
@@ -114,17 +125,13 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize!
 	 * by the {@code dtmc} uniformization rate. Commonly, this should true when computing
 	 * steady-state rewards, and false when computing reachability rewards.
 	 */
-	public MCRewards getDTMCRew(boolean divideByUniformizationRate) throws PrismException {
+	public MCRewards getDTMCRew() throws PrismException {
 		if (dtmc == null) {
 			computeEquivalentDTMC();
 		}
-		if (this.divideByUniformizationRate == divideByUniformizationRate) {
-			if (dtmcRew != null) {
-				return dtmcRew;
-			}
+		if (dtmcRew == null) {
+			computeEquivalentDTMCRew();
 		}
-		this.divideByUniformizationRate = divideByUniformizationRate;
-		computeEquivalentDTMCRew();
 		return dtmcRew;
 	}
 	
@@ -141,14 +148,22 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize!
 	
 	private void computeEquivalentDTMC() throws PrismException {
 		computeKappa();
-		dtmc = constructDTMC();
+		if (uniformize) {
+			dtmc = constructUniformizedDTMC();
+		} else {
+			dtmc = constructDTMC();
+		}
 	}
 	
 	private void computeEquivalentDTMCRew() throws PrismException {
 		if (dtmc == null) {
 			computeEquivalentDTMC();
 		}
-		dtmcRew = constructDTMCRew(dtmc, divideByUniformizationRate);
+		if (uniformize) {
+			dtmcRew = constructUniformizedDTMCRew(dtmc);
+		} else {
+			dtmcRew = constructDTMCRew(dtmc);
+		}
 	}
 	
 	/**
@@ -173,7 +188,10 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize!
 			
 			BitSet targetPermut = new BitSet(actmc.getNumStates());
 			for (int i = target.nextSetBit(0); i >= 0; i = target.nextSetBit(i+1)) {
-				targetPermut.set(ACTMCtoDTMC.get(i));
+				Integer permutTarget = ACTMCtoDTMC.get(i);
+				if (permutTarget != null) {
+					targetPermut.set(ACTMCtoDTMC.get(i));
+				}
 			}
 			
 			for (int entrance : entrances) {
@@ -213,7 +231,7 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize!
 			pd.setKappaMap(kappaOneMap);
 		}
 
-		DTMCSimple kappaOneDTMC = constructDTMC();
+		DTMCSimple kappaOneDTMC = constructUniformizedDTMC();
 		MCRewards kappaOneDTMCRew = new StateRewardsConstant(1);
 		DTMCModelChecker mc1 = new DTMCModelChecker(this);
 		mc1.termCritParam = epsilon;
@@ -233,8 +251,8 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize!
 		for (Map.Entry<String, ACTMCPotatoData> pdEntry : pdMap.entrySet()) {
 			pdEntry.getValue().setKappaMap(kappaTwoMap);
 		}
-		DTMCSimple kappaTwoDTMC = constructDTMC();
-		MCRewards kappaTwoDTMCRew = constructDTMCRew(kappaTwoDTMC, false);
+		DTMCSimple kappaTwoDTMC = constructUniformizedDTMC();
+		MCRewards kappaTwoDTMCRew = constructUniformizedDTMCRew(kappaTwoDTMC);
 		DTMCModelChecker mc2 = new DTMCModelChecker(this);
 		mc2.termCritParam = epsilon;
 		mc2.linEqMethod = LinEqMethod.GAUSS_SEIDEL; // TODO MAJO - maybe this can go away, but reliability is priority!
@@ -322,12 +340,12 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize!
 	/**
 	 * Uses {@code actmc} and current {@code pdMap} to construct
 	 * an equivalent {@code dtmc}.
+	 * This is suitable for steady-state probabilities/rewards.
 	 * @return {@code dtmc} equivalent to {@code actmc} according to the current {@code pdMap}
 	 */
 	private DTMCSimple constructDTMC() throws PrismException {
 		CTMCSimple ctmc = new CTMCSimple(actmc);
 		double uniformizationRate = ctmc.getMaxExitRate();
-		//ctmc.uniformise(uniformizationRate); // TODO MAJO - make 100% sure this can be deleted
 		DTMCSimple dtmc = ctmc.buildUniformisedDTMC(uniformizationRate);
 		
 		for (Map.Entry<String, ACTMCPotatoData> pdEntry : pdMap.entrySet()) {
@@ -351,12 +369,11 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize!
 	
 	/**
 	 * Uses {@code actmc} and current {@code pdMap} to construct
-	 * equivalent uniformized {@code dtmc}. The DTMC is uniformized according to how much
+	 * equivalent uniformized {@code dtmc}. The DTMC is uniformized in accordance to how much
 	 * time is spent within each potato having entered from a particular entrance.
-	 * This tends to introduce a lot of unnecessary loops!
-	 * @return {@code dtmc} equivalent to {@code actmc} according to the current {@code pdMap}
+	 * This is suitable for reachability rewards.
+	 * @return Uniformized {@code dtmc} equivalent to {@code actmc} according to the current {@code pdMap}
 	 */
-	@Deprecated
 	private DTMCSimple constructUniformizedDTMC() throws PrismException {
 		CTMCSimple ctmc = new CTMCSimple(actmc);
 		double uniformizationRate = ctmc.getMaxExitRate();
@@ -387,7 +404,6 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize!
 		}
 		
 		// Then, reduce the CTMC to a DTMC.
-		ctmc.uniformise(uniformizationRate); // TODO MAJO - this doesnt need to be here
 		DTMCSimple dtmc = ctmc.buildUniformisedDTMC(uniformizationRate);
 		return dtmc;
 	}
@@ -395,27 +411,22 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize!
 	/**
 	 * Uses {@code actmc}, {@code actmcRew} and current {@code pdMap} to construct
 	 * equivalent {@code mcRewards} for {@code dtmc}.
+	 * This is suitable for steady-state rewards.
 	 * <br>
 	 * Iff {@code divideByUniformizationRate} is true,
 	 * rewards are also adjusted to {@code dtmc.uniformizationRate}.
 	 * @return {@code MCRewards} equivalent to actmcRew
 	 */
-	private MCRewards constructDTMCRew(DTMCSimple dtmc, boolean divideByUniformizationRate) throws PrismException {
+	private MCRewards constructDTMCRew(DTMCSimple dtmc) throws PrismException {
 		StateRewardsSimple newRew = new StateRewardsSimple();
 		if (actmcRew == null) {
 			return newRew;
 		}
 		
-		double uniformizationRate = dtmc.uniformizationRate;
-		if (!divideByUniformizationRate) {
-			dtmc.uniformizationRate = 1;
-		}
-		
-		int numStates = dtmc.getNumStates();
-		for (int s = 0; s < numStates ; ++s) {
+		for (int s = 0; s < dtmc.getNumStates() ; ++s) {
 			double rew = actmcRew.getStateReward(s);
 			if (rew > 0) {
-				newRew.setStateReward(s, rew / dtmc.uniformizationRate);
+				newRew.setStateReward(s, rew);
 			}
 		}
 		
@@ -424,44 +435,27 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize!
 			Set<Integer> entrances = potatoData.getEntrances();
 			for (int entrance : entrances) {
 				double rew = potatoData.getMeanRewards().get(entrance);
-				newRew.setStateReward(entrance, rew / dtmc.uniformizationRate);
+				newRew.setStateReward(entrance, rew);
 			}
 		}
 		
-		dtmc.uniformizationRate = uniformizationRate;
 		return newRew;
 	}
 	
 	/**
 	 * Uses {@code actmc}, {@code actmcRew} and current {@code pdMap} to construct
-	 * equivalent {@code mcRewards} for uniformized {@code dtmc} (created by {@code constructUniformizedDTMC()}.
+	 * equivalent {@code mcRewards} for uniformized {@code dtmc} (created by {@code constructUniformizedDTMC()},
+	 * i.e. the rewards are weighted in accordance to how much time is spent within potatoes.
+	 * This is suitable for reachability rewards.
 	 * <br>
 	 * Iff {@code divideByUniformizationRate} is true,
 	 * rewards are also adjusted to {@code dtmc.uniformizationRate}.
-	 * @return {@code MCRewards} equivalent to actmcRew
+	 * @return Uniformized {@code MCRewards} equivalent to actmcRew
 	 */
-	@Deprecated
-	private MCRewards constructUniformizedDTMCRew(DTMCSimple dtmc, boolean divideByUniformizationRate) throws PrismException {
+	private MCRewards constructUniformizedDTMCRew(DTMCSimple dtmc) throws PrismException {
 		StateRewardsSimple newRew = new StateRewardsSimple();
 		if (actmcRew == null) {
 			return newRew;
-		}
-		
-		double uniformizationRate = dtmc.uniformizationRate;
-		if (!divideByUniformizationRate) {
-			dtmc.uniformizationRate = 1;
-		}
-		
-		Map<Integer, Double> meanRewWithinPotatoesOverTime = new HashMap<Integer, Double>();
-		for (Map.Entry<String, ACTMCPotatoData> pdEntry : pdMap.entrySet()) {
-			ACTMCPotatoData potatoData = pdEntry.getValue();
-			Set<Integer> entrances = potatoData.getEntrances();
-			for (int entrance : entrances) {
-				double rew = potatoData.getMeanRewards().get(entrance);
-				double theta = potatoData.getMeanTimes().get(entrance).sum();
-				double meanRew = rew / theta;//average reward over average time spent within
-				meanRewWithinPotatoesOverTime.put(entrance, meanRew);
-			}
 		}
 		
 		int numStates = dtmc.getNumStates();
@@ -472,12 +466,19 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize!
 			}
 		}
 		
-		Set<Integer> entrances = meanRewWithinPotatoesOverTime.keySet();
-		for (int entrance : entrances) {
-			newRew.setStateReward(entrance, meanRewWithinPotatoesOverTime.get(entrance) / dtmc.uniformizationRate);
+		for (Map.Entry<String, ACTMCPotatoData> pdEntry : pdMap.entrySet()) {
+			ACTMCPotatoData potatoData = pdEntry.getValue();
+			Set<Integer> entrances = potatoData.getEntrances();
+			for (int entrance : entrances) {
+				double rew = potatoData.getMeanRewards().get(entrance);
+				if (rew > 0) {
+					double theta = potatoData.getMeanTimes().get(entrance).sum();
+					double meanRew = rew / theta;//average reward over average time spent within
+					newRew.setStateReward(entrance, meanRew / dtmc.uniformizationRate);
+				}
+			}
 		}
 		
-		dtmc.uniformizationRate = uniformizationRate;
 		return newRew;
 	}
 

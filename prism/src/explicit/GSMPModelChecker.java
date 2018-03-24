@@ -244,7 +244,7 @@ public class GSMPModelChecker extends ProbModelChecker
 	private StateValues computeSteadyStateACTMC(ACTMCSimple actmc, StateValues initDistr) throws PrismException {
 		long reduceTime = System.currentTimeMillis();
 		// Initialize necessary data structures
-		ACTMCReduction reduction = new ACTMCReduction(actmc, null, null, this);
+		ACTMCReduction reduction = new ACTMCReduction(actmc, null, false, null, this);
 		Map<String, ACTMCPotatoData> pdMap = reduction.getPotatoData();
 		Map<Integer, Distribution> timesWithinPotatoes = new HashMap<Integer, Distribution>();
 		for (Map.Entry<String, ACTMCPotatoData> pdEntry : pdMap.entrySet()) {
@@ -300,13 +300,13 @@ public class GSMPModelChecker extends ProbModelChecker
 	private ModelCheckerResult computeReachRewardsACTMC(ACTMCSimple actmc, ACTMCRewardsSimple actmcRew, BitSet target) throws PrismException {
 		long reduceTime = System.currentTimeMillis();
 		// Initialize necessary data structures
-		ACTMCReduction reduction = new ACTMCReduction(actmc, actmcRew, target, this);
+		ACTMCReduction reduction = new ACTMCReduction(actmc, actmcRew, true, target, this);
 		
 		// Reduce the ACTMC to an equivalent DTMC.
 		DTMCSimple dtmc = reduction.getDTMC();
 		
 		// Compute the new state reward values (including the event behavior)
-		MCRewards dtmcRew = reduction.getDTMCRew(false);
+		MCRewards dtmcRew = reduction.getDTMCRew();
 		
 		reduceTime = System.currentTimeMillis() - reduceTime;
 		
@@ -328,7 +328,7 @@ public class GSMPModelChecker extends ProbModelChecker
 		// TODO MAJO - reuse the code from Steady State probabilities
 		long reduceTime = System.currentTimeMillis();
 		// Initialize necessary data structures
-		ACTMCReduction reduction = new ACTMCReduction(actmc, actmcRew, null, this);
+		ACTMCReduction reduction = new ACTMCReduction(actmc, actmcRew, false, null, this);
 		Map<String, ACTMCPotatoData> pdMap = reduction.getPotatoData();
 		Map<Integer, Distribution> timesWithinPotatoes = new HashMap<Integer, Distribution>();
 		for (Map.Entry<String, ACTMCPotatoData> pdEntry : pdMap.entrySet()) {
@@ -339,7 +339,7 @@ public class GSMPModelChecker extends ProbModelChecker
 		DTMCSimple dtmc = reduction.getDTMC();
 		
 		// Compute the new state reward values (including the event behavior)
-		MCRewards dtmcRew = reduction.getDTMCRew(true);
+		MCRewards dtmcRew = reduction.getDTMCRew();
 		
 		reduceTime = System.currentTimeMillis() - reduceTime;
 		long computeTime = System.currentTimeMillis();

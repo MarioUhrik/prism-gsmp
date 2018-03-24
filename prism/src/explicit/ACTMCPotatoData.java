@@ -324,9 +324,8 @@ public class ACTMCPotatoData
 	
 	/**
 	 * Gets a map where the keys are entrances into the potato, and
-	 * the values is a distribution of time spent within the states of the potato
-	 * until first leaving the potato.
-	 * if entered from state {@code key}.
+	 * the value is a distribution of time spent within the states of the potato
+	 * until first leaving the potato, having entered from state {@code key}.
 	 * <br>
 	 * If this is the first call, this method computes it before returning it.
 	 */
