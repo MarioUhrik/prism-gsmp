@@ -26,6 +26,7 @@
 
 package explicit;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.HashMap;
@@ -122,7 +123,7 @@ public class ACTMCPotatoData
 	 * computed and stored by class FoxGlynn.
 	 * I.e. keys are potato entrances, and values are Poisson distribution values.
 	 */
-	private Map<Integer, FoxGlynn> foxGlynnMap = new HashMap<Integer, FoxGlynn>();
+	private Map<Integer, FoxGlynn_BD> foxGlynnMap = new HashMap<Integer, FoxGlynn_BD>();
 	/**
 	 * While computing the {@code foxGlynnMap}, the most accurate accuracy (kappa)
 	 * is detected and stored here.
@@ -515,12 +516,12 @@ public class ACTMCPotatoData
 				mostPreciseAccuracy = accuracy;
 				mostPreciseAccuracyEntrance = entrance;
 			}
-			FoxGlynn fg;
+			FoxGlynn_BD fg;
 			
 			switch (event.getDistributionType().getEnum()) {
 			case DIRAC:
 				double fgRate = uniformizationRate * event.getFirstParameter();
-				fg = new FoxGlynn(fgRate, 1e-300, 1e+300, accuracy);
+				fg = new FoxGlynn_BD(new BigDecimal(fgRate), new BigDecimal(1e-300), new BigDecimal(1e+300), new BigDecimal(accuracy));
 				foxGlynnMap.put(entrance, fg);
 				break;
 			case ERLANG:
@@ -566,11 +567,18 @@ public class ACTMCPotatoData
 		for (int entrance : entrances) {
 			
 			// Prepare the FoxGlynn data
-			FoxGlynn fg = foxGlynnMap.get(entrance);
+			FoxGlynn_BD fg = foxGlynnMap.get(entrance);
 			int left = fg.getLeftTruncationPoint();
 			int right = fg.getRightTruncationPoint();
-			double[] weights = fg.getWeights().clone();
-			double totalWeight = fg.getTotalWeight();
+			///// Conversion from BigDecimal to Double!!! // TODO MAJO - convert EVERYTHING to BigDecimal
+			BigDecimal[] weights_BD = fg.getWeights().clone();
+			double[] weights = new double[weights_BD.length];
+			for (int i = 0 ; i < weights.length ; ++i) {
+				weights[i] = weights_BD[i].doubleValue();
+			}
+			BigDecimal totalWeight_BD = fg.getTotalWeight();
+			double totalWeight = totalWeight_BD.doubleValue();
+			/////
 			for (int i = left; i <= right; i++) {
 				weights[i - left] /= totalWeight;
 			}
@@ -655,11 +663,18 @@ public class ACTMCPotatoData
 		for (int entrance : entrances) {
 			
 			// Prepare the FoxGlynn data
-			FoxGlynn fg = foxGlynnMap.get(entrance);
+			FoxGlynn_BD fg = foxGlynnMap.get(entrance);
 			int left = fg.getLeftTruncationPoint();
 			int right = fg.getRightTruncationPoint();
-			double[] weights = fg.getWeights().clone();
-			double totalWeight = fg.getTotalWeight();
+			///// Conversion from BigDecimal to Double!!! // TODO MAJO - convert EVERYTHING to BigDecimal
+			BigDecimal[] weights_BD = fg.getWeights().clone();
+			double[] weights = new double[weights_BD.length];
+			for (int i = 0 ; i < weights.length ; ++i) {
+				weights[i] = weights_BD[i].doubleValue();
+			}
+			BigDecimal totalWeight_BD = fg.getTotalWeight();
+			double totalWeight = totalWeight_BD.doubleValue();
+			/////
 			for (int i = left; i <= right; i++) {
 				weights[i - left] /= totalWeight;
 			}
@@ -771,11 +786,18 @@ public class ACTMCPotatoData
 		int numStates = potatoDTMC.getNumStates();
 		
 		// Prepare the FoxGlynn data
-		FoxGlynn fg = foxGlynnMap.get(mostPreciseAccuracyEntrance);
+		FoxGlynn_BD fg = foxGlynnMap.get(mostPreciseAccuracyEntrance);
 		int left = fg.getLeftTruncationPoint();
 		int right = fg.getRightTruncationPoint();
-		double[] weights = fg.getWeights().clone();
-		double totalWeight = fg.getTotalWeight();
+		///// Conversion from BigDecimal to Double!!! // TODO MAJO - convert EVERYTHING to BigDecimal
+		BigDecimal[] weights_BD = fg.getWeights().clone();
+		double[] weights = new double[weights_BD.length];
+		for (int i = 0 ; i < weights.length ; ++i) {
+			weights[i] = weights_BD[i].doubleValue();
+		}
+		BigDecimal totalWeight_BD = fg.getTotalWeight();
+		double totalWeight = totalWeight_BD.doubleValue();
+		/////
 		for (int i = left; i <= right; i++) {
 			weights[i - left] /= totalWeight;
 		}

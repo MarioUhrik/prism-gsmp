@@ -271,6 +271,9 @@ public class GSMPModelChecker extends ProbModelChecker
 				weightedResult[s] += result.valuesD[s];
 			} else {
 				double prob = result.valuesD[s];
+				if (prob == 0) {
+					continue; //optimization
+				}
 				double theta = timeDistr.sum();
 				Set<Integer> distrSupport = timeDistr.getSupport();
 				for ( int t : distrSupport) {
@@ -322,6 +325,7 @@ public class GSMPModelChecker extends ProbModelChecker
 	}
 	
 	private ModelCheckerResult computeSteadyStateRewardsACTMC(ACTMCSimple actmc, ACTMCRewardsSimple actmcRew) throws PrismException {
+		// TODO MAJO - reuse the code from Steady State probabilities
 		long reduceTime = System.currentTimeMillis();
 		// Initialize necessary data structures
 		ACTMCReduction reduction = new ACTMCReduction(actmc, actmcRew, null, this);
@@ -354,6 +358,9 @@ public class GSMPModelChecker extends ProbModelChecker
 				weightedResult[s] += result.valuesD[s];
 			} else {
 				double prob = result.valuesD[s];
+				if (prob == 0) {
+					continue; //optimization
+				}
 				double theta = timeDistr.sum();
 				Set<Integer> distrSupport = timeDistr.getSupport();
 				for ( int t : distrSupport) {

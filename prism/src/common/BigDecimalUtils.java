@@ -61,6 +61,8 @@ public class BigDecimalUtils {
 	 * Compute the number of decimal digits corresponding to floating point {@code precision}.
 	 * This number is increased by 3 to provide extra accuracy when the requested precision
 	 * is very low.
+	 * <br>
+	 * IMPORTANT NOTE: Does not work for precision = 0
 	 */
 	public static int decimalDigitsPrecision(BigDecimal precision) {
 		BigDecimal inverse = BigDecimal.ONE.divide(precision, RoundingMode.UP);

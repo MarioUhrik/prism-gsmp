@@ -60,14 +60,13 @@ public final class FoxGlynn_BD
 	public FoxGlynn_BD(BigDecimal qtmax, BigDecimal uf, BigDecimal of, BigDecimal acc) throws PrismException
 	{
 		decimalPrecision = BigDecimalUtils.decimalDigitsPrecision(acc);
+		mc = new MathContext(decimalPrecision, RoundingMode.HALF_UP);
+		ceil = new MathContext(decimalPrecision, RoundingMode.CEILING);
 		
-		q_tmax = qtmax;
-		q_tmax = q_tmax.setScale(decimalPrecision);
+		q_tmax = qtmax.setScale(decimalPrecision, RoundingMode.HALF_UP);
 		//underflow = uf;
 		overflow = of;
 		accuracy = acc;
-		mc = new MathContext(decimalPrecision, RoundingMode.HALF_UP);
-		ceil = new MathContext(decimalPrecision, RoundingMode.CEILING);
 		run();
 	}
 

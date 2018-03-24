@@ -177,7 +177,6 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize!
 			}
 			
 			for (int entrance : entrances) {
-				// TODO MAJO - shitty variable names - do something about it!
 				BitSet reachableStatesPermut = potatoDTMC.getReachableStates(ACTMCtoDTMC.get(entrance), targetPermut);
 				// TODO MAJO - Optimize by doing them per entire bitset!
 				BitSet reachableStates = new BitSet(actmc.getNumStates());
@@ -186,11 +185,12 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize!
 				}
 				
 				double minProb = potatoDTMC.getMinimumProbability(reachableStatesPermut);
-				double maxRew;
+				double maxRew = 0;
 				if (actmcRew != null) {
 					maxRew = actmcRew.getMax(reachableStates);
-				} else {
-					maxRew = 0;
+				}
+				if (maxRew == 0) { // This deals with situations where there are no rewards.
+					maxRew = 1;
 				}
 				double baseKappaOne = minProb / 2;
 				double baseKappaTwo = Math.min(baseKappaOne, maxRew);
@@ -275,8 +275,13 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize!
 	/**
 	 * Finds the maximum element of the array, but only considers indices
 	 * that are either potato entrances or outside the potato.
+	 * @return If relevant results are given, returns their maximum. <br>
+	 * 		   If the maximum of the relevant results is {@literal Infinity}, returns 1. <br>
+	 * 		   If the maximum of the relevant results is 0, throws an exception. <br>
+	 * 		   If no relevant results are given, returns 1. <br>
+	 * 
 	 */
-	private double findMaxTR(double[] soln) {
+	private double findMaxTR(double[] soln) throws PrismException {
 		// find relevant states
 		Set<Integer> potatoes = new HashSet<Integer>();
 		Set<Integer> entrances = new HashSet<Integer>();
@@ -298,8 +303,17 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize!
 				max = soln[relevantState];
 			}
 		}
+		if (Double.isInfinite(max)) {
+			max = 1; 
+			// This deals with strange behavior of reachability rewards when entrance is the initial state.
+		}
 		if (max == Double.MIN_VALUE) {
-			max = 0.0; // TODO MAJO - can this happen? shouldnt it be an error?
+			max = 1; 
+			// This deals with strange behavior of reachability rewards when there are no rewards.
+		}
+		if (max == 0) {
+			throw new PrismException("ACTMC reduction to DTMC failed: maximum Reachability Reward is 0!");
+			// This should never happen.
 		}
 		
 		return max;
