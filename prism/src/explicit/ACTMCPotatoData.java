@@ -116,7 +116,7 @@ public class ACTMCPotatoData
 	 * Required accuracy (kappa) for computation of each potato entrance.
 	 * I.e. each key is a potato entrance, and the value is the required precision.
 	 */
-	private Map<Integer, Double> kappaMap = new HashMap<Integer, Double>();
+	private Map<Integer, BigDecimal> kappaMap = new HashMap<Integer, BigDecimal>();
 	
 	/**
 	 * Poisson distribution values for each entrance of this potato,
@@ -130,14 +130,14 @@ public class ACTMCPotatoData
 	 * I.e. {@code foxGlynnMap.get(mostPreciseAccuracyEntrance)} contains the most accurate
 	 * Poisson probabilities, computed with precision {@code mostPreciseAccuracy}.
 	 */
-	private double mostPreciseAccuracy = Double.MAX_VALUE;
+	private BigDecimal mostPreciseKappa = new BigDecimal(Double.MAX_VALUE);
 	/**
 	 * While computing the {@code foxGlynnMap}, the potato entrance with the highest
 	 * required accuracy (kappa) is detected and stored here.
 	 * I.e. {@code foxGlynnMap.get(mostPreciseAccuracyEntrance)} contains the most accurate
 	 * Poisson probabilities, computed with precision {@code mostPreciseAccuracy}.
 	 */
-	private int mostPreciseAccuracyEntrance;
+	private int mostPreciseKappaEntrance;
 	private boolean foxGlynnMapComputed = false;
 	
 	/** Mapping of expected accumulated rewards until leaving the potato onto states used to enter the potato */
@@ -188,10 +188,10 @@ public class ACTMCPotatoData
 	 * @param kappaMap kappa values for each potato entrance
 	 * I.e. each key of the map is a potato entrance, and the value is the required precision.
 	 * {@code kappaMap} is not verified in any way, so make sure it is correct!
-	 * Particularly, all keys must be entrances and all entrances must be present.
-	 * Formally, {@code kappaMap.keySet()} should be equal to {@code this.getEntrances()}.
+	 * Particularly, all keys should be entrances and all entrances must be present.
+	 * Formally, {@code kappaMap.keySet()} must contain all elements of {@code this.getEntrances()}.
 	 */
-	public void setKappaMap(Map<Integer, Double> kappaMap) {
+	public void setKappaMap(Map<Integer, BigDecimal> kappaMap) {
 		this.kappaMap = kappaMap;
 		// force this class to recompute all data with the new kappa values
 		foxGlynnMapComputed = false;
@@ -274,7 +274,7 @@ public class ACTMCPotatoData
 	 * Gets a mapping where the keys are entrances into the potato,
 	 * and the values are current kappa error bounds.
 	 */
-	public Map<Integer, Double> getKappaMap() {
+	public Map<Integer, BigDecimal> getKappaMap() {
 		return kappaMap;
 	}
 	
@@ -507,20 +507,22 @@ public class ACTMCPotatoData
 			// Using class FoxGlynn to pre-compute the Poisson distribution.
 			// Different approach is required for each distribution type.
 			
-			Double accuracy = kappaMap.get(entrance); //get the preset required accuracy
-			if (accuracy == null) {
-				accuracy = 1e-10; //if none is preset, then use a default one
+			BigDecimal kappa = kappaMap.get(entrance); //get the preset required accuracy
+			if (kappa == null) {
+				kappa = new BigDecimal(1e-20); 
+				//if none is preset, then use a default one. This should never happen however.
+				// TODO MAJO - maybe throw exception here?
 			}
-			if (accuracy < mostPreciseAccuracy) {
-				mostPreciseAccuracy = accuracy;
-				mostPreciseAccuracyEntrance = entrance;
+			if (kappa.compareTo(mostPreciseKappa) < 0) {
+				mostPreciseKappa = kappa;
+				mostPreciseKappaEntrance = entrance;
 			}
 			FoxGlynn_BD fg;
 			
 			switch (event.getDistributionType().getEnum()) {
 			case DIRAC:
 				double fgRate = uniformizationRate * event.getFirstParameter();
-				fg = new FoxGlynn_BD(new BigDecimal(fgRate), new BigDecimal(1e-300), new BigDecimal(1e+300), new BigDecimal(accuracy));
+				fg = new FoxGlynn_BD(new BigDecimal(fgRate), new BigDecimal(1e-300), new BigDecimal(1e+300), kappa);
 				foxGlynnMap.put(entrance, fg);
 				break;
 			case ERLANG:
@@ -785,7 +787,7 @@ public class ACTMCPotatoData
 		int numStates = potatoDTMC.getNumStates();
 		
 		// Prepare the FoxGlynn data
-		FoxGlynn_BD fg = foxGlynnMap.get(mostPreciseAccuracyEntrance);
+		FoxGlynn_BD fg = foxGlynnMap.get(mostPreciseKappaEntrance);
 		int left = fg.getLeftTruncationPoint();
 		int right = fg.getRightTruncationPoint();
 		///// Conversion from BigDecimal to Double!!! // TODO MAJO - convert EVERYTHING to BigDecimal

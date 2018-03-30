@@ -73,4 +73,15 @@ public class BigDecimalUtils {
 		}
 		return decimalDigits;
 	}
+	
+	/**
+	 * Computes and returns a number with the smallest value.
+	 */
+	public static BigDecimal min(BigDecimal a, BigDecimal b) {
+		if (a.compareTo(b) < 0) {
+			return a;
+		} else {
+			return b;
+		}
+	}
 }

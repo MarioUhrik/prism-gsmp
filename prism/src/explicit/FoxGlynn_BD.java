@@ -239,10 +239,10 @@ public final class FoxGlynn_BD
 		long stopwatch_fg = 0;
 		try {
 			// q = maxDiagRate, time = time parameter (a U<time b)
-			double q = 4, time = 101; // ADJUST AT WILL!
+			double q = 4, time = 20; // ADJUST AT WILL! // 4, 3 error!
 			double uf = 1.0e-300; // ADJUST AT WILL!
 			double of = 1.0e-300; // ADJUST AT WILL!
-			double acc = 1.0e-5; // ADJUST AT WILL!
+			double acc = 1.0e-25; // ADJUST AT WILL!
 			mc = new MathContext(BigDecimalUtils.decimalDigitsPrecision(new BigDecimal(acc)), RoundingMode.HALF_UP);
 			
 			stopwatch_fg_BD = System.currentTimeMillis();
