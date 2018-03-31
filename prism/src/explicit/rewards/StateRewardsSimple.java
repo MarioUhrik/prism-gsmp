@@ -113,7 +113,7 @@ public class StateRewardsSimple extends StateRewards
 	 */
 	public double getMax() {
 		BitSet bs = new BitSet(stateRewards.size());
-		bs.flip(0, bs.size());
+		bs.flip(0, stateRewards.size());
 		return getMax(bs);
 	}
 	

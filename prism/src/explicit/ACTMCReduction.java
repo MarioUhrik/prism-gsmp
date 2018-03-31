@@ -194,7 +194,7 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize! (Big
 			entranceStates.addAll(pdEntry.getValue().getEntrances());
 		}
 		
-		relevantStates.set(0, relevantStates.size());
+		relevantStates.set(0, actmc.getNumStates());
 		for (int ps : potatoStates) {
 			relevantStates.set(ps, false);
 		}
@@ -346,7 +346,6 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize! (Big
 			kappaMap.put(entrance, kappa);
 		}
 		
-		setKappaMap(kappaMap);
 		return kappaMap;
 	}
 	
