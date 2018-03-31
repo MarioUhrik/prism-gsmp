@@ -317,9 +317,9 @@ public class GSMPModelChecker extends ProbModelChecker
 		result.timeTaken += result.timePre;
 		result.timePre = reduceTime/1000.0;
 		mainLog.println("\nReducing ACTMC to equivalent DTMC "
-				+ "took " + result.timePre/1000.0 + "seconds.");
+				+ "took " + result.timePre + "seconds.");
 		mainLog.println("Computing reachability rewards for the equivalent DTMC "
-				+ "took " + result.timeTaken/1000.0 + "seconds.");
+				+ "took " + result.timeTaken + "seconds.");
 		
 		return result;
 	}
