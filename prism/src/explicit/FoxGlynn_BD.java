@@ -32,15 +32,14 @@ import java.math.BigDecimal;
 import java.math.MathContext;
 import java.math.RoundingMode;
 
-import org.nevec.rjm.BigDecimalMath;
-
+import ch.obermuhlner.math.big.BigDecimalMath;
 import common.BigDecimalUtils;
 import prism.PrismException;
 
 /**
  * BigDecimal version of {@link FoxGlynn}, allowing arbitrary {@code accuracy}.
  */
-public final class FoxGlynn_BD
+public final class FoxGlynn_BD // TODO MAJO - maybe optimize BigDecimal and BigDecimalMath computations
 {
 	// Math context for specifying BigDecimal accuracy
 	MathContext mc;
@@ -97,7 +96,7 @@ public final class FoxGlynn_BD
 		}
 		else if (q_tmax.compareTo(new BigDecimal("400.0")) < 0)
 		{ //here naive approach should have better performance than Fox Glynn
-			final BigDecimal expcoef = BigDecimalMath.exp(q_tmax.negate()); //the "e^-lambda" part of p.m.f. of Poisson dist.
+			final BigDecimal expcoef = BigDecimalMath.exp(q_tmax.negate(), mc); //the "e^-lambda" part of p.m.f. of Poisson dist.
 			int k; //denotes that we work with event "k steps occur"
 			BigDecimal lastval; //(probability that exactly k events occur)/expcoef
 			BigDecimal accum; //(probability that 0 to k events occur)/expcoef
@@ -137,11 +136,11 @@ public final class FoxGlynn_BD
 			final int m = q_tmax.intValue(); //mode
 			//run FINDER to get left, right and weight[m]
 			{
-				final BigDecimal sqrtpi = BigDecimalMath.sqrt(BigDecimalMath.pi(mc)); //square root of PI
-				final BigDecimal sqrt2 = BigDecimalMath.sqrt((new BigDecimal("2.0")).setScale(decimalPrecision)); //square root of 2
-				final BigDecimal sqrtq = BigDecimalMath.sqrt(q_tmax);
-				final BigDecimal aq = (BigDecimal.ONE.add(BigDecimal.ONE.divide(q_tmax, mc))).multiply(BigDecimalMath.exp(new BigDecimal("0.0625").setScale(decimalPrecision)).multiply(sqrt2)); //a_\lambda from the paper			
-				final BigDecimal bq = (BigDecimal.ONE.add(BigDecimal.ONE.divide(q_tmax, mc))).multiply(BigDecimalMath.exp(new BigDecimal("0.125").divide(q_tmax, mc))); //b_\lambda from the paper
+				final BigDecimal sqrtpi = BigDecimalMath.sqrt(BigDecimalMath.pi(mc), mc); //square root of PI
+				final BigDecimal sqrt2 = BigDecimalMath.sqrt((new BigDecimal("2.0")).setScale(decimalPrecision), mc); //square root of 2
+				final BigDecimal sqrtq = BigDecimalMath.sqrt(q_tmax, mc);
+				final BigDecimal aq = (BigDecimal.ONE.add(BigDecimal.ONE.divide(q_tmax, mc))).multiply(BigDecimalMath.exp(new BigDecimal("0.0625").setScale(decimalPrecision), mc).multiply(sqrt2)); //a_\lambda from the paper			
+				final BigDecimal bq = (BigDecimal.ONE.add(BigDecimal.ONE.divide(q_tmax, mc))).multiply(BigDecimalMath.exp(new BigDecimal("0.125").divide(q_tmax, mc), mc)); //b_\lambda from the paper
 
 				//use Corollary 1 to find right truncation point
 				final BigDecimal lower_k_1 = BigDecimal.ONE.divide(sqrt2.multiply(q_tmax).multiply(new BigDecimal("2.0")), mc); //lower bound on k from Corollary 1
@@ -153,8 +152,8 @@ public final class FoxGlynn_BD
 				for(k=lower_k_1; k.compareTo(upper_k_1) <= 0;
 					k=(k.compareTo(lower_k_1) == 0)? k.add(new BigDecimal("4.0")) : k.add(BigDecimal.ONE) )
 				{
-					BigDecimal dkl = BigDecimal.ONE.divide(BigDecimal.ONE.subtract(BigDecimalMath.exp((new BigDecimal("2.0").divide(new BigDecimal("9.0"), mc)).multiply((k.multiply(sqrt2, mc).multiply(sqrtq, mc).add(new BigDecimal("1.5"))), mc).negate())), mc); //d(k,\lambda) from the paper
-					BigDecimal res = aq.multiply(dkl, mc).multiply(BigDecimalMath.exp(k.multiply(k, mc).divide(new BigDecimal("2.0"), mc).negate()), mc).divide(k.multiply(sqrt2, mc).multiply(sqrtpi, mc), mc); //right hand side of the equation in Corollary 1
+					BigDecimal dkl = BigDecimal.ONE.divide(BigDecimal.ONE.subtract(BigDecimalMath.exp((new BigDecimal("2.0").divide(new BigDecimal("9.0"), mc)).multiply((k.multiply(sqrt2, mc).multiply(sqrtq, mc).add(new BigDecimal("1.5"))), mc).negate(), mc), mc), mc); //d(k,\lambda) from the paper
+					BigDecimal res = aq.multiply(dkl, mc).multiply(BigDecimalMath.exp(k.multiply(k, mc).divide(new BigDecimal("2.0"), mc).negate(), mc), mc).divide(k.multiply(sqrt2, mc).multiply(sqrtpi, mc), mc); //right hand side of the equation in Corollary 1
 					if (res.compareTo(accuracy.divide(new BigDecimal("2.0"), mc)) <= 0)
 					{
 						break;
@@ -175,7 +174,7 @@ public final class FoxGlynn_BD
 				k=lower_k_2;
 				do
 				{
-					res = bq.multiply(BigDecimalMath.exp(k.multiply(k).divide(new BigDecimal("2.0"), mc).negate()), mc).divide(k.multiply(sqrt2, mc).multiply(sqrtpi, mc), mc); //right hand side of the equation in Corollary 2
+					res = bq.multiply(BigDecimalMath.exp(k.multiply(k).divide(new BigDecimal("2.0"), mc).negate(), mc), mc).divide(k.multiply(sqrt2, mc).multiply(sqrtpi, mc), mc); //right hand side of the equation in Corollary 2
 					k = k.add(BigDecimal.ONE);			
 				}
 				while (res.compareTo(accuracy.divide(new BigDecimal("2.0"), mc)) > 0);
@@ -185,6 +184,7 @@ public final class FoxGlynn_BD
 				//According to the paper, we should check underflow of lower bound.
 				//However, it seems that for no reasonable values this can happen.
 				//And neither the original implementation checked it
+				// TODO MAJO - perhaps this is necessary for arbitrary precision implementation!
 				
 				BigDecimal wm = overflow.divide(factor.multiply(new BigDecimal(this.right - this.left)), mc);
 
@@ -239,10 +239,10 @@ public final class FoxGlynn_BD
 		long stopwatch_fg = 0;
 		try {
 			// q = maxDiagRate, time = time parameter (a U<time b)
-			double q = 4, time = 20; // ADJUST AT WILL! // 4, 3 error!
+			double q = 4, time = 3; // ADJUST AT WILL!
 			double uf = 1.0e-300; // ADJUST AT WILL!
 			double of = 1.0e-300; // ADJUST AT WILL!
-			double acc = 1.0e-25; // ADJUST AT WILL!
+			double acc = 1.0e-10; // ADJUST AT WILL!
 			mc = new MathContext(BigDecimalUtils.decimalDigitsPrecision(new BigDecimal(acc)), RoundingMode.HALF_UP);
 			
 			stopwatch_fg_BD = System.currentTimeMillis();

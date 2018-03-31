@@ -37,8 +37,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Vector;
 
-import org.nevec.rjm.BigDecimalMath;
-
+import ch.obermuhlner.math.big.BigDecimalMath;
 import common.BigDecimalUtils;
 import explicit.ProbModelChecker.LinEqMethod;
 import explicit.rewards.ACTMCRewardsSimple;
@@ -57,7 +56,7 @@ import prism.PrismSettings;
  * but on the scope of the entire ACTMC, whereas the scope of {@code ACTMCPotatoData}
  * only encompasses a single event.
  */
-public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize!
+public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize! (BigDecimal usage as well)
 {
 	/** ACTMC model this class is associated with */
 	private ACTMCSimple actmc;
@@ -231,7 +230,7 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize!
 					mcMap.put(entrance, mc);
 					
 					n = n.setScale(n.intValue(), RoundingMode.HALF_UP);
-					maxExpectedSteps = n.divide(BigDecimalMath.pow(baseKappaOne, n), mc);
+					maxExpectedSteps = n.divide(BigDecimalMath.pow(baseKappaOne, n, mc), mc);
 				}
 				BigDecimal maxExpectedTR = maxExpectedSteps.multiply(new BigDecimal(maxRew));
 				BigDecimal b = BigDecimal.ONE.divide(new BigDecimal("2.0").multiply(maxExpectedSteps).multiply(n), mc);
