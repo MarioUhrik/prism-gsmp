@@ -61,6 +61,7 @@ public class BigDecimalUtils {
 	 * Compute the number of decimal digits corresponding to floating point {@code precision}.
 	 * This number is increased by 3 to provide extra accuracy when the requested precision
 	 * is very low.
+	 * @param precision supposed to be a number greater than 0 but smaller than 1. For example, 0.0001 or 1.0e-10.
 	 * <br>
 	 * IMPORTANT NOTE: Does not work for precision = 0
 	 */

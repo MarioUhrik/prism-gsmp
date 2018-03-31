@@ -44,6 +44,7 @@ import explicit.rewards.ACTMCRewardsSimple;
 import explicit.rewards.MCRewards;
 import explicit.rewards.StateRewardsConstant;
 import explicit.rewards.StateRewardsSimple;
+import prism.Pair;
 import prism.PrismComponent;
 import prism.PrismDevNullLog;
 import prism.PrismException;
@@ -66,6 +67,10 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize! (Big
 	private ACTMCRewardsSimple actmcRew = null;
 	/** Optional bitset of target states (for reachability) */
 	private BitSet target = null;
+	/** Set of states of which each element:
+	 *  1) either does not belong to any potato (no non-exponential event is active in it),
+	 *  2) or it is an entrance to some potato. */
+	private BitSet relevantStates;
 	/** Map where the keys are string identifiers of the GSMPEvents,
 	 *  and the values are corresponding ACTMCPotatoData structures.
 	 *  This is useful for fast access and efficient reusage of the ACTMCPotatoData structures.*/
@@ -114,6 +119,8 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize! (Big
 		}
 		this.epsilon = new BigDecimal(this.getSettings().getDouble(PrismSettings.PRISM_TERM_CRIT_PARAM));
 		this.pdMap = createPotatoDataMap(this.actmc, this.actmcRew, this.target);
+		this.relevantStates = new BitSet(actmc.getNumStates());
+		setRelevantStates();
 	}
 	
 	/**
@@ -156,7 +163,7 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize! (Big
 	}
 	
 	private void computeEquivalentDTMC() throws PrismException {
-		computeKappa();
+		setKappaMap(computeKappa());
 		if (uniformize) {
 			dtmc = constructUniformizedDTMC();
 		} else {
@@ -176,7 +183,42 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize! (Big
 	}
 	
 	/**
-	 * Computes the kappa error bounds and assigns it to the {@code pdMap}.
+	 * Computes and sets the bitset of relevant states.
+	 * The {@code pdMap} must already be correctly initialised!
+	 */
+	private void setRelevantStates() {
+		Set<Integer> potatoStates = new HashSet<Integer>();
+		Set<Integer> entranceStates = new HashSet<Integer>();
+		for (Map.Entry<String, ACTMCPotatoData> pdEntry : pdMap.entrySet()) {
+			potatoStates.addAll(pdEntry.getValue().getPotato());
+			entranceStates.addAll(pdEntry.getValue().getEntrances());
+		}
+		
+		relevantStates.set(0, relevantStates.size());
+		for (int ps : potatoStates) {
+			relevantStates.set(ps, false);
+		}
+		for (int es : entranceStates) {
+			relevantStates.set(es, true);
+		}
+	}
+	
+	/**
+	 * Assigns {@code kappaMap} to all ACTMCPotatoData within {@code pdMap}.
+	 * <br>
+	 * I.e. next ACTMCPotatoData computations will be with precision dictated by the kappaMap.
+	 * @param kappaMap
+	 */
+	private void setKappaMap(Map<Integer, BigDecimal> kappaMap) {
+		for (Map.Entry<String, ACTMCPotatoData> pdEntry : pdMap.entrySet()) {
+			pdEntry.getValue().setKappaMap(kappaMap);
+		}
+	}
+	
+	/**
+	 * Computes the kappa error bounds such that any model checking
+	 * done on a thusly created {@code dtmc} is guaranteed to be accurate
+	 * within allowed error {@code epsilon}.
 	 */
 	private Map<Integer, BigDecimal> computeKappa() throws PrismException {
 		Map<Integer, MathContext> mcMap = new HashMap<Integer, MathContext>();
@@ -212,10 +254,11 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize! (Big
 					reachableStates.set(DTMCtoACTMC.get(i));
 				}
 				
-				double minProb = potatoDTMC.getMinimumProbability(reachableStatesPermut);
+				Pair<Double, Double> minProb_maxRew = compute_minProb_maxRew();
+				double minProb = minProb_maxRew.getKey();
 				double maxRew = 0;
 				if (actmcRew != null) {
-					maxRew = actmcRew.getMax(reachableStates);
+					maxRew = minProb_maxRew.getValue();
 				}
 				if (maxRew == 0) { // This deals with situations where there are no rewards.
 					maxRew = 1;
@@ -247,9 +290,9 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize! (Big
 				kappaOneMap.put(entrance, kappaOne);
 				kappaTwoMap.put(entrance, kappaTwo);
 			}
-			pd.setKappaMap(kappaOneMap);
 		}
 
+		setKappaMap(kappaOneMap);
 		DTMCSimple kappaOneDTMC = constructUniformizedDTMC();
 		MCRewards kappaOneDTMCRew = new StateRewardsConstant(1);
 		DTMCModelChecker mc1 = new DTMCModelChecker(this);
@@ -267,9 +310,7 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize! (Big
 			maxStepsMap.put(entrance, max.add(pre_epsilon));
 		}
 		
-		for (Map.Entry<String, ACTMCPotatoData> pdEntry : pdMap.entrySet()) {
-			pdEntry.getValue().setKappaMap(kappaTwoMap);
-		}
+		setKappaMap(kappaTwoMap);
 		DTMCSimple kappaTwoDTMC = constructUniformizedDTMC();
 		MCRewards kappaTwoDTMCRew = constructUniformizedDTMCRew(kappaTwoDTMC);
 		DTMCModelChecker mc2 = new DTMCModelChecker(this);
@@ -305,16 +346,45 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize! (Big
 			kappaMap.put(entrance, kappa);
 		}
 		
-		for (Map.Entry<String, ACTMCPotatoData> pdEntry : pdMap.entrySet()) {
-			pdEntry.getValue().setKappaMap(kappaMap);
-		}
-		
+		setKappaMap(kappaMap);
 		return kappaMap;
 	}
 	
 	/**
-	 * Finds the maximum element of the array, but only considers indices
-	 * that are either potato entrances or outside the potato.
+	 * Computes the lowest probability that could be present within a {@code dtmc}
+	 * created from {@code actmc} and the highest reward that could be present
+	 * within an equivalent reward structure for {@code dtmc}.
+	 * @return a pair where the key is the minimum probability, and the value is the maximum reward
+	 */
+	private Pair<Double, Double> compute_minProb_maxRew() throws PrismException {
+		final double kappa = 1.0e-5;
+		final BigDecimal kappaBD = new BigDecimal(kappa);
+		Map<Integer, BigDecimal> kappaMap = new HashMap<Integer, BigDecimal>();
+		
+		// make a kappa map and assign it to pdMap
+		for (Map.Entry<String, ACTMCPotatoData> pdEntry : pdMap.entrySet()) {
+			for (int entrance : pdEntry.getValue().getEntrances()) {
+				kappaMap.put(entrance, kappaBD);
+			}
+		}
+		setKappaMap(kappaMap);
+		
+		// construct dtmc and dtmcRew
+		DTMCSimple dtmc = constructDTMC();
+		StateRewardsSimple rewards = constructDTMCRew(dtmc);
+		
+		// obtain the values and adjust them for potential kappa error
+		BitSet relevantStates = new BitSet(actmc.getNumStates());
+		relevantStates.or(this.relevantStates);
+		relevantStates.andNot(target);
+		double minProb = dtmc.getMinimumProbability(relevantStates) + kappa;
+		double maxRew = rewards.getMax(relevantStates) + kappa; 
+		
+		return new Pair<Double, Double>(minProb, maxRew);
+	}
+	
+	/**
+	 * Finds the maximum element of the array, but only considers {@code relevantStates}.
 	 * @return If relevant results are given, returns their maximum. <br>
 	 * 		   If the maximum of the relevant results is {@literal Infinity}, returns 1. <br>
 	 * 		   If the maximum of the relevant results is 0, throws an exception. <br>
@@ -322,27 +392,15 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize! (Big
 	 * 
 	 */
 	private double findMaxTR(double[] soln) throws PrismException {
-		// find relevant states
-		Set<Integer> potatoes = new HashSet<Integer>();
-		Set<Integer> entrances = new HashSet<Integer>();
-		for (Map.Entry<String, ACTMCPotatoData> pdEntry : pdMap.entrySet()) {
-			entrances.addAll(pdEntry.getValue().getEntrances());
-			potatoes.addAll(pdEntry.getValue().getPotato());
-		}
-		Set<Integer> relevantStates = new HashSet<Integer>();
-		for (int i = 0; i < actmc.getNumStates() ; ++i) {
-			relevantStates.add(i);
-		}
-		relevantStates.removeAll(potatoes);
-		relevantStates.addAll(entrances);
 		
 		// find maximum of the relevant states
 		double max = Double.MIN_VALUE;
-		for (int relevantState : relevantStates) {
-			if (soln[relevantState] > max) {
-				max = soln[relevantState];
+		for (int s = relevantStates.nextSetBit(0); s >= 0; s = relevantStates.nextSetBit(s+1)) {
+			if (soln[s] > max) {
+				max = soln[s];
 			}
 		}
+		
 		if (Double.isInfinite(max)) {
 			max = 1; 
 			// This deals with strange behavior of reachability rewards when entrance is the initial state.
@@ -439,7 +497,7 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize! (Big
 	 * rewards are also adjusted to {@code dtmc.uniformizationRate}.
 	 * @return {@code MCRewards} equivalent to actmcRew
 	 */
-	private MCRewards constructDTMCRew(DTMCSimple dtmc) throws PrismException {
+	private StateRewardsSimple constructDTMCRew(DTMCSimple dtmc) throws PrismException {
 		StateRewardsSimple newRew = new StateRewardsSimple();
 		if (actmcRew == null) {
 			return newRew;
@@ -474,7 +532,7 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize! (Big
 	 * rewards are also adjusted to {@code dtmc.uniformizationRate}.
 	 * @return Uniformized {@code MCRewards} equivalent to actmcRew
 	 */
-	private MCRewards constructUniformizedDTMCRew(DTMCSimple dtmc) throws PrismException {
+	private StateRewardsSimple constructUniformizedDTMCRew(DTMCSimple dtmc) throws PrismException {
 		StateRewardsSimple newRew = new StateRewardsSimple();
 		if (actmcRew == null) {
 			return newRew;

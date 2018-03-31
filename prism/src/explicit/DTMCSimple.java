@@ -313,7 +313,7 @@ public class DTMCSimple extends DTMCExplicit implements ModelSimple
 	public double getMinimumProbability()
 	{
 		BitSet bs = new BitSet(numStates);
-		bs.flip(0, numStates); // set all to true
+		bs.flip(0, bs.size()); // set all to true
 		return getMinimumProbability(bs);
 	}
 	
