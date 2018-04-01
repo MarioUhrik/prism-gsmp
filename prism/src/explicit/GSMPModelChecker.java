@@ -203,6 +203,7 @@ public class GSMPModelChecker extends ProbModelChecker
 				}
 			}
 		}
+		mainLog.println("The model was recognized to be an ACTMC, so ACTMC method will be used!");
 		return true;
 	}
 

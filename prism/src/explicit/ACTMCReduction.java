@@ -56,7 +56,7 @@ import prism.PrismSettings;
  * but on the scope of the entire ACTMC, whereas the scope of {@code ACTMCPotatoData}
  * only encompasses a single event.
  */
-public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize BigDecimal usage
+public class ACTMCReduction extends PrismComponent
 {
 	/** ACTMC model this class is associated with */
 	private ACTMCSimple actmc;
@@ -239,11 +239,12 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize BigDe
 			BigDecimal baseKappaOne = new BigDecimal(minProb / 2);
 			BigDecimal baseKappaTwo = new BigDecimal(Math.min(baseKappaOne.doubleValue(), maxRew));
 			BigDecimal maxExpectedSteps; {
-				int maxExpectedStepsScale = 1 + baseKappaOne.scale() * n.intValue();
-				mc = new MathContext(maxExpectedStepsScale + 2, RoundingMode.HALF_UP);
+				int maxExpectedStepsPrecision = 1 + BigDecimalUtils.decimalDigitsPrecision(baseKappaOne) * n.intValue();
+				mc = new MathContext(maxExpectedStepsPrecision + 2, RoundingMode.HALF_UP);
 				maxExpectedSteps = n.divide(BigDecimalMath.pow(baseKappaOne, n, mc), mc);
 			}
 			BigDecimal maxExpectedTR = maxExpectedSteps.multiply(new BigDecimal(maxRew));
+			mc = new MathContext((mc.getPrecision() * 2) + (int) maxRew, RoundingMode.HALF_UP);
 			BigDecimal b = BigDecimal.ONE.divide(new BigDecimal("2.0").multiply(maxExpectedSteps).multiply(n), mc);
 			/* kappaOne derivation*/ {
 				BigDecimal c = pre_epsilon.divide(new BigDecimal("2.0").multiply(maxExpectedSteps).multiply(maxExpectedSteps.multiply(n).add(BigDecimal.ONE)), mc);

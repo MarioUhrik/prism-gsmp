@@ -39,7 +39,7 @@ import prism.PrismException;
 /**
  * BigDecimal version of {@link FoxGlynn}, allowing arbitrary {@code accuracy}.
  */
-public final class FoxGlynn_BD // TODO MAJO - maybe optimize BigDecimal and BigDecimalMath computations
+public final class FoxGlynn_BD
 {
 	// Math context for specifying BigDecimal accuracy
 	MathContext mc;
