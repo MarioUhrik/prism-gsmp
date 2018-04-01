@@ -26,6 +26,7 @@
 
 package explicit;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.HashMap;
@@ -40,12 +41,12 @@ import explicit.rewards.ACTMCRewardsSimple;
 import prism.PrismException;
 
 /**
- * Class for storage and computation of potato-related data for ACTMCs.
+ * Class for storage and computation of single potato-related data for ACTMCs.
  * <br>
  * Potato is a subset of states of an ACTMC in which a given event is active.
  * <br><br>
  * This data is fundamental for ACTMC model checking methods based on reduction
- * of ACTMC to CTMC. The reduction works by pre-computing the expected behavior
+ * of ACTMC to DTMC. The reduction works by pre-computing the expected behavior
  * (rewards, spent time, resulting distribution...) occurring between
  * entering and leaving a potato. Then, these expected values are used in
  * regular CTMC/DTMC model checking methods.
@@ -56,10 +57,9 @@ public class ACTMCPotatoData
 	private ACTMCSimple actmc;
 	/** specific event of {@code actmc} this data is associated with */
 	private GSMPEvent event;
-	/** Reward structure of the {@code actmc}. May be null. */
+	/** Reward structure of the {@code actmc}. May be null.
+	 *  The CTMC transition rewards are expected to have already been converted to state rewards only. */
 	private ACTMCRewardsSimple rewards = null;
-	/** termination epsilon (i.e. when probability gets smaller than this, stop) */
-	private double error;
 	/** Bitset of target states for reachability analysis. May be null. */
 	private BitSet target = null;
 	
@@ -104,7 +104,7 @@ public class ACTMCPotatoData
 	 * DTMC making up the part of {@code actmc} such that it only
 	 * contains states that are the union of {@code potato} and {@code successors}.
 	 */
-	private DTMC potatoDTMC = null;
+	private DTMCSimple potatoDTMC = null;
 	double uniformizationRate;
 	/** Mapping from the state indices of {@code actmc} (K) to {@code potatoDTMC} (V)*/
 	private Map<Integer, Integer> ACTMCtoDTMC = new HashMap<Integer, Integer>();
@@ -112,11 +112,10 @@ public class ACTMCPotatoData
 	private Vector<Integer> DTMCtoACTMC = new Vector<Integer>();
 	private boolean potatoDTMCComputed = false;
 	
-	/**
-	 * Poisson distribution values for this potato,
-	 * computed and stored by class FoxGlynn.
-	 */
-	private FoxGlynn foxGlynn = null;
+	/** Allowed error (kappa) for computation of FoxGlynn */
+	private BigDecimal kappa;
+	/** Poisson distribution values computed and stored by class FoxGlynn. */
+	private FoxGlynn_BD foxGlynn;
 	private boolean foxGlynnComputed = false;
 	
 	/** Mapping of expected accumulated rewards until leaving the potato onto states used to enter the potato */
@@ -143,26 +142,36 @@ public class ACTMCPotatoData
 	 * @param event Event belonging to the ACTMC. Must not be null!
 	 * @param rewards Optional ACTMC Reward structure. May be null, but calls to
 	 *        {@code getMeanReward()} with null reward structure throws an exception!
-	 * @param error Termination epsilon (i.e. when probability gets smaller than this, stop)
+	 * @param target Bitset of target states (if doing reachability). May be null.
 	 * @throws Exception if the arguments break the above rules
 	 */
 	public ACTMCPotatoData(ACTMCSimple actmc, GSMPEvent event, 
-			ACTMCRewardsSimple rewards, double error, BitSet target) throws PrismException {
+			ACTMCRewardsSimple rewards, BitSet target) throws PrismException {
 		if (actmc == null || event == null) {
 			throw new NullPointerException("ACTMCPotatoData constructor has received a null object!");
 		}
 		if (!actmc.getEventList().contains(event)) {
 			throw new IllegalArgumentException("ACTMCPotatoData received arguments (actmc,event) where event does not belong to actmc!");
 		}
-		if (error <= 0.0 || error >= 0.5) { // TODO MAJO - can we force the error to be exactly 0? I guess not.
-			throw new IllegalArgumentException("ACTMCPotatoData received an inappropriate termination error bound " + error);
-		}
 		
 		this.actmc = actmc;
 		this.event = event;
 		this.rewards = rewards;
-		this.error = error;
 		this.target = target;
+	}
+	
+	/**
+	 * This method allows external insertion of custom kappa allowed error bounds.
+	 * Kappa is the required accuracy for computation of FoxGlynn.
+	 * @param kappa kappa allowed error bound
+	 */
+	public void setKappa(BigDecimal kappa) {
+		this.kappa = kappa;
+		// force this class to recompute all data with the new kappa
+		foxGlynnComputed = false;
+		meanTimesComputed = false;
+		meanDistributionsComputed = false;
+		meanRewardsComputed = false;
 	}
 	
 	/** Gets the actmc model associated with this object */
@@ -228,11 +237,18 @@ public class ACTMCPotatoData
 	 * <br>
 	 * If this is the first call, this method computes them before returning it.
 	 */
-	public DTMC getPotatoDTMC() {
+	public DTMCSimple getPotatoDTMC() {
 		if (!potatoDTMCComputed) {
 			computePotatoDTMC();
 		}
 		return potatoDTMC;
+	}
+	
+	/**
+	 * Gets the current kappa allowed error bound. May be null.
+	 */
+	public BigDecimal getKappa() {
+		return kappa;
 	}
 	
 	/**
@@ -281,9 +297,8 @@ public class ACTMCPotatoData
 	
 	/**
 	 * Gets a map where the keys are entrances into the potato, and
-	 * the values is a distribution of time spent within the states of the potato
-	 * until first leaving the potato.
-	 * if entered from state {@code key}.
+	 * the value is a distribution of time spent within the states of the potato
+	 * until first leaving the potato, having entered from state {@code key}.
 	 * <br>
 	 * If this is the first call, this method computes it before returning it.
 	 */
@@ -432,7 +447,7 @@ public class ACTMCPotatoData
 			}
 		}
 		
-		uniformizationRate = actmc.getMaxExitRate();
+		uniformizationRate = actmc.getMaxExitRate(); // TODO MAJO - maxExitRate of the potatoCTMC is enough!!!
 		// Construct the transition matrix of the new CTMC
 		for (int s : potatoACTMCStates) {
 			if (potato.contains(s)) {
@@ -450,25 +465,29 @@ public class ACTMCPotatoData
 		}
 		
 		// convert the CTMC to a DTMC and store the DTMC
-		potatoCTMC.uniformise(uniformizationRate);
+		//potatoCTMC.uniformise(uniformizationRate); // TODO MAJO - make 100% sure this can be deleted
 		potatoDTMC = potatoCTMC.buildUniformisedDTMC(uniformizationRate);
 		
 		potatoDTMCComputed = true;
 	}
 	
+	/** Uses class FoxGlynn to pre-compute the Poisson distribution.
+	 *  Different approach is required for each event distribution type. */
 	private void computeFoxGlynn() throws PrismException {
 		if (!potatoDTMCComputed) {
 			computePotatoDTMC();
 		}
-		// TODO MAJO - foxGynn needs accuracy = kappa. implement it.
-		// TODO MAJO - for now, I use constant 1e-10.
 		
-		// Using class FoxGlynn to pre-compute the Poisson distribution.
-		// Different approach is required for each distribution type.
+		if (kappa == null) {
+			kappa = new BigDecimal(1e-20); 
+			//if no kappa is preset, then use a default one. This should never happen however.
+			// TODO MAJO - maybe throw exception here?
+		}
+		
 		switch (event.getDistributionType().getEnum()) {
 		case DIRAC:
 			double fgRate = uniformizationRate * event.getFirstParameter();
-			foxGlynn = new FoxGlynn(fgRate, 1e-300, 1e+300, 1e-10);
+			foxGlynn = new FoxGlynn_BD(new BigDecimal(fgRate), new BigDecimal(1e-300), new BigDecimal(1e+300), kappa);
 			break;
 		case ERLANG:
 			throw new UnsupportedOperationException("ACTMCPotatoData does not yet support the Erlang distribution!");
@@ -495,7 +514,7 @@ public class ACTMCPotatoData
 		
 		foxGlynnComputed = true;
 	}
-	
+
 	/**
 	 * For all potato entrances, computes the expected time spent within the potato
 	 * before leaving the potato, having entered from a particular entrance.
@@ -512,8 +531,15 @@ public class ACTMCPotatoData
 		// Prepare the FoxGlynn data
 		int left = foxGlynn.getLeftTruncationPoint();
 		int right = foxGlynn.getRightTruncationPoint();
-		double[] weights = foxGlynn.getWeights().clone();
-		double totalWeight = foxGlynn.getTotalWeight();
+		///// Conversion from BigDecimal to Double!!! // TODO MAJO - convert EVERYTHING to BigDecimal
+		BigDecimal[] weights_BD = foxGlynn.getWeights().clone();
+		double[] weights = new double[weights_BD.length];
+		for (int i = 0 ; i < weights.length ; ++i) {
+			weights[i] = weights_BD[i].doubleValue();
+		}
+		BigDecimal totalWeight_BD = foxGlynn.getTotalWeight();
+		double totalWeight = totalWeight_BD.doubleValue();
+		/////
 		for (int i = left; i <= right; i++) {
 			weights[i - left] /= totalWeight;
 		}
@@ -579,7 +605,6 @@ public class ACTMCPotatoData
 				if (time > 0) {
 					resultDistr.add(ps, time);
 				}
-				// TODO MAJO -imprecise results, but probably not fixable (fg precision)
 			}
 			meanTimes.put(entrance, resultDistr);
 		}
@@ -597,12 +622,19 @@ public class ACTMCPotatoData
 		}
 		
 		int numStates = potatoDTMC.getNumStates();
-
+		
 		// Prepare the FoxGlynn data
 		int left = foxGlynn.getLeftTruncationPoint();
 		int right = foxGlynn.getRightTruncationPoint();
-		double[] weights = foxGlynn.getWeights().clone();
-		double totalWeight = foxGlynn.getTotalWeight();
+		///// Conversion from BigDecimal to Double!!! // TODO MAJO - convert EVERYTHING to BigDecimal
+		BigDecimal[] weights_BD = foxGlynn.getWeights().clone();
+		double[] weights = new double[weights_BD.length];
+		for (int i = 0 ; i < weights.length ; ++i) {
+			weights[i] = weights_BD[i].doubleValue();
+		}
+		BigDecimal totalWeight_BD = foxGlynn.getTotalWeight();
+		double totalWeight = totalWeight_BD.doubleValue();
+		/////
 		for (int i = left; i <= right; i++) {
 			weights[i - left] /= totalWeight;
 		}
@@ -718,8 +750,15 @@ public class ACTMCPotatoData
 		// Prepare the FoxGlynn data
 		int left = foxGlynn.getLeftTruncationPoint();
 		int right = foxGlynn.getRightTruncationPoint();
-		double[] weights = foxGlynn.getWeights().clone();
-		double totalWeight = foxGlynn.getTotalWeight();
+		///// Conversion from BigDecimal to Double!!! // TODO MAJO - convert EVERYTHING to BigDecimal
+		BigDecimal[] weights_BD = foxGlynn.getWeights().clone();
+		double[] weights = new double[weights_BD.length];
+		for (int i = 0 ; i < weights.length ; ++i) {
+			weights[i] = weights_BD[i].doubleValue();
+		}
+		BigDecimal totalWeight_BD = foxGlynn.getTotalWeight();
+		double totalWeight = totalWeight_BD.doubleValue();
+		/////
 		for (int i = left; i <= right; i++) {
 			weights[i - left] /= totalWeight;
 		}
@@ -793,7 +832,6 @@ public class ACTMCPotatoData
 					double weight = meanDistributionsBeforeEvent.get(entrance)[ACTMCtoDTMC.get(ps)];
 					double eventRew = rews.get(succ);
 					result[ACTMCtoDTMC.get(entrance)] += prob * weight * eventRew;
-					// TODO MAJO - uncertain about this
 				}
 			}
 			

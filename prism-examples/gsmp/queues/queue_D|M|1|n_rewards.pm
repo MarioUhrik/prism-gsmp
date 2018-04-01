@@ -1,4 +1,4 @@
-// This is a model of G/G/1/n queue.
+// This is a model of D/M/1/n queue.
 // The inter-arrival time is specified by Prod_event.
 // The service time is specified by Serve_event.
 

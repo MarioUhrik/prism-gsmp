@@ -3,6 +3,7 @@
 //	Copyright (c) 2002-
 //	Authors:
 //	* Dave Parker <david.parker@comlab.ox.ac.uk> (University of Oxford)
+//  * Mario Uhrik <433501@mail.muni.cz> (Masaryk University)
 //	
 //------------------------------------------------------------------------------
 //	
@@ -258,6 +259,94 @@ public class DTMCSimple extends DTMCExplicit implements ModelSimple
 			if (trans.get(i).isEmpty() && (except == null || !except.get(i)))
 				throw new PrismException("DTMC has a deadlock in state " + i);
 		}
+	}
+	
+	/**
+	 * Finds and returns a bitset of states reachable from state {@code s}.
+	 * (including {@code s} itself)
+	 */
+	public BitSet getReachableStates(int s)
+	{
+		return getReachableStates(s, null);
+	}
+	
+	/**
+	 * Finds and returns a bitset of states reachable from state {@code s}
+	 * (including {@code s} itself). Passage through or into
+	 * bitset of states {@code target} is not allowed.
+	 */
+	public BitSet getReachableStates(int s, BitSet target)
+	{
+		BitSet reach = new BitSet(numStates);
+		BitSet newReach = new BitSet(numStates);
+		BitSet oldReach = new BitSet(numStates);
+		reach.set(s);
+		oldReach.set(s);
+		
+		// TODO MAJO - not sure if this works properly!
+		for (int i = 0; i < numStates ; ++i) {
+			for (int j = oldReach.nextSetBit(0); j >= 0; j = oldReach.nextSetBit(j+1)) {
+			     Distribution distr = trans.get(j);
+			     Set<Integer> distrSupport = distr.getSupport();
+			     for (int k : distrSupport) {
+			    	 if (distr.get(k) > 0) {
+			    		 newReach.set(k);
+			    	 }
+			     }
+			}
+			if (target != null) {
+				newReach.andNot(target);
+			}
+			reach.or(newReach);
+			oldReach.clear();
+			oldReach.or(newReach);
+			newReach.clear();
+		}
+		
+		return reach;
+	}
+	
+	/**
+	 * Finds and returns the minimum probability within this DTMC.
+	 * I.e. returns the lowest existing P(s,t) out of all states s and t.
+	 * For DTMC with no transitions, this should return 0.
+	 */
+	public double getMinimumProbability()
+	{
+		BitSet bs = new BitSet(numStates);
+		bs.flip(0, numStates); // set all to true
+		return getMinimumProbability(bs);
+	}
+	
+	/**
+	 * Finds and returns the minimum probability within this DTMC,
+	 * but only considers source states within {@code bs}.
+	 * I.e. returns the lowest existing P(s,t) where s belongs to {@code bs}.
+	 * For DTMC with no transitions or empty {@code bs}, this should return 0.
+	 */
+	public double getMinimumProbability(BitSet bs)
+	{
+		double minProb = Double.MAX_VALUE;
+		
+		for (int i = bs.nextSetBit(0); i >= 0; i = bs.nextSetBit(i+1)) {
+			Distribution distr = trans.get(i);
+			
+			int distrMinIndex = distr.min();
+			if (distrMinIndex == -1) {
+				continue;
+			} 
+			
+			double distrMin = distr.get(distrMinIndex);
+			if (distrMin < minProb) {
+				minProb = distrMin;
+			}
+		}
+		
+		if (minProb == Double.MAX_VALUE) {
+			minProb = 0.0;
+		}
+		
+		return minProb;
 	}
 
 	// Accessors (for DTMC)

@@ -229,6 +229,28 @@ public class Distribution implements Iterable<Entry<Integer, Double>>
 		}
 		return d;
 	}
+	
+	/**
+	 * Get the index for which the probability is the lowest.
+	 * I.e. returns {@code i} such that {@code get(i)} returns
+	 * the lowest value within this distribution.
+	 * If something goes wrong (such as when this distribution is empty) returns -1!
+	 */
+	public int min() {
+		double minProb = Double.MAX_VALUE;
+		int minProbIndex = -1;
+		
+		Iterator<Entry<Integer, Double>> i = iterator();
+		while (i.hasNext()) {
+			Map.Entry<Integer, Double> e = i.next();
+			double prob = e.getValue();
+			if (prob < minProb) {
+				minProb = prob;
+				minProbIndex = e.getKey();
+			}
+		}
+		return minProbIndex;
+	}
 
 	/**
 	 * Create a new distribution, based on a mapping from the indices

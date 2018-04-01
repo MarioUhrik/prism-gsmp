@@ -3,6 +3,7 @@
 //	Copyright (c) 2002-
 //	Authors:
 //	* Dave Parker <david.parker@comlab.ox.ac.uk> (University of Oxford)
+//  * Mario Uhrik <433501@mail.muni.cz> (Masaryk University)
 //	
 //------------------------------------------------------------------------------
 //	
@@ -27,6 +28,7 @@
 package explicit.rewards;
 
 import java.util.ArrayList;
+import java.util.BitSet;
 
 import explicit.Model;
 import explicit.Product;
@@ -103,6 +105,36 @@ public class StateRewardsSimple extends StateRewards
 			return 0.0;
 		}
 		*/
+	}
+	
+	/**
+	 * Find the maximum state reward.
+	 * Returns 0 if none are found.
+	 */
+	public double getMax() {
+		BitSet bs = new BitSet(stateRewards.size());
+		bs.flip(0, stateRewards.size());
+		return getMax(bs);
+	}
+	
+	/**
+	 * Find a maximum state reward from within a set of states represented by {@code bs}.
+	 * Returns 0 if none are found.
+	 * @param bs set of states
+	 */
+	public double getMax(BitSet bs) {
+		double max = Double.MIN_VALUE;
+		for (int i = bs.nextSetBit(0); i >= 0; i = bs.nextSetBit(i+1)) {
+			double rew = getStateReward(i);
+			if (rew > max) {
+				max = rew;
+			}
+		}
+		
+		if (max == Double.MIN_VALUE) {
+			max = 0;
+		}
+		return max;
 	}
 
 	// Converters

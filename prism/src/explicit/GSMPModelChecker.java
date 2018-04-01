@@ -37,7 +37,6 @@ import explicit.rewards.ACTMCRewardsSimple;
 import explicit.rewards.GSMPRewards;
 import explicit.rewards.GSMPRewardsSimple;
 import explicit.rewards.MCRewards;
-import explicit.rewards.StateRewardsSimple;
 import parser.ast.SynthParam;
 import parser.type.TypeDistributionExponential;
 import prism.PrismComponent;
@@ -46,6 +45,7 @@ import prism.PrismNotSupportedException;
 
 /**
  * Explicit-state model checker for generalized semi-Markov processes (GSMPs).
+ * ACTMCs are treated as special cases, and solved differently.
  */
 public class GSMPModelChecker extends ProbModelChecker
 {
@@ -203,6 +203,7 @@ public class GSMPModelChecker extends ProbModelChecker
 				}
 			}
 		}
+		mainLog.println("The model was recognized to be an ACTMC, so ACTMC method will be used!");
 		return true;
 	}
 
@@ -238,130 +239,21 @@ public class GSMPModelChecker extends ProbModelChecker
 		
 		mainLog.print("\nSynthesis parameter list is valid. Proceeding with the computation. The list is:\n" + paramList +  "\n");
 	}
-	
-	/**
-	 * Converts {@code actmc} to an equivalent {@code DTMCSimple}.
-	 * Heavily relies on class {@link ACTMCPotatoData} for necessary computations.
-	 * @param actmc The ACTMC model from which to construct DTMCSimple
-	 * @param potatoDataMap reusable storage of ACTMCPotatoData structures.
-	 *                      Created by {@code createPotatoDataMap()}.
-	 * @return {@code DTMCSimple} equivalent to {@code actmc}
-	 */
-	private DTMCSimple reduceACTMCtoDTMC(ACTMCSimple actmc, Map<String, ACTMCPotatoData> potatoDataMap) throws PrismException {
-		CTMCSimple ctmc = new CTMCSimple(actmc);
-		double uniformizationRate = ctmc.getMaxExitRate();
-		
-		for (Map.Entry<String, ACTMCPotatoData> pdEntry : potatoDataMap.entrySet()) {
-			ACTMCPotatoData potatoData = pdEntry.getValue();
-			Map<Integer, Distribution> meanTimesWithinPotato = potatoData.getMeanTimes();
-			Map<Integer, Distribution> meanDistrs = potatoData.getMeanDistributions();
-			
-			Set<Integer> potatoEntrances = potatoData.getEntrances();
-			for (int entrance : potatoEntrances) {
-				// compute the rate
-				Distribution potatoTimeDistr = meanTimesWithinPotato.get(entrance);
-				double theta = potatoTimeDistr.sum();
-				double meanRateWithinPotato = 1 / theta;
-				if ((meanRateWithinPotato) > uniformizationRate) {
-					uniformizationRate = meanRateWithinPotato;
-				}
-				
-				// weigh the distribution by the rate and assign it to the CTMC
-				Distribution meanDistr = new Distribution(meanDistrs.get(entrance));
-				Set<Integer> distrSupport = meanDistrs.get(entrance).getSupport();
-				for ( int s : distrSupport) {
-					meanDistr.set(s, meanDistr.get(s) * meanRateWithinPotato);
-				}
-				ctmc.trans.set(entrance, meanDistr);
-			}
-		}
-		ctmc.uniformise(uniformizationRate); // TODO MAJO - is this necessary?
-		// Then, reduce the CTMC to a DTMC.
-		DTMCSimple dtmc = ctmc.buildUniformisedDTMC(uniformizationRate);
-		
-		return dtmc;
-	}
-	
-	/**
-	 * Uses ACTMCRewardsSimple {@code actmcRew} to create equivalent MCRewards for {@code dtmc}.
-	 * Heavily relies on class {@link ACTMCPotatoData} for necessary computations.
-	 * The rewards are also adjusted to {@code dtmc.uniformizationRate}.
-	 * In order to skip this, please set it to 1.
-	 * @param actmcRew ACTMCRewardsSimple from which to construct MCRewards
-	 * @param dtmc DTMC equivalent to ACTMC which {@code actmcRew} belong to
-	 * @param potatoDataMap reusable storage of ACTMCPotatoData structures.
-	 *                      Created by {@code createPotatoDataMap()}.
-	 * @return {@code MCRewards} equivalent to actmcRew
-	 */
-	private MCRewards reduceACTMCRewtoDTMCRew(ACTMCRewardsSimple actmcRew, DTMCSimple dtmc, Map<String, ACTMCPotatoData> potatoDataMap) throws PrismException {
-		StateRewardsSimple newRew = new StateRewardsSimple();
-		
-		Map<Integer, Double> meanRewWithinPotatoesOverTime = new HashMap<Integer, Double>();
-		for (Map.Entry<String, ACTMCPotatoData> pdEntry : potatoDataMap.entrySet()) {
-			ACTMCPotatoData potatoData = pdEntry.getValue();
-			Set<Integer> entrances = potatoData.getEntrances();
-			for (int entrance : entrances) {
-				double rew = potatoData.getMeanRewards().get(entrance);
-				double theta = potatoData.getMeanTimes().get(entrance).sum();
-				double meanRew = rew / theta;//average reward over average time spent within
-				meanRewWithinPotatoesOverTime.put(entrance, meanRew);
-			}
-		}
-		
-		int numStates = dtmc.getNumStates();
-		for (int s = 0; s < numStates ; ++s) {
-			double rew = actmcRew.getStateReward(s);
-			if (rew > 0) {
-				newRew.setStateReward(s, rew / dtmc.uniformizationRate);
-			}
-		}
-		
-		Set<Integer> entrances = meanRewWithinPotatoesOverTime.keySet();
-		for (int entrance : entrances) {
-			newRew.setStateReward(entrance, meanRewWithinPotatoesOverTime.get(entrance) / dtmc.uniformizationRate);
-		}
-		
-		return newRew;
-	}
-	
-	/**
-	 * Creates a map where the keys are string identifiers of the GSMPEvents,
-	 * and the values are corresponding ACTMCPotatoData structures.
-	 * This is useful as to enable reusage of the ACTMCPotatoData structures efficiently.
-	 * @param actmc ACTMC model for which to create the ACTMCPotatoData structures
-	 * @param rew Optional rewards associated with {@code actmc}. May be null, but calls
-	 *            to {@code ACTMCPotatoData.getMeanReward()} will throw an exception!
-	 */
-	private Map<String, ACTMCPotatoData> createPotatoDataMap(ACTMCSimple actmc,
-			ACTMCRewardsSimple rew, BitSet target) throws PrismException {
-		Map<String, ACTMCPotatoData> pdMap = new HashMap<String, ACTMCPotatoData>();
-		List<GSMPEvent> events = actmc.getEventList();
-		double terminationEpsilon = getTermCritParam();
-		
-		for (GSMPEvent event: events) {
-			ACTMCPotatoData potatoData = new ACTMCPotatoData(actmc,
-					event,
-					rew,
-					terminationEpsilon,
-					target);
-			pdMap.put(event.getIdentifier(), potatoData);
-		}
-		return pdMap;
-	}
 
 	// ACTMC model checking functions (fast alternative for GSMPs that are ACTMCs)
 	
 	private StateValues computeSteadyStateACTMC(ACTMCSimple actmc, StateValues initDistr) throws PrismException {
 		long reduceTime = System.currentTimeMillis();
 		// Initialize necessary data structures
-		Map<String, ACTMCPotatoData> pdMap = createPotatoDataMap(actmc, null, null);
+		ACTMCReduction reduction = new ACTMCReduction(actmc, null, false, null, this);
+		Map<String, ACTMCPotatoData> pdMap = reduction.getPotatoData();
 		Map<Integer, Distribution> timesWithinPotatoes = new HashMap<Integer, Distribution>();
 		for (Map.Entry<String, ACTMCPotatoData> pdEntry : pdMap.entrySet()) {
 			timesWithinPotatoes.putAll(pdEntry.getValue().getMeanTimes());
 		}
 		
 		// Reduce the ACTMC to an equivalent DTMC.
-		DTMCSimple dtmc = reduceACTMCtoDTMC(actmc, pdMap);
+		DTMCSimple dtmc = reduction.getDTMC();
 		
 		reduceTime = System.currentTimeMillis() - reduceTime;
 		long computeTime = System.currentTimeMillis();
@@ -380,6 +272,9 @@ public class GSMPModelChecker extends ProbModelChecker
 				weightedResult[s] += result.valuesD[s];
 			} else {
 				double prob = result.valuesD[s];
+				if (prob == 0) {
+					continue; //optimization
+				}
 				double theta = timeDistr.sum();
 				Set<Integer> distrSupport = timeDistr.getSupport();
 				for ( int t : distrSupport) {
@@ -406,13 +301,13 @@ public class GSMPModelChecker extends ProbModelChecker
 	private ModelCheckerResult computeReachRewardsACTMC(ACTMCSimple actmc, ACTMCRewardsSimple actmcRew, BitSet target) throws PrismException {
 		long reduceTime = System.currentTimeMillis();
 		// Initialize necessary data structures
-		Map<String, ACTMCPotatoData> pdMap = createPotatoDataMap(actmc, actmcRew, target);
+		ACTMCReduction reduction = new ACTMCReduction(actmc, actmcRew, true, target, this);
 		
 		// Reduce the ACTMC to an equivalent DTMC.
-		DTMCSimple dtmc = reduceACTMCtoDTMC(actmc, pdMap);
+		DTMCSimple dtmc = reduction.getDTMC();
 		
 		// Compute the new state reward values (including the event behavior)
-		MCRewards dtmcRew = reduceACTMCRewtoDTMCRew(actmcRew, dtmc, pdMap);
+		MCRewards dtmcRew = reduction.getDTMCRew();
 		
 		reduceTime = System.currentTimeMillis() - reduceTime;
 		
@@ -423,28 +318,29 @@ public class GSMPModelChecker extends ProbModelChecker
 		result.timeTaken += result.timePre;
 		result.timePre = reduceTime/1000.0;
 		mainLog.println("\nReducing ACTMC to equivalent DTMC "
-				+ "took " + result.timePre/1000.0 + "seconds.");
+				+ "took " + result.timePre + "seconds.");
 		mainLog.println("Computing reachability rewards for the equivalent DTMC "
-				+ "took " + result.timeTaken/1000.0 + "seconds.");
+				+ "took " + result.timeTaken + "seconds.");
 		
 		return result;
 	}
 	
 	private ModelCheckerResult computeSteadyStateRewardsACTMC(ACTMCSimple actmc, ACTMCRewardsSimple actmcRew) throws PrismException {
+		// TODO MAJO - reuse the code from Steady State probabilities
 		long reduceTime = System.currentTimeMillis();
 		// Initialize necessary data structures
-		Map<String, ACTMCPotatoData> pdMap = createPotatoDataMap(actmc, actmcRew, null);
+		ACTMCReduction reduction = new ACTMCReduction(actmc, actmcRew, false, null, this);
+		Map<String, ACTMCPotatoData> pdMap = reduction.getPotatoData();
 		Map<Integer, Distribution> timesWithinPotatoes = new HashMap<Integer, Distribution>();
 		for (Map.Entry<String, ACTMCPotatoData> pdEntry : pdMap.entrySet()) {
 			timesWithinPotatoes.putAll(pdEntry.getValue().getMeanTimes());
 		}
 		
 		// Reduce the ACTMC to an equivalent DTMC.
-		DTMCSimple dtmc = reduceACTMCtoDTMC(actmc, pdMap);
+		DTMCSimple dtmc = reduction.getDTMC();
 		
 		// Compute the new state reward values (including the event behavior)
-		dtmc.uniformizationRate = 1;
-		MCRewards dtmcRew = reduceACTMCRewtoDTMCRew(actmcRew, dtmc, pdMap);
+		MCRewards dtmcRew = reduction.getDTMCRew();
 		
 		reduceTime = System.currentTimeMillis() - reduceTime;
 		long computeTime = System.currentTimeMillis();
@@ -463,6 +359,9 @@ public class GSMPModelChecker extends ProbModelChecker
 				weightedResult[s] += result.valuesD[s];
 			} else {
 				double prob = result.valuesD[s];
+				if (prob == 0) {
+					continue; //optimization
+				}
 				double theta = timeDistr.sum();
 				Set<Integer> distrSupport = timeDistr.getSupport();
 				for ( int t : distrSupport) {
