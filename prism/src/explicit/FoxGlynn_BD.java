@@ -138,9 +138,9 @@ public final class FoxGlynn_BD // TODO MAJO - maybe optimize BigDecimal and BigD
 			//run FINDER to get left, right and weight[m]
 			{
 				final BigDecimal sqrtpi = BigDecimalMath.sqrt(BigDecimalMath.pi(mc), mc); //square root of PI
-				final BigDecimal sqrt2 = BigDecimalMath.sqrt((new BigDecimal("2.0")).setScale(decimalPrecision), mc); //square root of 2
+				final BigDecimal sqrt2 = BigDecimalMath.sqrt(new BigDecimal("2.0"), mc); //square root of 2
 				final BigDecimal sqrtq = BigDecimalMath.sqrt(q_tmax, mc);
-				final BigDecimal aq = (BigDecimal.ONE.add(BigDecimal.ONE.divide(q_tmax, mc))).multiply(BigDecimalMath.exp(new BigDecimal("0.0625").setScale(decimalPrecision), mc).multiply(sqrt2)); //a_\lambda from the paper			
+				final BigDecimal aq = (BigDecimal.ONE.add(BigDecimal.ONE.divide(q_tmax, mc))).multiply(BigDecimalMath.exp(new BigDecimal("0.0625"), mc).multiply(sqrt2)); //a_\lambda from the paper			
 				final BigDecimal bq = (BigDecimal.ONE.add(BigDecimal.ONE.divide(q_tmax, mc))).multiply(BigDecimalMath.exp(new BigDecimal("0.125").divide(q_tmax, mc), mc)); //b_\lambda from the paper
 
 				//use Corollary 1 to find right truncation point

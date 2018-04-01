@@ -119,7 +119,7 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize BigDe
 		this.epsilon = new BigDecimal(this.getSettings().getDouble(PrismSettings.PRISM_TERM_CRIT_PARAM));
 		this.pdMap = createPotatoDataMap(this.actmc, this.actmcRew, this.target);
 		this.relevantStates = new BitSet(actmc.getNumStates());
-		setRelevantStatesAndEntrances();
+		setRelevantStates();
 		
 	}
 	
@@ -183,10 +183,10 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize BigDe
 	}
 	
 	/**
-	 * Computes and sets the bitset of relevant states, and the set of entrances.
+	 * Computes and sets the bitset of relevant states {@code relevantStates}.
 	 * The {@code pdMap} must already be correctly initialised!
 	 */
-	private void setRelevantStatesAndEntrances() {
+	private void setRelevantStates() {
 		Set<Integer> potatoStates = new HashSet<Integer>();
 		Set<Integer> entranceStates = new HashSet<Integer>();
 		for (Map.Entry<String, ACTMCPotatoData> pdEntry : pdMap.entrySet()) {
