@@ -283,6 +283,7 @@ public class DTMCSimple extends DTMCExplicit implements ModelSimple
 		reach.set(s);
 		oldReach.set(s);
 		
+		// TODO MAJO - not sure if this works properly!
 		for (int i = 0; i < numStates ; ++i) {
 			for (int j = oldReach.nextSetBit(0); j >= 0; j = oldReach.nextSetBit(j+1)) {
 			     Distribution distr = trans.get(j);

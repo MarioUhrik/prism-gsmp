@@ -112,33 +112,11 @@ public class ACTMCPotatoData
 	private Vector<Integer> DTMCtoACTMC = new Vector<Integer>();
 	private boolean potatoDTMCComputed = false;
 	
-	/**
-	 * Required accuracy (kappa) for computation of each potato entrance.
-	 * I.e. each key is a potato entrance, and the value is the required precision.
-	 */
-	private Map<Integer, BigDecimal> kappaMap = new HashMap<Integer, BigDecimal>();
-	
-	/**
-	 * Poisson distribution values for each entrance of this potato,
-	 * computed and stored by class FoxGlynn.
-	 * I.e. keys are potato entrances, and values are Poisson distribution values.
-	 */
-	private Map<Integer, FoxGlynn_BD> foxGlynnMap = new HashMap<Integer, FoxGlynn_BD>();
-	/**
-	 * While computing the {@code foxGlynnMap}, the most accurate accuracy (kappa)
-	 * is detected and stored here.
-	 * I.e. {@code foxGlynnMap.get(mostPreciseAccuracyEntrance)} contains the most accurate
-	 * Poisson probabilities, computed with precision {@code mostPreciseAccuracy}.
-	 */
-	private BigDecimal mostPreciseKappa = new BigDecimal(Double.MAX_VALUE);
-	/**
-	 * While computing the {@code foxGlynnMap}, the potato entrance with the highest
-	 * required accuracy (kappa) is detected and stored here.
-	 * I.e. {@code foxGlynnMap.get(mostPreciseAccuracyEntrance)} contains the most accurate
-	 * Poisson probabilities, computed with precision {@code mostPreciseAccuracy}.
-	 */
-	private int mostPreciseKappaEntrance;
-	private boolean foxGlynnMapComputed = false;
+	/** Allowed error (kappa) for computation of FoxGlynn */
+	private BigDecimal kappa;
+	/** Poisson distribution values computed and stored by class FoxGlynn. */
+	private FoxGlynn_BD foxGlynn;
+	private boolean foxGlynnComputed = false;
 	
 	/** Mapping of expected accumulated rewards until leaving the potato onto states used to enter the potato */
 	private Map<Integer, Double> meanRewards = new HashMap<Integer, Double>();
@@ -183,18 +161,14 @@ public class ACTMCPotatoData
 	}
 	
 	/**
-	 * This method allows external insertion of custom kappa error bounds.
-	 * Kappa is the required accuracy for computation of each potato entrance.
-	 * @param kappaMap kappa values for each potato entrance
-	 * I.e. each key of the map is a potato entrance, and the value is the required precision.
-	 * {@code kappaMap} is not verified in any way, so make sure it is correct!
-	 * Particularly, all keys should be entrances and all entrances must be present.
-	 * Formally, {@code kappaMap.keySet()} must contain all elements of {@code this.getEntrances()}.
+	 * This method allows external insertion of custom kappa allowed error bounds.
+	 * Kappa is the required accuracy for computation of FoxGlynn.
+	 * @param kappa kappa allowed error bound
 	 */
-	public void setKappaMap(Map<Integer, BigDecimal> kappaMap) {
-		this.kappaMap = kappaMap;
-		// force this class to recompute all data with the new kappa values
-		foxGlynnMapComputed = false;
+	public void setKappa(BigDecimal kappa) {
+		this.kappa = kappa;
+		// force this class to recompute all data with the new kappa
+		foxGlynnComputed = false;
 		meanTimesComputed = false;
 		meanDistributionsComputed = false;
 		meanRewardsComputed = false;
@@ -271,11 +245,10 @@ public class ACTMCPotatoData
 	}
 	
 	/**
-	 * Gets a mapping where the keys are entrances into the potato,
-	 * and the values are current kappa error bounds.
+	 * Gets the current kappa allowed error bound. May be null.
 	 */
-	public Map<Integer, BigDecimal> getKappaMap() {
-		return kappaMap;
+	public BigDecimal getKappa() {
+		return kappa;
 	}
 	
 	/**
@@ -498,58 +471,48 @@ public class ACTMCPotatoData
 		potatoDTMCComputed = true;
 	}
 	
+	/** Uses class FoxGlynn to pre-compute the Poisson distribution.
+	 *  Different approach is required for each event distribution type. */
 	private void computeFoxGlynn() throws PrismException {
 		if (!potatoDTMCComputed) {
 			computePotatoDTMC();
 		}
 		
-		for (int entrance : entrances) {
-			// Using class FoxGlynn to pre-compute the Poisson distribution.
-			// Different approach is required for each distribution type.
-			
-			BigDecimal kappa = kappaMap.get(entrance); //get the preset required accuracy
-			if (kappa == null) {
-				kappa = new BigDecimal(1e-20); 
-				//if none is preset, then use a default one. This should never happen however.
-				// TODO MAJO - maybe throw exception here?
-			}
-			if (kappa.compareTo(mostPreciseKappa) < 0) {
-				mostPreciseKappa = kappa;
-				mostPreciseKappaEntrance = entrance;
-			}
-			FoxGlynn_BD fg;
-			
-			switch (event.getDistributionType().getEnum()) {
-			case DIRAC:
-				double fgRate = uniformizationRate * event.getFirstParameter();
-				fg = new FoxGlynn_BD(new BigDecimal(fgRate), new BigDecimal(1e-300), new BigDecimal(1e+300), kappa);
-				foxGlynnMap.put(entrance, fg);
-				break;
-			case ERLANG:
-				throw new UnsupportedOperationException("ACTMCPotatoData does not yet support the Erlang distribution!");
-				// TODO MAJO - implement erlang distributed event support
-				//break;
-			case EXPONENTIAL:
-				throw new PrismException("ACTMCPotatoData received an event with exponential distribution!");
-				// TODO MAJO - implement exponentially distributed event support
-				//break;
-			case UNIFORM:
-				throw new UnsupportedOperationException("ACTMCPotatoData does not yet support the uniform distribution!");
-				// TODO MAJO - implement uniformly distributed event support
-				//break;
-			case WEIBULL:
-				throw new UnsupportedOperationException("ACTMCPotatoData does not yet support the Weibull distribution!");
-				// TODO MAJO - implement weibull distributed event support
-				//break;
-			default:
-				throw new PrismException("ACTMCPotatoData received an event with unrecognized distribution!");
-			}
-			if (fg.getRightTruncationPoint() < 0) {
-				throw new PrismException("Overflow in Fox-Glynn computation of the Poisson distribution!");
-			}
+		if (kappa == null) {
+			kappa = new BigDecimal(1e-20); 
+			//if no kappa is preset, then use a default one. This should never happen however.
+			// TODO MAJO - maybe throw exception here?
 		}
 		
-		foxGlynnMapComputed = true;
+		switch (event.getDistributionType().getEnum()) {
+		case DIRAC:
+			double fgRate = uniformizationRate * event.getFirstParameter();
+			foxGlynn = new FoxGlynn_BD(new BigDecimal(fgRate), new BigDecimal(1e-300), new BigDecimal(1e+300), kappa);
+			break;
+		case ERLANG:
+			throw new UnsupportedOperationException("ACTMCPotatoData does not yet support the Erlang distribution!");
+			// TODO MAJO - implement erlang distributed event support
+			//break;
+		case EXPONENTIAL:
+			throw new PrismException("ACTMCPotatoData received an event with exponential distribution!");
+			// TODO MAJO - implement exponentially distributed event support
+			//break;
+		case UNIFORM:
+			throw new UnsupportedOperationException("ACTMCPotatoData does not yet support the uniform distribution!");
+			// TODO MAJO - implement uniformly distributed event support
+			//break;
+		case WEIBULL:
+			throw new UnsupportedOperationException("ACTMCPotatoData does not yet support the Weibull distribution!");
+			// TODO MAJO - implement weibull distributed event support
+			//break;
+		default:
+			throw new PrismException("ACTMCPotatoData received an event with unrecognized distribution!");
+		}
+		if (foxGlynn.getRightTruncationPoint() < 0) {
+			throw new PrismException("Overflow in Fox-Glynn computation of the Poisson distribution!");
+		}
+		
+		foxGlynnComputed = true;
 	}
 
 	/**
@@ -559,36 +522,35 @@ public class ACTMCPotatoData
 	 * for the potato entrances, and with a time bound given by the potato event.
 	 */
 	private void computeMeanTimes() throws PrismException {
-		if (!foxGlynnMapComputed) {
+		if (!foxGlynnComputed) {
 			computeFoxGlynn();
 		}
 		
 		int numStates = potatoDTMC.getNumStates();
 		
+		// Prepare the FoxGlynn data
+		int left = foxGlynn.getLeftTruncationPoint();
+		int right = foxGlynn.getRightTruncationPoint();
+		///// Conversion from BigDecimal to Double!!! // TODO MAJO - convert EVERYTHING to BigDecimal
+		BigDecimal[] weights_BD = foxGlynn.getWeights().clone();
+		double[] weights = new double[weights_BD.length];
+		for (int i = 0 ; i < weights.length ; ++i) {
+			weights[i] = weights_BD[i].doubleValue();
+		}
+		BigDecimal totalWeight_BD = foxGlynn.getTotalWeight();
+		double totalWeight = totalWeight_BD.doubleValue();
+		/////
+		for (int i = left; i <= right; i++) {
+			weights[i - left] /= totalWeight;
+		}
+		for (int i = left+1; i <= right; i++) {
+			weights[i - left] += weights[i - 1 - left];
+		}
+		for (int i = left; i <= right; i++) {
+			weights[i - left] = (1 - weights[i - left]) / uniformizationRate;
+		}
+		
 		for (int entrance : entrances) {
-			
-			// Prepare the FoxGlynn data
-			FoxGlynn_BD fg = foxGlynnMap.get(entrance);
-			int left = fg.getLeftTruncationPoint();
-			int right = fg.getRightTruncationPoint();
-			///// Conversion from BigDecimal to Double!!! // TODO MAJO - convert EVERYTHING to BigDecimal
-			BigDecimal[] weights_BD = fg.getWeights().clone();
-			double[] weights = new double[weights_BD.length];
-			for (int i = 0 ; i < weights.length ; ++i) {
-				weights[i] = weights_BD[i].doubleValue();
-			}
-			BigDecimal totalWeight_BD = fg.getTotalWeight();
-			double totalWeight = totalWeight_BD.doubleValue();
-			/////
-			for (int i = left; i <= right; i++) {
-				weights[i - left] /= totalWeight;
-			}
-			for (int i = left+1; i <= right; i++) {
-				weights[i - left] += weights[i - 1 - left];
-			}
-			for (int i = left; i <= right; i++) {
-				weights[i - left] = (1 - weights[i - left]) / uniformizationRate;
-			}
 			
 			// Prepare solution arrays
 			double[] soln = new double[numStates];
@@ -655,30 +617,29 @@ public class ACTMCPotatoData
 	 * I.e., on average, where does the ACTMC end up when it happens to enter a potato.
 	 */
 	private void computeMeanDistributions() throws PrismException {
-		if (!foxGlynnMapComputed) {
+		if (!foxGlynnComputed) {
 			computeFoxGlynn();
 		}
 		
 		int numStates = potatoDTMC.getNumStates();
 		
+		// Prepare the FoxGlynn data
+		int left = foxGlynn.getLeftTruncationPoint();
+		int right = foxGlynn.getRightTruncationPoint();
+		///// Conversion from BigDecimal to Double!!! // TODO MAJO - convert EVERYTHING to BigDecimal
+		BigDecimal[] weights_BD = foxGlynn.getWeights().clone();
+		double[] weights = new double[weights_BD.length];
+		for (int i = 0 ; i < weights.length ; ++i) {
+			weights[i] = weights_BD[i].doubleValue();
+		}
+		BigDecimal totalWeight_BD = foxGlynn.getTotalWeight();
+		double totalWeight = totalWeight_BD.doubleValue();
+		/////
+		for (int i = left; i <= right; i++) {
+			weights[i - left] /= totalWeight;
+		}
+		
 		for (int entrance : entrances) {
-			
-			// Prepare the FoxGlynn data
-			FoxGlynn_BD fg = foxGlynnMap.get(entrance);
-			int left = fg.getLeftTruncationPoint();
-			int right = fg.getRightTruncationPoint();
-			///// Conversion from BigDecimal to Double!!! // TODO MAJO - convert EVERYTHING to BigDecimal
-			BigDecimal[] weights_BD = fg.getWeights().clone();
-			double[] weights = new double[weights_BD.length];
-			for (int i = 0 ; i < weights.length ; ++i) {
-				weights[i] = weights_BD[i].doubleValue();
-			}
-			BigDecimal totalWeight_BD = fg.getTotalWeight();
-			double totalWeight = totalWeight_BD.doubleValue();
-			/////
-			for (int i = left; i <= right; i++) {
-				weights[i - left] /= totalWeight;
-			}
 			
 			// Prepare solution arrays // TODO MAJO - optimize, reuse the arrays!
 			double[] initDist = new double[numStates];
@@ -787,16 +748,15 @@ public class ACTMCPotatoData
 		int numStates = potatoDTMC.getNumStates();
 		
 		// Prepare the FoxGlynn data
-		FoxGlynn_BD fg = foxGlynnMap.get(mostPreciseKappaEntrance);
-		int left = fg.getLeftTruncationPoint();
-		int right = fg.getRightTruncationPoint();
+		int left = foxGlynn.getLeftTruncationPoint();
+		int right = foxGlynn.getRightTruncationPoint();
 		///// Conversion from BigDecimal to Double!!! // TODO MAJO - convert EVERYTHING to BigDecimal
-		BigDecimal[] weights_BD = fg.getWeights().clone();
+		BigDecimal[] weights_BD = foxGlynn.getWeights().clone();
 		double[] weights = new double[weights_BD.length];
 		for (int i = 0 ; i < weights.length ; ++i) {
 			weights[i] = weights_BD[i].doubleValue();
 		}
-		BigDecimal totalWeight_BD = fg.getTotalWeight();
+		BigDecimal totalWeight_BD = foxGlynn.getTotalWeight();
 		double totalWeight = totalWeight_BD.doubleValue();
 		/////
 		for (int i = left; i <= right; i++) {

@@ -47,8 +47,9 @@ public final class FoxGlynn_BD // TODO MAJO - maybe optimize BigDecimal and BigD
 	int decimalPrecision;
 	
 	// constructor parameters
-	//private BigDecimal underflow;
-	private BigDecimal overflow, accuracy;
+	private BigDecimal underflow;
+	private BigDecimal overflow;
+	private BigDecimal accuracy;
 	private BigDecimal q_tmax;
 
 	// returned values
@@ -62,8 +63,8 @@ public final class FoxGlynn_BD // TODO MAJO - maybe optimize BigDecimal and BigD
 		mc = new MathContext(decimalPrecision, RoundingMode.HALF_UP);
 		ceil = new MathContext(decimalPrecision, RoundingMode.CEILING);
 		
-		q_tmax = qtmax.setScale(decimalPrecision, RoundingMode.HALF_UP);
-		//underflow = uf;
+		q_tmax = qtmax;
+		underflow = uf;
 		overflow = of;
 		accuracy = acc;
 		run();

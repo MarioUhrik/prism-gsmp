@@ -35,7 +35,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.Vector;
 
 import ch.obermuhlner.math.big.BigDecimalMath;
 import common.BigDecimalUtils;
@@ -57,7 +56,7 @@ import prism.PrismSettings;
  * but on the scope of the entire ACTMC, whereas the scope of {@code ACTMCPotatoData}
  * only encompasses a single event.
  */
-public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize! (BigDecimal usage as well)
+public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize BigDecimal usage
 {
 	/** ACTMC model this class is associated with */
 	private ACTMCSimple actmc;
@@ -67,7 +66,7 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize! (Big
 	private ACTMCRewardsSimple actmcRew = null;
 	/** Optional bitset of target states (for reachability) */
 	private BitSet target = null;
-	/** Set of states of which each element:
+	/** bitset of states of which each element:
 	 *  1) either does not belong to any potato (no non-exponential event is active in it),
 	 *  2) or it is an entrance to some potato. */
 	private BitSet relevantStates;
@@ -120,7 +119,8 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize! (Big
 		this.epsilon = new BigDecimal(this.getSettings().getDouble(PrismSettings.PRISM_TERM_CRIT_PARAM));
 		this.pdMap = createPotatoDataMap(this.actmc, this.actmcRew, this.target);
 		this.relevantStates = new BitSet(actmc.getNumStates());
-		setRelevantStates();
+		setRelevantStatesAndEntrances();
+		
 	}
 	
 	/**
@@ -163,7 +163,7 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize! (Big
 	}
 	
 	private void computeEquivalentDTMC() throws PrismException {
-		setKappaMap(computeKappa());
+		setKappa(computeKappa());
 		if (uniformize) {
 			dtmc = constructUniformizedDTMC();
 		} else {
@@ -183,10 +183,10 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize! (Big
 	}
 	
 	/**
-	 * Computes and sets the bitset of relevant states.
+	 * Computes and sets the bitset of relevant states, and the set of entrances.
 	 * The {@code pdMap} must already be correctly initialised!
 	 */
-	private void setRelevantStates() {
+	private void setRelevantStatesAndEntrances() {
 		Set<Integer> potatoStates = new HashSet<Integer>();
 		Set<Integer> entranceStates = new HashSet<Integer>();
 		for (Map.Entry<String, ACTMCPotatoData> pdEntry : pdMap.entrySet()) {
@@ -204,149 +204,112 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize! (Big
 	}
 	
 	/**
-	 * Assigns {@code kappaMap} to all ACTMCPotatoData within {@code pdMap}.
+	 * Assigns {@code kappa} to all ACTMCPotatoData within {@code pdMap}.
 	 * <br>
-	 * I.e. next ACTMCPotatoData computations will be with precision dictated by the kappaMap.
-	 * @param kappaMap
+	 * I.e. next ACTMCPotatoData computations will be with precision kappa.
+	 * @param kappa BigDecimal allowed error bound
 	 */
-	private void setKappaMap(Map<Integer, BigDecimal> kappaMap) {
+	private void setKappa(BigDecimal kappa) {
 		for (Map.Entry<String, ACTMCPotatoData> pdEntry : pdMap.entrySet()) {
-			pdEntry.getValue().setKappaMap(kappaMap);
+			pdEntry.getValue().setKappa(kappa);
 		}
 	}
 	
 	/**
-	 * Computes the kappa error bounds such that any model checking
+	 * Computes the kappa error bound such that any model checking
 	 * done on a thusly created {@code dtmc} is guaranteed to be accurate
 	 * within allowed error {@code epsilon}.
 	 */
-	private Map<Integer, BigDecimal> computeKappa() throws PrismException {
-		Map<Integer, MathContext> mcMap = new HashMap<Integer, MathContext>();
+	private BigDecimal computeKappa() throws PrismException {
 		MathContext mc;
-		Map<Integer, BigDecimal> kappaOneMap = new HashMap<Integer, BigDecimal>();
-		Map<Integer, BigDecimal> kappaTwoMap = new HashMap<Integer, BigDecimal>();
-		Map<Integer, BigDecimal> maxStepsMap = new HashMap<Integer, BigDecimal>();
-		Map<Integer, BigDecimal> maxTRMap = new HashMap<Integer, BigDecimal>();
-		Map<Integer, BigDecimal> nMap = new HashMap<Integer, BigDecimal>(); // actually integers
-		Set<Integer> allEntrances = new HashSet<Integer>();
+		BigDecimal n = new BigDecimal(actmc.getNumStates() - target.cardinality()); // amount of non-target states
 		
-		for (Map.Entry<String, ACTMCPotatoData> pdEntry : pdMap.entrySet()) {
-			ACTMCPotatoData pd = pdEntry.getValue();
-			Set<Integer> entrances = pd.getEntrances();
-			allEntrances.addAll(entrances);
-			DTMCSimple potatoDTMC = pd.getPotatoDTMC();
-			Map<Integer, Integer> ACTMCtoDTMC = pd.getMapACTMCtoDTMC();
-			Vector<Integer> DTMCtoACTMC = pd.getMapDTMCtoACTMC();
-			
-			BitSet targetPermut = new BitSet(actmc.getNumStates());
-			for (int i = target.nextSetBit(0); i >= 0; i = target.nextSetBit(i+1)) {
-				Integer permutTarget = ACTMCtoDTMC.get(i);
-				if (permutTarget != null) {
-					targetPermut.set(ACTMCtoDTMC.get(i));
-				}
+		// derive kappaOne and kappaTwo from a rough estimate of the model structure
+		BigDecimal kappaOne;
+		BigDecimal kappaTwo; {
+			Pair<Double, Double> minProb_maxRew = compute_minProb_maxRew();
+			double minProb = minProb_maxRew.getKey();
+			double maxRew = 0;
+			if (actmcRew != null) {
+				maxRew = minProb_maxRew.getValue();
 			}
-			
-			for (int entrance : entrances) {
-				BitSet reachableStatesPermut = potatoDTMC.getReachableStates(ACTMCtoDTMC.get(entrance), targetPermut);
-				// TODO MAJO - Optimize by doing them per entire bitset!
-				BitSet reachableStates = new BitSet(actmc.getNumStates());
-				for (int i = reachableStatesPermut.nextSetBit(0); i >= 0; i = reachableStatesPermut.nextSetBit(i+1)) {
-					reachableStates.set(DTMCtoACTMC.get(i));
-				}
-				
-				Pair<Double, Double> minProb_maxRew = compute_minProb_maxRew();
-				double minProb = minProb_maxRew.getKey();
-				double maxRew = 0;
-				if (actmcRew != null) {
-					maxRew = minProb_maxRew.getValue();
-				}
-				if (maxRew == 0) { // This deals with situations where there are no rewards.
-					maxRew = 1;
-				}
-				BigDecimal baseKappaOne = new BigDecimal(minProb / 2);
-				BigDecimal baseKappaTwo = new BigDecimal(Math.min(baseKappaOne.doubleValue(), maxRew));
-				BigDecimal n = new BigDecimal(reachableStates.cardinality()); // amount of non-target states
-				nMap.put(entrance, n);
-				BigDecimal maxExpectedSteps; {
-					int maxExpectedStepsScale = 1 + baseKappaOne.scale() * n.intValue();
-					mc = new MathContext(maxExpectedStepsScale + 2, RoundingMode.HALF_UP);
-					mcMap.put(entrance, mc);
-					
-					n = n.setScale(n.intValue(), RoundingMode.HALF_UP);
-					maxExpectedSteps = n.divide(BigDecimalMath.pow(baseKappaOne, n, mc), mc);
-				}
-				BigDecimal maxExpectedTR = maxExpectedSteps.multiply(new BigDecimal(maxRew));
-				BigDecimal b = BigDecimal.ONE.divide(new BigDecimal("2.0").multiply(maxExpectedSteps).multiply(n), mc);
-				BigDecimal kappaOne; {
-					BigDecimal c = pre_epsilon.divide(new BigDecimal("2.0").multiply(maxExpectedSteps).multiply(maxExpectedSteps.multiply(n).add(BigDecimal.ONE)), mc);
-					kappaOne = BigDecimalUtils.min(baseKappaOne, BigDecimalUtils.min(b, c));
-					kappaOne.setScale(mc.getPrecision(), RoundingMode.HALF_UP);
-				}
-				BigDecimal kappaTwo; {
-					BigDecimal c = pre_epsilon.divide(new BigDecimal("2.0").multiply(maxExpectedSteps).multiply(maxExpectedTR.multiply(n).add(BigDecimal.ONE)), mc);
-					kappaTwo = BigDecimalUtils.min(baseKappaTwo, BigDecimalUtils.min(b, c));
-					kappaTwo.setScale(mc.getPrecision(), RoundingMode.HALF_UP);
-				}
-				kappaOneMap.put(entrance, kappaOne);
-				kappaTwoMap.put(entrance, kappaTwo);
+			if (maxRew == 0) { // This deals with situations where there are no rewards.
+				maxRew = 1;
+			}
+			BigDecimal baseKappaOne = new BigDecimal(minProb / 2);
+			BigDecimal baseKappaTwo = new BigDecimal(Math.min(baseKappaOne.doubleValue(), maxRew));
+			BigDecimal maxExpectedSteps; {
+				int maxExpectedStepsScale = 1 + baseKappaOne.scale() * n.intValue();
+				mc = new MathContext(maxExpectedStepsScale + 2, RoundingMode.HALF_UP);
+				maxExpectedSteps = n.divide(BigDecimalMath.pow(baseKappaOne, n, mc), mc);
+			}
+			BigDecimal maxExpectedTR = maxExpectedSteps.multiply(new BigDecimal(maxRew));
+			BigDecimal b = BigDecimal.ONE.divide(new BigDecimal("2.0").multiply(maxExpectedSteps).multiply(n), mc);
+			/* kappaOne derivation*/ {
+				BigDecimal c = pre_epsilon.divide(new BigDecimal("2.0").multiply(maxExpectedSteps).multiply(maxExpectedSteps.multiply(n).add(BigDecimal.ONE)), mc);
+				kappaOne = BigDecimalUtils.min(baseKappaOne, BigDecimalUtils.min(b, c));
+			}
+			/* kappaTwo derivation*/ {
+				BigDecimal c = pre_epsilon.divide(new BigDecimal("2.0").multiply(maxExpectedSteps).multiply(maxExpectedTR.multiply(n).add(BigDecimal.ONE)), mc);
+				kappaTwo = BigDecimalUtils.min(baseKappaTwo, BigDecimalUtils.min(b, c));
 			}
 		}
 
-		setKappaMap(kappaOneMap);
-		DTMCSimple kappaOneDTMC = constructUniformizedDTMC();
-		MCRewards kappaOneDTMCRew = new StateRewardsConstant(1);
-		DTMCModelChecker mc1 = new DTMCModelChecker(this);
-		mc1.termCritParam = pre_epsilon.doubleValue();
-		mc1.linEqMethod = LinEqMethod.GAUSS_SEIDEL; // TODO MAJO - maybe this can go away, but reliability is priority!
-		mc1.maxIters = 250000;
-		mc1.setLog(new PrismDevNullLog()); // mute the reachability computation log messages
-		for (int entrance : allEntrances ) {
-			boolean isEntranceTarget = target.get(entrance);
-			target.set(entrance);
-			ModelCheckerResult kappaOneTR = mc1.computeReachRewards(kappaOneDTMC, kappaOneDTMCRew, target);
-			target.set(entrance, isEntranceTarget);
-			
-			BigDecimal max = new BigDecimal(findMaxTR(kappaOneTR.soln));
-			maxStepsMap.put(entrance, max.add(pre_epsilon));
+		// derive a more precise estimate of the upper bound on the amount of steps
+		BigDecimal maxSteps = new BigDecimal(Double.MIN_VALUE); {
+			setKappa(kappaOne);
+			DTMCSimple kappaOneDTMC = constructUniformizedDTMC();
+			MCRewards kappaOneDTMCRew = new StateRewardsConstant(1);
+			DTMCModelChecker mc1 = new DTMCModelChecker(this);
+			mc1.termCritParam = pre_epsilon.doubleValue();
+			mc1.linEqMethod = LinEqMethod.GAUSS_SEIDEL; // TODO MAJO - maybe this can go away, but reliability is priority!
+			mc1.maxIters = 250000;
+			mc1.setLog(new PrismDevNullLog()); // mute the reachability computation log messages
+			for (int s = relevantStates.nextSetBit(0); s >= 0; s = relevantStates.nextSetBit(s+1)) {
+				boolean isEntranceTarget = target.get(s);
+				target.set(s);
+				ModelCheckerResult kappaOneTR = mc1.computeReachRewards(kappaOneDTMC, kappaOneDTMCRew, target);
+				target.set(s, isEntranceTarget);
+				
+				BigDecimal max = (new BigDecimal(findMaxTR(kappaOneTR.soln))).add(pre_epsilon);
+				if (maxSteps.compareTo(max) < 0) {
+					maxSteps = max;
+				}
+			}
 		}
 		
-		setKappaMap(kappaTwoMap);
-		DTMCSimple kappaTwoDTMC = constructUniformizedDTMC();
-		MCRewards kappaTwoDTMCRew = constructUniformizedDTMCRew(kappaTwoDTMC);
-		DTMCModelChecker mc2 = new DTMCModelChecker(this);
-		mc2.termCritParam = pre_epsilon.doubleValue();
-		mc2.linEqMethod = LinEqMethod.GAUSS_SEIDEL; // TODO MAJO - maybe this can go away, but reliability is priority!
-		mc2.maxIters = 250000;
-		mc2.setLog(new PrismDevNullLog()); // mute the reachability computation log messages
-		for (int entrance : allEntrances ) {
-			boolean isEntranceTarget = target.get(entrance);
-			target.set(entrance);
-			ModelCheckerResult kappaTwoTR = mc2.computeReachRewards(kappaTwoDTMC, kappaTwoDTMCRew, target);
-			target.set(entrance, isEntranceTarget);
-			
-			BigDecimal max = new BigDecimal(findMaxTR(kappaTwoTR.soln));
-			maxTRMap.put(entrance, max.add(pre_epsilon));
+		// derive a more precise estimate of the upper bound on the total reward
+		BigDecimal maxTR = new BigDecimal(Double.MIN_VALUE); {
+			setKappa(kappaTwo);
+			DTMCSimple kappaTwoDTMC = constructUniformizedDTMC();
+			MCRewards kappaTwoDTMCRew = constructUniformizedDTMCRew(kappaTwoDTMC);
+			DTMCModelChecker mc2 = new DTMCModelChecker(this);
+			mc2.termCritParam = pre_epsilon.doubleValue();
+			mc2.linEqMethod = LinEqMethod.GAUSS_SEIDEL; // TODO MAJO - maybe this can go away, but reliability is priority!
+			mc2.maxIters = 250000;
+			mc2.setLog(new PrismDevNullLog()); // mute the reachability computation log messages
+			for (int s = relevantStates.nextSetBit(0); s >= 0; s = relevantStates.nextSetBit(s+1)) {
+				boolean isEntranceTarget = target.get(s);
+				target.set(s);
+				ModelCheckerResult kappaTwoTR = mc2.computeReachRewards(kappaTwoDTMC, kappaTwoDTMCRew, target);
+				target.set(s, isEntranceTarget);
+				
+				BigDecimal max = (new BigDecimal(findMaxTR(kappaTwoTR.soln))).add(pre_epsilon);
+				if (maxTR.compareTo(max) < 0) {
+					maxTR = max;
+				}
+			}
 		}
 		
-		Map<Integer, BigDecimal> kappaMap = new HashMap<Integer, BigDecimal>();
-		for (Map.Entry<Integer, BigDecimal> entry : kappaOneMap.entrySet()) {
-			int entrance = entry.getKey();
-			BigDecimal kappaOne = entry.getValue();
-			BigDecimal kappaTwo = kappaTwoMap.get(entrance);
-			BigDecimal maxSteps = maxStepsMap.get(entrance);
-			BigDecimal maxTR = maxTRMap.get(entrance);
-			BigDecimal n = nMap.get(entrance);
-			mc = mcMap.get(entrance);
-			
-			BigDecimal a = BigDecimal.ONE.divide(new BigDecimal("2.0").multiply(n).multiply(maxSteps), mc);
-			BigDecimal b = epsilon.divide(new BigDecimal("2.0").multiply(maxSteps).multiply(maxTR.multiply(n).add(BigDecimal.ONE)), mc);
-			
-			BigDecimal kappa = BigDecimalUtils.min(kappaOne, BigDecimalUtils.min(kappaTwo, BigDecimalUtils.min(a, b)));
-			kappa.setScale(mc.getPrecision(), RoundingMode.HALF_UP);
-			kappaMap.put(entrance, kappa);
+		// use the previous values to derive the actual kappa allowed error bound
+		BigDecimal kappa; {
+		BigDecimal aAccurate = BigDecimal.ONE.divide(new BigDecimal("2.0").multiply(n).multiply(maxSteps), mc);
+		BigDecimal bAccurate = epsilon.divide(new BigDecimal("2.0").multiply(maxSteps).multiply(maxTR.multiply(n).add(BigDecimal.ONE)), mc);
+		
+		kappa = BigDecimalUtils.min(kappaOne, BigDecimalUtils.min(kappaTwo, BigDecimalUtils.min(aAccurate, bAccurate)));
 		}
 		
-		return kappaMap;
+		return kappa;
 	}
 	
 	/**
@@ -358,15 +321,7 @@ public class ACTMCReduction extends PrismComponent // TODO MAJO - optimize! (Big
 	private Pair<Double, Double> compute_minProb_maxRew() throws PrismException {
 		final double kappa = 1.0e-5;
 		final BigDecimal kappaBD = new BigDecimal(kappa);
-		Map<Integer, BigDecimal> kappaMap = new HashMap<Integer, BigDecimal>();
-		
-		// make a kappa map and assign it to pdMap
-		for (Map.Entry<String, ACTMCPotatoData> pdEntry : pdMap.entrySet()) {
-			for (int entrance : pdEntry.getValue().getEntrances()) {
-				kappaMap.put(entrance, kappaBD);
-			}
-		}
-		setKappaMap(kappaMap);
+		setKappa(kappaBD);
 		
 		// construct dtmc and dtmcRew
 		DTMCSimple dtmc = constructDTMC();
