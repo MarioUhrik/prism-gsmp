@@ -602,9 +602,7 @@ public class ACTMCPotatoData
 			Distribution resultDistr = new Distribution();
 			for (int ps : potato) {
 				double time = result[ACTMCtoDTMC.get(ps)];
-				if (time > 0) {
-					resultDistr.add(ps, time);
-				}
+				resultDistr.add(ps, Math.abs(time));
 			}
 			meanTimes.put(entrance, resultDistr);
 		}
@@ -721,9 +719,7 @@ public class ACTMCPotatoData
 			Distribution resultDistr = new Distribution();
 			for (int succState : successors) {
 				double prob = result[ACTMCtoDTMC.get(succState)];
-				if (prob > 0) {
-					resultDistr.add(succState, prob / probSum);
-				}
+				resultDistr.add(succState, Math.abs(prob) / probSum);
 			}
 			meanDistributions.put(entrance, resultDistr);
 		}
