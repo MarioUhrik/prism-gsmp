@@ -78,12 +78,6 @@ public class ACTMCReduction extends PrismComponent
 	 *  Initially null.*/
 	private DTMCSimple dtmc = null;
 	private MCRewards dtmcRew = null;
-	/** If this is true, the resulting dtmc and rewards are uniformized so that
-	 *  each step of the dtmc corresponds to the same real time unit,
-	 *  precisely 1/dtmc.uniformizationRate.
-	 *  Generally, this should be true for Total Reward/Reachability reward
-	 *  kind of computations, and false for Steady-state probabilities/rewards.*/
-	private boolean uniformize;
 	
 	/** Requested total accuracy passed in from the parent prismComponent (termCritParam) */
 	private BigDecimal epsilon;
@@ -94,24 +88,18 @@ public class ACTMCReduction extends PrismComponent
 	 * The only constructor
 	 * @param actmc Associated ACTMC model. Must not be null!
 	 * @param actmcRew Optional reward structure associated with {@code actmc}. May be null.
-	 * @param uniformize If this is true, the resulting dtmc and rewards are uniformized so that
-	 *  				 each step of the dtmc corresponds to the same real time unit,
-	 *  				 precisely 1/dtmc.uniformizationRate.
-	 *  				 Generally, this should be true for Total Reward/Reachability reward
-	 *  				 kind of computations, and false for Steady-state probabilities/rewards.
 	 * @param target Optional bitset of target states (if doing reachability). May be null.
 	 * @param parent PrismComponent, presumably a model checker.
 	 * Used to obtain current settings.
 	 * @throws Exception if the arguments break the above rules
 	 */
-	public ACTMCReduction(ACTMCSimple actmc, ACTMCRewardsSimple actmcRew, boolean uniformize, BitSet target, PrismComponent parent) throws PrismException {
+	public ACTMCReduction(ACTMCSimple actmc, ACTMCRewardsSimple actmcRew, BitSet target, PrismComponent parent) throws PrismException {
 		super(parent);
 		if (actmc == null) {
 			throw new NullPointerException("ACTMCReduction constructor has received a null actmc!");
 		}
 		this.actmc = actmc;
 		this.actmcRew = actmcRew;
-		this.uniformize = uniformize;
 		this.target = target;
 		if (this.target == null) {
 			this.target = new BitSet(actmc.getNumStates());
@@ -137,9 +125,6 @@ public class ACTMCReduction extends PrismComponent
 	/**
 	 * Get a DTMC reward structure for {@code dtmc} fully equivalent to {@code actmc}.
 	 * Computed values are accurate up to error {@literal kappa} computed by this class.
-	 * @param divideByUniformizationRate is true if the computed rewards should be divided
-	 * by the {@code dtmc} uniformization rate. Commonly, this should true when computing
-	 * steady-state rewards, and false when computing reachability rewards.
 	 */
 	public MCRewards getDTMCRew() throws PrismException {
 		if (dtmc == null) {
@@ -164,22 +149,14 @@ public class ACTMCReduction extends PrismComponent
 	
 	private void computeEquivalentDTMC() throws PrismException {
 		setKappa(computeKappa());
-		if (uniformize) {
-			dtmc = constructUniformizedDTMC();
-		} else {
-			dtmc = constructDTMC();
-		}
+		dtmc = constructUniformizedDTMC();
 	}
 	
 	private void computeEquivalentDTMCRew() throws PrismException {
 		if (dtmc == null) {
 			computeEquivalentDTMC();
 		}
-		if (uniformize) {
-			dtmcRew = constructUniformizedDTMCRew(dtmc);
-		} else {
-			dtmcRew = constructDTMCRew(dtmc);
-		}
+		dtmcRew = constructUniformizedDTMCRew(dtmc);
 	}
 	
 	/**
@@ -325,8 +302,8 @@ public class ACTMCReduction extends PrismComponent
 		setKappa(kappaBD);
 		
 		// construct dtmc and dtmcRew
-		DTMCSimple dtmc = constructDTMC();
-		StateRewardsSimple rewards = constructDTMCRew(dtmc);
+		DTMCSimple dtmc = constructUniformizedDTMC();
+		StateRewardsSimple rewards = constructUniformizedDTMCRew(dtmc);
 		
 		// obtain the values and adjust them for potential kappa error
 		BitSet relevantStates = new BitSet(actmc.getNumStates());
@@ -375,9 +352,10 @@ public class ACTMCReduction extends PrismComponent
 	/**
 	 * Uses {@code actmc} and current {@code pdMap} to construct
 	 * an equivalent {@code dtmc}.
-	 * This is suitable for steady-state probabilities/rewards.
-	 * @return {@code dtmc} equivalent to {@code actmc} according to the current {@code pdMap}
+	 * This is suitable for SOME (NOT ALL) steady-state probabilitie/reward computations.
+	 * @return {@code dtmc} sometimes equivalent to {@code actmc} according to the current {@code pdMap}
 	 */
+	@Deprecated
 	private DTMCSimple constructDTMC() throws PrismException {
 		CTMCSimple ctmc = new CTMCSimple(actmc);
 		double uniformizationRate = ctmc.getMaxExitRate();
@@ -407,7 +385,7 @@ public class ACTMCReduction extends PrismComponent
 	 * equivalent uniformized {@code dtmc}. The DTMC is uniformized in accordance to how much
 	 * time is spent within each potato having entered from a particular entrance.
 	 * This is suitable for reachability rewards.
-	 * @return Uniformized {@code dtmc} equivalent to {@code actmc} according to the current {@code pdMap}
+	 * @return Uniformized fully {@code dtmc} equivalent to {@code actmc} according to the current {@code pdMap}
 	 */
 	private DTMCSimple constructUniformizedDTMC() throws PrismException {
 		CTMCSimple ctmc = new CTMCSimple(actmc);
@@ -446,12 +424,10 @@ public class ACTMCReduction extends PrismComponent
 	/**
 	 * Uses {@code actmc}, {@code actmcRew} and current {@code pdMap} to construct
 	 * equivalent {@code mcRewards} for {@code dtmc}.
-	 * This is suitable for steady-state rewards.
-	 * <br>
-	 * Iff {@code divideByUniformizationRate} is true,
-	 * rewards are also adjusted to {@code dtmc.uniformizationRate}.
-	 * @return {@code MCRewards} equivalent to actmcRew
+	 * This is suitable for SOME (NOT ALL) steady-state reward computations.
+	 * @return {@code MCRewards} sometimes equivalent to actmcRew
 	 */
+	@Deprecated
 	private StateRewardsSimple constructDTMCRew(DTMCSimple dtmc) throws PrismException {
 		StateRewardsSimple newRew = new StateRewardsSimple();
 		if (actmcRew == null) {
@@ -482,10 +458,7 @@ public class ACTMCReduction extends PrismComponent
 	 * equivalent {@code mcRewards} for uniformized {@code dtmc} (created by {@code constructUniformizedDTMC()},
 	 * i.e. the rewards are weighted in accordance to how much time is spent within potatoes.
 	 * This is suitable for reachability rewards.
-	 * <br>
-	 * Iff {@code divideByUniformizationRate} is true,
-	 * rewards are also adjusted to {@code dtmc.uniformizationRate}.
-	 * @return Uniformized {@code MCRewards} equivalent to actmcRew
+	 * @return Uniformized {@code MCRewards} fully equivalent to actmcRew
 	 */
 	private StateRewardsSimple constructUniformizedDTMCRew(DTMCSimple dtmc) throws PrismException {
 		StateRewardsSimple newRew = new StateRewardsSimple();
