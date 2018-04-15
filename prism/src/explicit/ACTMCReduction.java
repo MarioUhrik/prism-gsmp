@@ -297,7 +297,7 @@ public class ACTMCReduction extends PrismComponent
 	 * @return a pair where the key is the minimum probability, and the value is the maximum reward
 	 */
 	private Pair<Double, Double> compute_minProb_maxRew() throws PrismException {
-		final double kappa = 1.0e-5;
+		final double kappa = 1.0e-20;
 		final BigDecimal kappaBD = new BigDecimal(kappa);
 		setKappa(kappaBD);
 		
