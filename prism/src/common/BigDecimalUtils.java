@@ -85,4 +85,15 @@ public class BigDecimalUtils {
 			return b;
 		}
 	}
+	
+	/**
+	 * Returns a number with the highest value.
+	 */
+	public static BigDecimal max(BigDecimal a, BigDecimal b) {
+		if (a.compareTo(b) > 0) {
+			return a;
+		} else {
+			return b;
+		}
+	}
 }

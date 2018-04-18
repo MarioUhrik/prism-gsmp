@@ -82,7 +82,7 @@ public class ACTMCReduction extends PrismComponent
 	/** Requested total accuracy passed in from the parent prismComponent (termCritParam) */
 	private BigDecimal epsilon;
 	/** Default first stage accuracy for computing kappa */
-	private static final BigDecimal pre_epsilon = BigDecimal.ONE;
+	private static final BigDecimal pre_epsilon = new BigDecimal("0.1");
 	
 	/**
 	 * The only constructor
@@ -201,9 +201,9 @@ public class ACTMCReduction extends PrismComponent
 		MathContext mc;
 		BigDecimal n = new BigDecimal(actmc.getNumStates() - target.cardinality()); // amount of non-target states
 		
-		// derive kappaOne and kappaTwo from a rough estimate of the model structure
-		BigDecimal kappaOne;
-		BigDecimal kappaTwo; {
+		// derive kappaSteps and kappaTR from a rough estimate of the model structure
+		BigDecimal kappaSteps;
+		BigDecimal kappaTR; {
 			Pair<Double, Double> minProb_maxRew = compute_minProb_maxRew();
 			double minProb = minProb_maxRew.getKey();
 			double maxRew = 0;
@@ -216,28 +216,30 @@ public class ACTMCReduction extends PrismComponent
 			BigDecimal baseKappaOne = new BigDecimal(minProb / 2);
 			BigDecimal baseKappaTwo = new BigDecimal(Math.min(baseKappaOne.doubleValue(), maxRew));
 			BigDecimal maxExpectedSteps; {
-				int maxExpectedStepsPrecision = 1 + BigDecimalUtils.decimalDigitsPrecision(baseKappaOne) * n.intValue();
-				mc = new MathContext(maxExpectedStepsPrecision + 2, RoundingMode.HALF_UP);
+				int maxExpectedStepsPrecision = 3 + BigDecimalUtils.decimalDigitsPrecision(baseKappaOne) * n.intValue() * 2;
+				mc = new MathContext(maxExpectedStepsPrecision, RoundingMode.HALF_UP);
 				maxExpectedSteps = n.divide(BigDecimalMath.pow(baseKappaOne, n, mc), mc);
 			}
 			BigDecimal maxExpectedTR = maxExpectedSteps.multiply(new BigDecimal(maxRew));
 			mc = new MathContext((mc.getPrecision() * 2) + (int) maxRew, RoundingMode.HALF_UP);
 			BigDecimal b = BigDecimal.ONE.divide(new BigDecimal("2.0").multiply(maxExpectedSteps).multiply(n), mc);
-			/* kappaOne derivation*/ {
+			/* kappaSteps derivation*/ {
 				BigDecimal c = pre_epsilon.divide(new BigDecimal("2.0").multiply(maxExpectedSteps).multiply(maxExpectedSteps.multiply(n).add(BigDecimal.ONE)), mc);
-				kappaOne = BigDecimalUtils.min(baseKappaOne, BigDecimalUtils.min(b, c));
+				kappaSteps = BigDecimalUtils.min(baseKappaOne, BigDecimalUtils.min(b, c));
 			}
-			/* kappaTwo derivation*/ {
+			/* kappaTR derivation*/ {
 				BigDecimal c = pre_epsilon.divide(new BigDecimal("2.0").multiply(maxExpectedSteps).multiply(maxExpectedTR.multiply(n).add(BigDecimal.ONE)), mc);
-				kappaTwo = BigDecimalUtils.min(baseKappaTwo, BigDecimalUtils.min(b, c));
+				kappaTR = BigDecimalUtils.min(baseKappaTwo, BigDecimalUtils.min(b, c));
 			}
 		}
 
-		// derive a more precise estimate of the upper bound on the amount of steps
-		BigDecimal maxSteps = new BigDecimal(Double.MIN_VALUE); {
-			setKappa(kappaOne);
+		// derive a more precise estimate of the bounds on the amount of steps and time
+		BigDecimal minTime = new BigDecimal(Double.MAX_VALUE);
+		BigDecimal maxTime = new BigDecimal(Double.MIN_VALUE);
+		BigDecimal maxSteps; {
+			setKappa(kappaSteps);
 			DTMCSimple kappaOneDTMC = constructUniformizedDTMC();
-			MCRewards kappaOneDTMCRew = new StateRewardsConstant(1);
+			MCRewards kappaOneDTMCRew = new StateRewardsConstant(1 / kappaOneDTMC.uniformizationRate);
 			DTMCModelChecker mc1 = new DTMCModelChecker(this);
 			mc1.termCritParam = pre_epsilon.doubleValue();
 			mc1.linEqMethod = LinEqMethod.GAUSS_SEIDEL; // TODO MAJO - maybe this can go away, but reliability is priority!
@@ -249,16 +251,32 @@ public class ACTMCReduction extends PrismComponent
 				ModelCheckerResult kappaOneTR = mc1.computeReachRewards(kappaOneDTMC, kappaOneDTMCRew, target);
 				target.set(s, isEntranceTarget);
 				
-				BigDecimal max = (new BigDecimal(findMaxTR(kappaOneTR.soln))).add(pre_epsilon);
-				if (maxSteps.compareTo(max) < 0) {
-					maxSteps = max;
+				Pair<Double, Double> minMax = findMinMax(kappaOneTR.soln);
+				if (!minMax.first.isNaN()) { 
+					BigDecimal min = (new BigDecimal(minMax.first)).subtract(pre_epsilon);
+					if (minTime.compareTo(min) > 0) {
+						minTime = min;
+					}
+				}
+				if (!minMax.second.isNaN()) {
+					BigDecimal max = (new BigDecimal(minMax.second)).add(pre_epsilon);
+					if (maxTime.compareTo(max) < 0) {
+						maxTime = max;
+					}
 				}
 			}
+			if (minTime.compareTo(new BigDecimal(Double.MAX_VALUE)) == 0) {
+				minTime = BigDecimal.ONE;
+			}
+			if (maxTime.compareTo(new BigDecimal(Double.MIN_VALUE)) == 0) {
+				maxTime = BigDecimal.ONE;
+			}
+			maxSteps = maxTime.multiply(new BigDecimal(kappaOneDTMC.uniformizationRate), mc);
 		}
 		
 		// derive a more precise estimate of the upper bound on the total reward
 		BigDecimal maxTR = new BigDecimal(Double.MIN_VALUE); {
-			setKappa(kappaTwo);
+			setKappa(kappaTR);
 			DTMCSimple kappaTwoDTMC = constructUniformizedDTMC();
 			MCRewards kappaTwoDTMCRew = constructUniformizedDTMCRew(kappaTwoDTMC);
 			DTMCModelChecker mc2 = new DTMCModelChecker(this);
@@ -272,11 +290,27 @@ public class ACTMCReduction extends PrismComponent
 				ModelCheckerResult kappaTwoTR = mc2.computeReachRewards(kappaTwoDTMC, kappaTwoDTMCRew, target);
 				target.set(s, isEntranceTarget);
 				
-				BigDecimal max = (new BigDecimal(findMaxTR(kappaTwoTR.soln))).add(pre_epsilon);
-				if (maxTR.compareTo(max) < 0) {
-					maxTR = max;
+				Pair<Double, Double> minMax = findMinMax(kappaTwoTR.soln);
+				if (!minMax.second.isNaN()) {
+					BigDecimal max = (new BigDecimal(minMax.second)).add(pre_epsilon);
+					if (maxTR.compareTo(max) < 0) {
+						maxTR = max;
+					}
 				}
 			}
+			if (maxTR.compareTo(new BigDecimal(Double.MIN_VALUE)) == 0) {
+				maxTR = BigDecimal.ONE;
+			}
+		}
+		
+		// derive kappa for Mean Payoff computations
+		BigDecimal kappaMP; {
+			BigDecimal wMax = BigDecimalUtils.max(maxTR, maxTime);
+			BigDecimal a = (minTime.multiply(minTime, mc)).multiply(epsilon.divide(n, mc), mc);
+			BigDecimal b = wMax.multiply(epsilon.divide(n, mc).add(new BigDecimal("2.0"), mc), mc).multiply(n.multiply(wMax, mc).add(BigDecimal.ONE, mc), mc);
+			BigDecimal aDivb = a.divide(b, mc);
+			
+			kappaMP = BigDecimalUtils.min(aDivb, BigDecimalUtils.min(kappaSteps, kappaTR));
 		}
 		
 		// use the previous values to derive the actual kappa allowed error bound
@@ -284,7 +318,7 @@ public class ACTMCReduction extends PrismComponent
 		BigDecimal aAccurate = BigDecimal.ONE.divide(new BigDecimal("2.0").multiply(n).multiply(maxSteps), mc);
 		BigDecimal bAccurate = epsilon.divide(new BigDecimal("2.0").multiply(maxSteps).multiply(maxTR.multiply(n).add(BigDecimal.ONE)), mc);
 		
-		kappa = BigDecimalUtils.min(kappaOne, BigDecimalUtils.min(kappaTwo, BigDecimalUtils.min(aAccurate, bAccurate)));
+		kappa = BigDecimalUtils.min(kappaMP, BigDecimalUtils.min(aAccurate, bAccurate));
 		}
 		
 		return kappa;
@@ -316,37 +350,60 @@ public class ACTMCReduction extends PrismComponent
 	}
 	
 	/**
-	 * Finds the maximum element of the array, but only considers {@code relevantStates}.
-	 * @return If relevant results are given, returns their maximum. <br>
-	 * 		   If the maximum of the relevant results is {@literal Infinity}, returns 1. <br>
-	 * 		   If the maximum of the relevant results is 0, throws an exception. <br>
-	 * 		   If no relevant results are given, returns 1. <br>
-	 * 
+	 * Finds the maximum and minimum element of the array, but only considers {@code relevantStates}.
+	 * WARNING: The returned value must be checked for NaN !!!
+	 * @return A pair where the first value (K) is the minimum positive element
+	 *  	   and the second (V) is the maximum positive element, where: 
+	 *  	   <br> MINIMUM= <br>
+	 *         If relevant results are given, then their smallest positive element. <br>
+	 * 		   If the smallest positive element of the relevant results is {@literal Infinity}, then NaN. <br>
+	 * 		   If the smallest positive element of the relevant results is 0, NaN. <br>
+	 * 		   If no relevant results are given, then NaN.
+	 *  	   <br> MAXIMUM= <br>
+	 *         If relevant results are given, then their greatest positive element. <br>
+	 * 		   If the greatest positive element of the relevant results is {@literal Infinity}, then NaN. <br>
+	 * 		   If the greatest positive element of the relevant results is 0, then NaN. <br>
+	 * 		   If no relevant results are given, then NaN. <br>
 	 */
-	private double findMaxTR(double[] soln) throws PrismException {
+	private Pair<Double, Double> findMinMax(double[] array) {
 		
-		// find maximum of the relevant states
+		// find min/max of the relevant states
 		double max = Double.MIN_VALUE;
+		double min = Double.MAX_VALUE;
 		for (int s = relevantStates.nextSetBit(0); s >= 0; s = relevantStates.nextSetBit(s+1)) {
-			if (soln[s] > max) {
-				max = soln[s];
+			if (array[s] > max) {
+				max = array[s];
+			}
+			if (array[s] < min && array[s] > 0) {
+				min = array[s];
 			}
 		}
 		
-		if (Double.isInfinite(max)) {
-			max = 1; 
-			// This deals with strange behavior of reachability rewards when entrance is the initial state.
-		}
+		// This deals with strange behavior of reachability rewards when there are no rewards.
 		if (max == Double.MIN_VALUE) {
-			max = 1; 
-			// This deals with strange behavior of reachability rewards when there are no rewards.
+			max = Double.NaN; 
 		}
-		if (max == 0) {
-			throw new PrismException("ACTMC reduction to DTMC failed: maximum Reachability Reward is 0!");
-			// This should never happen.
+		if (min == Double.MAX_VALUE) {
+			min = Double.NaN; 
 		}
 		
-		return max;
+		// This deals with strange behavior of reachability rewards when entrance is the initial state.
+		if (Double.isInfinite(max)) {
+			max = Double.NaN; 
+		}
+		if (Double.isInfinite(min)) {
+			min = Double.NaN; 
+		}
+		
+		// This should never happen.
+		if (max == 0) {
+			max = Double.NaN;
+		}
+		if (min == 0) {
+			min = Double.NaN;
+		}
+		
+		return new Pair<Double, Double>(min, max);
 	}
 	
 	/**
