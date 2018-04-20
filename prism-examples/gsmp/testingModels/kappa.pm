@@ -1,8 +1,8 @@
 // The purpose of this model is to create such a small probability in the reduced DTMC,
 // that the probability gets rounded to zero (double precision), thus affecting the steady-state distribution.
-// The backbone of this model is essentially a single-direction exponentially distributed queue of capacity maxItem.
-// The queue is getting filled up at rate 1/lambda.
-// At the same time, from the very beginning, there is an active dirac event timeout with delay 1/lambda.
+// The backbone of this model is essentially a single-direction exponentially distributed queue of capacity capacity.
+// The queue is getting filled up at rate 1/time.
+// Meanwhile, from the very beginning, there is an active dirac event timeout with delay 1/time.
 // Experiment succeeds if the queue manages to fill up completely before timeout.
 // Experiment fails if the timeout occurs before the queue is full.
 
@@ -67,22 +67,18 @@
 
 gsmp
 
-const maxItem=10; // Adjust at will. Increase this to decrease the probability of success.
+const capacity=10; // Adjust at will. Increase this to decrease the probability of success.
 rate time = 5000; // Adjust at will. Increase this to decrease the probability of success.
-
-rewards
-	items>0 : items;
-endrewards
 
 module Queue
 
 	event enqueue = exponential(1/time);
 	event timeout = dirac(1/time);
 
-	items: [0..maxItem] init 0;
+	queueSize: [0..capacity] init 0;
 	outcome: [0..2] init 0; // 0- timeout hasnt occurred yet 1- failure, 2- success
 
-	[production]   (items < maxItem) & (outcome = 0) --enqueue-> (items'=items+1);
-	[timeout_bad]  (items < maxItem) & (outcome = 0) --timeout-> (outcome'=1);
-	[timeout_good] (items = maxItem) & (outcome = 0) --timeout-> (outcome'=2);
+	[production]   (queueSize < capacity) & (outcome = 0) --enqueue-> (queueSize'=queueSize+1);
+	[timeout_bad]  (queueSize < capacity) & (outcome = 0) --timeout-> (outcome'=1);
+	[timeout_good] (queueSize = capacity) & (outcome = 0) --timeout-> (outcome'=2);
 endmodule
