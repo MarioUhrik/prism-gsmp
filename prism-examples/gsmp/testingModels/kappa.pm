@@ -60,7 +60,7 @@
 
 // Conclusion: 
 //  Given arbitrary precision data type for storage of the probabilities, kappa must be computed.
-//  However, when the probability is lowered to such a small value that
+//  However, using type Double, when the probability is lowered to such a small value that
 //  it cannot be stored in type Double (10^-350 or smaller), the probability is still rounded to 0.
 //  Hence constant kappa smaller than the smallest value the data type used to store the probability can hold 
 //  (e.g. 10^-350 for type Double) is sufficient.
