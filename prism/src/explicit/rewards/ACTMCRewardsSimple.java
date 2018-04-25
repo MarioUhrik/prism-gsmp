@@ -207,9 +207,9 @@ public class ACTMCRewardsSimple implements MCRewards
 	}
 	
 	/**
-	 * Creates new ACTMCRewardsSimple where the transition rewards are merged
-	 * into the state rewards. I.e. transition rewards no longer exist and state
-	 * rewards may be increased so that the reward structure remains equivalent.
+	 * Creates new ACTMCRewardsSimple where the exponential transition rewards are merged
+	 * into the state rewards. I.e. after calling this, exponential transition rewards no longer
+	 * exist and state rewards may be increased so that the reward structure remains equivalent.
 	 * @param actmc ACTMC model these rewards are created from.
 	 *              This is needed because the rates are required as weights.
 	 *              Assumes the {@code actmc} is uniformised!

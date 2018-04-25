@@ -245,7 +245,7 @@ public class GSMPModelChecker extends ProbModelChecker
 	private StateValues computeSteadyStateACTMC(ACTMCSimple actmc, StateValues initDistr) throws PrismException {
 		long reduceTime = System.currentTimeMillis();
 		// Initialize necessary data structures
-		ACTMCReduction reduction = new ACTMCReduction(actmc, null, null, false, this);
+		ACTMCReduction reduction = new ACTMCReduction(actmc, null, null, true, this);
 		Map<String, ACTMCPotatoData> pdMap = reduction.getPotatoData();
 		Map<Integer, Distribution> timesWithinPotatoes = new HashMap<Integer, Distribution>();
 		for (Map.Entry<String, ACTMCPotatoData> pdEntry : pdMap.entrySet()) {
@@ -301,7 +301,7 @@ public class GSMPModelChecker extends ProbModelChecker
 	private ModelCheckerResult computeReachRewardsACTMC(ACTMCSimple actmc, ACTMCRewardsSimple actmcRew, BitSet target) throws PrismException {
 		long reduceTime = System.currentTimeMillis();
 		// Initialize necessary data structures
-		ACTMCReduction reduction = new ACTMCReduction(actmc, actmcRew, target, true, this);
+		ACTMCReduction reduction = new ACTMCReduction(actmc, actmcRew, target, false, this);
 		
 		// Reduce the ACTMC to an equivalent DTMC.
 		DTMCSimple dtmc = reduction.getDTMC();
@@ -329,7 +329,7 @@ public class GSMPModelChecker extends ProbModelChecker
 		// TODO MAJO - reuse the code from Steady State probabilities
 		long reduceTime = System.currentTimeMillis();
 		// Initialize necessary data structures
-		ACTMCReduction reduction = new ACTMCReduction(actmc, actmcRew, null, false, this);
+		ACTMCReduction reduction = new ACTMCReduction(actmc, actmcRew, null, true, this);
 		Map<String, ACTMCPotatoData> pdMap = reduction.getPotatoData();
 		Map<Integer, Distribution> timesWithinPotatoes = new HashMap<Integer, Distribution>();
 		for (Map.Entry<String, ACTMCPotatoData> pdEntry : pdMap.entrySet()) {

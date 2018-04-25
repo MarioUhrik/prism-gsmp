@@ -132,7 +132,10 @@ public class ACTMCPotatoData
 	 *  I.e. if we enter the potato using state {@code key}, then {@code value} is the distribution
 	 *  saying which states we are in after leaving the potato on average. */
 	private Map<Integer, Distribution> meanDistributions = new HashMap<Integer, Distribution>();
-	private Map<Integer, Double[]> meanDistributionsBeforeEvent = new HashMap<Integer, Double[]>();
+	/** Mapping of just-before-event state probability distributions onto states used to enter the potato.
+	 *  I.e. if we enter the potato using state {@code key}, then {@code value} is the distribution
+	 *  saying which states we are in just before the event occurs on average. */
+	private Map<Integer, Distribution> meanDistributionsBeforeEvent = new HashMap<Integer, Distribution>();
 	private boolean meanDistributionsComputed = false;
 	
 
@@ -684,10 +687,10 @@ public class ACTMCPotatoData
 				}
 				iters++;
 			}
-			// Store the DTMC solution vector for use by the computeMeanRewards() method
-			Double[] resultBeforeEvent = new Double[numStates];
+			// Store the DTMC solution vector for later use by other methods
+			Distribution resultBeforeEvent = new Distribution();
 			for(int i = 0; i < numStates ; ++i ) {
-				resultBeforeEvent[i] = result[i];
+				resultBeforeEvent.add(DTMCtoACTMC.get(i), result[i]);
 			}
 			meanDistributionsBeforeEvent.put(entrance, resultBeforeEvent);
 			
@@ -734,9 +737,7 @@ public class ACTMCPotatoData
 	 * This is computed using the expected cumulative reward using the ACTMC reward
 	 * structure for states within the potato, and with a time bound
 	 * given by the potato event. Since this would only be the underlying CTMC behavior,
-	 * it is the necessary to apply the potato event behavior as well.
-	 * In order to do that, the event transition rewards are weighted by the expected
-	 * distribution on states at the time of the occurrence of the event.
+	 * the potato event behavior is then applied as well.
 	 */
 	private void computeMeanRewards() throws PrismException {
 		if (!meanDistributionsComputed) {
@@ -817,28 +818,51 @@ public class ACTMCPotatoData
 		}
 		
 		//Now that we have the expected rewards for the underlying CTMC behavior,
-		//event behavior is applied as described above.
+		//event behavior is applied.
+		applyEventRewards(result, false);
+		// Store the finalized expected rewards using the original indexing.
+		for (int entrance : entrances) {
+			meanRewards.put(entrance, result[ACTMCtoDTMC.get(entrance)]);
+		}
+		
+		meanRewardsComputed = true;
+	}
+	
+	/**
+	 * Applies the potato event transition rewards to a given reward vector.
+	 * This is done by weighting the event transition reward by the probability of the model
+	 * being in the correct state at the time of event occurrence, and by the probability
+	 * that event transition then actually occurs. This value is then added to the reward vector.
+	 * NOTE: No adjustment for the mean time it takes the event to occur is done!!!
+	 * @param rewardsArray rewards array of rewards where each index is a state of the model
+	 * @param originalIndexing true if the array is indexed the same way as the original ACTMC.
+	 *                         This should generally be true when this method is called from the outside.
+	 *                         However, when called from within, the array may be indexed differently.
+	 * @return {@code rewardsArray}, but with rewards increased by the potato event transition reward application.
+	 */
+	public double[] applyEventRewards(double[] rewardsArray, boolean originalIndexing) {
 		for (int entrance : entrances) {
 			for (int ps : potato) {
 				Map<Integer, Double> rews = rewards.getEventTransitionRewards(ps);
 				if (rews == null) {
 					continue;
 				}
+				
+				Distribution eventTransitions = event.getTransitions(ps);
+				double weight = meanDistributionsBeforeEvent.get(entrance).get(ps);
 				Set<Integer> rewSet = rews.keySet();
 				for (int succ : rewSet) {
-					double prob = event.getTransitions(ps).get(succ);
-					double weight = meanDistributionsBeforeEvent.get(entrance)[ACTMCtoDTMC.get(ps)];
+					double prob = eventTransitions.get(succ);
 					double eventRew = rews.get(succ);
-					result[ACTMCtoDTMC.get(entrance)] += prob * weight * eventRew;
+					if (originalIndexing) {
+						rewardsArray[entrance] += prob * weight * eventRew;
+					} else {
+						rewardsArray[ACTMCtoDTMC.get(entrance)] += prob * weight * eventRew;
+					}
 				}
 			}
-			
-			// We are done computing this potato entrance
-			// Store the value using the original indexing.
-			meanRewards.put(entrance, result[ACTMCtoDTMC.get(entrance)]);
 		}
-		
-		meanRewardsComputed = true;
+		return rewardsArray;
 	}
 
 }
