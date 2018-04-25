@@ -315,22 +315,22 @@ public class ACTMCReduction extends PrismComponent
 			}
 		}
 		
-		// derive kappa for Mean Payoff computations
-		BigDecimal kappaMP; { // TODO MAJO - kappaMP only when computingSteadyState is true
+		// use the previous values to derive the actual kappa allowed error bound
+		BigDecimal kappa;
+		if (computingSteadyState) {
+			// kappa for Mean Payoff computations
 			BigDecimal wMax = BigDecimalUtils.max(maxTR, maxTime);
 			BigDecimal a = (minTime.multiply(minTime, mc)).multiply(epsilon.divide(n, mc), mc);
 			BigDecimal b = wMax.multiply(epsilon.divide(n, mc).add(new BigDecimal("2.0"), mc), mc).multiply(n.multiply(wMax, mc).add(BigDecimal.ONE, mc), mc);
 			BigDecimal aDivb = a.divide(b, mc);
 			
-			kappaMP = BigDecimalUtils.min(aDivb, BigDecimalUtils.min(kappaSteps, kappaTR));
-		}
-		
-		// use the previous values to derive the actual kappa allowed error bound
-		BigDecimal kappa; {
-		BigDecimal aAccurate = BigDecimal.ONE.divide(new BigDecimal("2.0").multiply(n).multiply(maxSteps), mc);
-		BigDecimal bAccurate = epsilon.divide(new BigDecimal("2.0").multiply(maxSteps).multiply(maxTR.multiply(n).add(BigDecimal.ONE)), mc);
-		
-		kappa = BigDecimalUtils.min(kappaMP, BigDecimalUtils.min(aAccurate, bAccurate));
+			kappa = BigDecimalUtils.min(aDivb, BigDecimalUtils.min(kappaSteps, kappaTR));
+		} else {
+			// kappa for Reachability Reward computation
+			BigDecimal aAccurate = BigDecimal.ONE.divide(new BigDecimal("2.0").multiply(n).multiply(maxSteps), mc);
+			BigDecimal bAccurate = epsilon.divide(new BigDecimal("2.0").multiply(maxSteps).multiply(maxTR.multiply(n).add(BigDecimal.ONE)), mc);
+			
+			kappa = BigDecimalUtils.min(kappaSteps, BigDecimalUtils.min(kappaTR, BigDecimalUtils.min(aAccurate, bAccurate)));
 		}
 		
 		return kappa;
@@ -356,7 +356,7 @@ public class ACTMCReduction extends PrismComponent
 		relevantStates.or(this.relevantStates);
 		relevantStates.andNot(target);
 		double minProb = dtmc.getMinimumProbability(relevantStates) + kappa;
-		double maxRew = rewards.getMax(relevantStates) + kappa; 
+		double maxRew = rewards.getMax(relevantStates) + kappa; // TODO MAJO - shouldnt this be minus kappa?
 		
 		return new Pair<Double, Double>(minProb, maxRew);
 	}
