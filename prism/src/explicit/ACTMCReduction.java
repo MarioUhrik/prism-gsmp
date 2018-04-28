@@ -85,10 +85,21 @@ public class ACTMCReduction extends PrismComponent
 	 *  Initially null.*/
 	private MCRewards dtmcRew = null;
 	
-	/** Requested total accuracy passed in from the parent prismComponent (termCritParam) */
+	/** Requested total epsilon accuracy for subsequent model checking.
+	 *  This is an option from the parent prismComponent settings.
+	 *  (termCritParam / Termination epsilon) */
 	private BigDecimal epsilon;
+	/** If this is true, kappa should be computed for the model.
+	 *  This is an option from parent prismComponent settings.
+	 *  (PRISM_ACTMC_COMPUTE_KAPPA / Compute precision for ACTMC (GSMP) reduction) */
+	private boolean computeKappa;
+	/** Constant allowed error kappa used if {@code computeKappa} is false.
+	 *  This is an option from parent prismComponent settings. 
+	 *  (PRISM_ACTMC_CONSTANT_KAPPA_DECIMAL_DIGITS / ACTMC (GSMP) reduction constant precision (decimal digits) */
+	private BigDecimal constantKappa;
 	/** Default first stage accuracy for computing kappa */
 	private static final BigDecimal pre_epsilon = new BigDecimal("0.1");
+	
 	
 	/**
 	 * The only constructor
@@ -117,6 +128,8 @@ public class ACTMCReduction extends PrismComponent
 		}
 		this.computingSteadyState = computingSteadyState;
 		this.epsilon = new BigDecimal(this.getSettings().getDouble(PrismSettings.PRISM_TERM_CRIT_PARAM));
+		this.computeKappa = this.getSettings().getBoolean(PrismSettings.PRISM_ACTMC_COMPUTE_KAPPA);
+		this.constantKappa = BigDecimalUtils.allowedError(this.getSettings().getInteger(PrismSettings.PRISM_ACTMC_CONSTANT_KAPPA_DECIMAL_DIGITS));
 		this.pdMap = createPotatoDataMap(this.actmc, this.actmcRew, this.target);
 		this.relevantStates = new BitSet(actmc.getNumStates());
 		setRelevantStates();
@@ -160,7 +173,11 @@ public class ACTMCReduction extends PrismComponent
 	}
 	
 	private void computeEquivalentDTMC() throws PrismException {
-		setKappa(computeKappa());
+		if (computeKappa) {
+			setKappa(computeKappa());
+		} else {
+			setKappa(constantKappa);
+		}
 		dtmc = constructUniformizedDTMC();
 	}
 	
@@ -228,7 +245,7 @@ public class ACTMCReduction extends PrismComponent
 			BigDecimal baseKappaOne = new BigDecimal(minProb / 2);
 			BigDecimal baseKappaTwo = new BigDecimal(Math.min(baseKappaOne.doubleValue(), maxRew));
 			BigDecimal maxExpectedSteps; {
-				int maxExpectedStepsPrecision = 3 + BigDecimalUtils.decimalDigitsPrecision(baseKappaOne) * n.intValue() * 2;
+				int maxExpectedStepsPrecision = 3 + BigDecimalUtils.decimalDigits(baseKappaOne) * n.intValue() * 2;
 				mc = new MathContext(maxExpectedStepsPrecision, RoundingMode.HALF_UP);
 				maxExpectedSteps = n.divide(BigDecimalMath.pow(baseKappaOne, n, mc), mc);
 			}

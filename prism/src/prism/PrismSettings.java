@@ -100,6 +100,8 @@ public class PrismSettings implements Observer
 	public static final	String PRISM_DD_EXTRA_STATE_VARS				= "prism.ddExtraStateVars";
 	public static final	String PRISM_DD_EXTRA_ACTION_VARS				= "prism.ddExtraActionVars";
 	public static final String PRISM_EXP_SYNC_BACKWARD_COMPATIBLE       = "prism.ExpSyncBackwardCompatible";
+	public static final String PRISM_ACTMC_COMPUTE_KAPPA       		= "prism.ACTMCComputeKappa";
+	public static final String PRISM_ACTMC_CONSTANT_KAPPA_DECIMAL_DIGITS     = "prism.ACTMCConstantKappa";
 	public static final	String PRISM_NUM_SB_LEVELS					= "prism.numSBLevels";//"prism.hybridNumLevels";
 	public static final	String PRISM_SB_MAX_MEM						= "prism.SBMaxMem";//"prism.hybridMaxMemory";
 	public static final	String PRISM_NUM_SOR_LEVELS					= "prism.numSORLevels";//"prism.hybridSORLevels";
@@ -382,6 +384,10 @@ public class PrismSettings implements Observer
 			// GSMP SETTINGS:
 			{ BOOLEAN_TYPE,		PRISM_EXP_SYNC_BACKWARD_COMPATIBLE,		"Allow synchronization of exponential GSMP events",		"4.4beta",			new Boolean(true),								"",
 			"ExpSyncBackwardCompatible\nIf this option is true, exponential events are allowed to be synchronized with each other instead of producing an error. Just like in CTMCs, the product exponential event obtains a rate equal to the product of rates of the synchronized events.\n The GSMP must be re-parsed in order for changes to take effect!" },
+			{ BOOLEAN_TYPE,		PRISM_ACTMC_COMPUTE_KAPPA,		"Compute precision for ACTMC (GSMP) reduction",		"4.4beta",			new Boolean(true),								"",
+			"If this option is true, kappa, the allowed error of reducing ACTMC to DTMC in GSMP model checking will be computed so that the error of model checking on the reduced DTMC is guaranteed to be within termination epsilon. Otherwise a constant specified by \"ACTMC (GSMP) reduction constant precision (decimal digits)\" is used. Kappa is computed in BigDecimal and it's value tends to be very small for larger models, so consider using constant kappa for larger models by setting this to false and specifying \"ACTMC (GSMP) reduction constant precision\"." },
+			{ INTEGER_TYPE,		PRISM_ACTMC_CONSTANT_KAPPA_DECIMAL_DIGITS,		"ACTMC (GSMP) reduction constant precision (decimal digits)",		"4.4beta",			new Integer(500),								"0,",
+			"If \"Compute precision for ACTMC (GSMP) reduction\" is set to false, kappa, the allowed error of reducing ACTMC to DTMC in GSMP model checking will not be computed. Instead, this constant is used. Specify the number of decimal digits of the precision, i.e. kappa = 1.0E-(this number). " },
 		},
 		{
 			{ INTEGER_TYPE,		SIMULATOR_DEFAULT_NUM_SAMPLES,			"Default number of samples",			"4.0",		new Integer(1000),			"1,",
@@ -1361,6 +1367,21 @@ public class PrismSettings implements Observer
 			}
 		} else if (sw.equals("ExpSyncBackwardCompatible")) {
 			set(PRISM_EXP_SYNC_BACKWARD_COMPATIBLE, false);
+		} else if (sw.equals("ACTMCComputeKappa")) {
+			set(PRISM_ACTMC_COMPUTE_KAPPA, false);
+		} else if (sw.equals("ACTMCConstantKappa")) {
+			if (i < args.length - 1) {
+				try {
+					int v = Integer.parseInt(args[++i]);
+					if (v < 0)
+						throw new NumberFormatException("");
+					set(PRISM_ACTMC_CONSTANT_KAPPA_DECIMAL_DIGITS, v);
+				} catch (NumberFormatException e) {
+					throw new PrismException("Invalid value for -" + sw + " switch");
+				}
+			} else {
+				throw new PrismException("No value specified for -" + sw + " switch");
+			}
 		}
 		
 		// ADVERSARIES/COUNTEREXAMPLES:
@@ -1754,6 +1775,9 @@ public class PrismSettings implements Observer
 		mainLog.println("-ltl2dasyntax <x> .............. Specify output format for -ltl2datool switch (lbt, spin, spot, rabinizer)");
 		mainLog.println("-exportiterations .............. Export vectors for iteration algorithms to file");
 		mainLog.println("-pmaxquotient .................. For Pmax computations in MDPs, compute in the MEC quotient");
+		mainLog.println("-ExpSyncBackwardCompatible ..... Disable synchronization of exponential events for GSMPs");
+		mainLog.println("-ACTMCComputeKappa ............. Disable computatation of kappa allowed error for ACTMC reduction (use constant kappa)");
+		mainLog.println("-ACTMCConstantKappa <n> ........ Set decimal digit precision of constant kappa allowed error [default: 500]");
 		
 		mainLog.println();
 		mainLog.println("MULTI-OBJECTIVE MODEL CHECKING:");
@@ -1778,7 +1802,6 @@ public class PrismSettings implements Observer
 		mainLog.println("-ddsanity ...................... Enable internal sanity checks (causes slow-down)");
 		mainLog.println("-ddextrastatevars <n> .......... Set the number of preallocated state vars [default: 20]");
 		mainLog.println("-ddextraactionvars <n> ......... Set the number of preallocated action vars [default: 20]");
-		mainLog.println("-ExpSyncBackwardCompatible ..... Disable synchronization of exponential events for GSMPs ");
 		mainLog.println();
 		mainLog.println("PARAMETRIC MODEL CHECKING OPTIONS:");
 		mainLog.println("-param <vals> .................. Do parametric model checking with parameters (and ranges) <vals>");

@@ -59,7 +59,7 @@ public final class FoxGlynn_BD
 
 	public FoxGlynn_BD(BigDecimal qtmax, BigDecimal uf, BigDecimal of, BigDecimal acc) throws PrismException
 	{
-		decimalPrecision = BigDecimalUtils.decimalDigitsPrecision(acc);
+		decimalPrecision = BigDecimalUtils.decimalDigits(acc);
 		mc = new MathContext(decimalPrecision, RoundingMode.HALF_UP);
 		ceil = new MathContext(decimalPrecision, RoundingMode.CEILING);
 		
@@ -244,7 +244,7 @@ public final class FoxGlynn_BD
 			double uf = 1.0e-300; // ADJUST AT WILL!
 			double of = 1.0e-300; // ADJUST AT WILL!
 			double acc = 1.0e-10; // ADJUST AT WILL!
-			mc = new MathContext(BigDecimalUtils.decimalDigitsPrecision(new BigDecimal(acc)), RoundingMode.HALF_UP);
+			mc = new MathContext(BigDecimalUtils.decimalDigits(new BigDecimal(acc)), RoundingMode.HALF_UP);
 			
 			stopwatch_fg_BD = System.currentTimeMillis();
 			fg_BD = new FoxGlynn_BD(

@@ -31,6 +31,8 @@ import java.math.BigInteger;
 import java.math.MathContext;
 import java.math.RoundingMode;
 
+import ch.obermuhlner.math.big.BigDecimalMath;
+
 /**
  * Utility class for BigDecimal.
  * However, BigDecimalMath.jar should be used
@@ -47,7 +49,7 @@ public class BigDecimalUtils {
 		BigDecimal e = BigDecimal.ONE; // 1
 		BigDecimal factorial = BigDecimal.ONE; // 1
 		
-		int decimalDigitsPrecision = decimalDigitsPrecision(precision) + 1;
+		int decimalDigitsPrecision = decimalDigits(precision) + 1;
 		for (int i = 1 ; i < decimalDigitsPrecision ; ++i) {
 			factorial = factorial.multiply(new BigDecimal(i));
 			factorial.round(MathContext.UNLIMITED);
@@ -58,21 +60,34 @@ public class BigDecimalUtils {
 	}
 	
 	/**
-	 * Compute the number of decimal digits corresponding to floating point {@code precision}.
-	 * This number is increased by 3 to provide extra accuracy when the requested precision
-	 * is very low.
-	 * @param precision supposed to be a number greater than 0 but smaller than 1. For example, 0.0001 or 1.0e-10.
+	 * Compute the number of decimal digits corresponding to floating point {@code allowedError}.
+	 * The returned number is increased by 3 to provide extra accuracy when the requested allowedError
+	 * is very small.
+	 * @param allowedError supposed to be a number greater than 0 but smaller than 1. For example, 0.0001 or 1.0e-10.
 	 * <br>
 	 * IMPORTANT NOTE: Does not work for precision = 0
 	 */
-	public static int decimalDigitsPrecision(BigDecimal precision) {
-		BigDecimal inverse = BigDecimal.ONE.divide(precision, RoundingMode.UP);
+	public static int decimalDigits(BigDecimal allowedError) {
+		BigDecimal inverse = BigDecimal.ONE.divide(allowedError, RoundingMode.UP);
+		// TODO MAJO - maybe the increase by 3 is not so nice in general
+		// TODO MAJO - rewrite to decimal logarithm
 		BigInteger inverseInt = inverse.toBigInteger();
 		int decimalDigits = 3;
 		for (  ; inverseInt.compareTo(BigInteger.ONE) >= 0 ; ++decimalDigits) {
 			inverseInt = inverseInt.divide(BigInteger.TEN);
 		}
 		return decimalDigits;
+	}
+	
+	/**
+	 * Compute precision corresponding to a number of decimal floating point digits {@code digits}.
+	 * Input digits are increased by 3 to provide extra accuracy when the requested digits are too few.
+	 * @param decimalDigits supposed to be a number of decimal floating point digits, e.g. 100 should return 1E-100.
+	 */
+	public static BigDecimal allowedError(int decimalDigits) {
+		// TODO MAJO - maybe the increase by 3 is not so nice in general
+		MathContext mc = new MathContext(decimalDigits, RoundingMode.HALF_UP);
+		return BigDecimalMath.pow(BigDecimal.TEN, new BigDecimal(decimalDigits + 3).negate(), mc);
 	}
 	
 	/**
