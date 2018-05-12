@@ -41,7 +41,7 @@ import explicit.rewards.ACTMCRewardsSimple;
 import prism.PrismException;
 
 /**
- * Class for storage and computation of single potato-related data for ACTMCs.
+ * Abstract superclass for storage and computation of single potato-related data for ACTMCs.
  * <br>
  * Potato is a subset of states of an ACTMC in which a given event is active.
  * <br><br>
@@ -51,17 +51,17 @@ import prism.PrismException;
  * entering and leaving a potato. Then, these expected values are used in
  * regular CTMC/DTMC model checking methods.
  */
-public class ACTMCPotatoData
+public abstract class ACTMCPotato
 {
 	/** ACTMC model this data is associated with */
-	private ACTMCSimple actmc;
+	protected ACTMCSimple actmc;
 	/** specific event of {@code actmc} this data is associated with */
-	private GSMPEvent event;
+	protected GSMPEvent event;
 	/** Reward structure of the {@code actmc}. May be null.
 	 *  The CTMC transition rewards are expected to have already been converted to state rewards only. */
-	private ACTMCRewardsSimple rewards = null;
+	protected ACTMCRewardsSimple rewards = null;
 	/** Bitset of target states for reachability analysis. May be null. */
-	private BitSet target = null;
+	protected BitSet target = null;
 	
 	/**
 	 * Set of states that belong to the potato, but are not reachability targets.
@@ -69,7 +69,7 @@ public class ACTMCPotatoData
 	 * I.e. such states of {@code actmc} that are not in {@code target} and 
 	 * where {@code event} is active.
 	 */
-	private Set<Integer> potato = new HashSet<Integer>();
+	protected Set<Integer> potato = new HashSet<Integer>();
 	/** 
 	 * Subset of {@code potato} states that are acting as entrances into the potato.
 	 * <br>
@@ -83,7 +83,7 @@ public class ACTMCPotatoData
 	 * <br>
 	 * 3) part of the initial distribution, i.e. it may be the initial state.
 	 */
-	private Set<Integer> entrances = new HashSet<Integer>();
+	protected Set<Integer> entrances = new HashSet<Integer>();
 	/**
 	 * Set of states that are successors of the potato states, or reachability targets.
 	 * <br>
@@ -97,50 +97,50 @@ public class ACTMCPotatoData
 	 * <br>
 	 * 3) target states that would otherwise be within the potato.
 	 */
-	private Set<Integer> successors = new HashSet<Integer>();
-	private boolean statesComputed = false;
+	protected Set<Integer> successors = new HashSet<Integer>();
+	protected boolean statesComputed = false;
 	
 	/**
 	 * DTMC making up the part of {@code actmc} such that it only
 	 * contains states that are the union of {@code potato} and {@code successors}.
 	 */
-	private DTMCSimple potatoDTMC = null;
-	double uniformizationRate;
+	protected DTMCSimple potatoDTMC = null;
+	protected double uniformizationRate;
 	/** Mapping from the state indices of {@code actmc} (K) to {@code potatoDTMC} (V)*/
-	private Map<Integer, Integer> ACTMCtoDTMC = new HashMap<Integer, Integer>();
+	protected Map<Integer, Integer> ACTMCtoDTMC = new HashMap<Integer, Integer>();
 	/** Mapping from the state indices of {@code potatoDTMC} (index) to {@code actmc} (value) */
-	private Vector<Integer> DTMCtoACTMC = new Vector<Integer>();
-	private boolean potatoDTMCComputed = false;
+	protected Vector<Integer> DTMCtoACTMC = new Vector<Integer>();
+	protected boolean potatoDTMCComputed = false;
 	
 	/** Allowed error (kappa) for computation of FoxGlynn */
-	private BigDecimal kappa;
+	protected BigDecimal kappa;
 	/** Poisson distribution values computed and stored by class FoxGlynn. */
-	private FoxGlynn_BD foxGlynn;
-	private boolean foxGlynnComputed = false;
+	protected FoxGlynn_BD foxGlynn;
+	protected boolean foxGlynnComputed = false;
 	
 	/** Mapping of expected accumulated rewards until leaving the potato onto states used to enter the potato */
-	private Map<Integer, Double> meanRewards = new HashMap<Integer, Double>();
-	private boolean meanRewardsComputed = false;
+	protected Map<Integer, Double> meanRewards = new HashMap<Integer, Double>();
+	protected boolean meanRewardsComputed = false;
 	
 	/** Mapping of expected times spent in individual states of the potato before leaving the potato
 	 * onto individual states used to enter the potato.
 	 * Sum of this distribution yields the total expected time spent within the potato. */
-	private Map<Integer, Distribution> meanTimes = new HashMap<Integer, Distribution>();
-	private boolean meanTimesComputed = false;
+	protected Map<Integer, Distribution> meanTimes = new HashMap<Integer, Distribution>();
+	protected boolean meanTimesComputed = false;
 	
 	/** Mapping of expected outcome state probability distributions onto states used to enter the potato.
 	 *  I.e. if we enter the potato using state {@code key}, then {@code value} is the distribution
 	 *  saying which states we are in after leaving the potato on average. */
-	private Map<Integer, Distribution> meanDistributions = new HashMap<Integer, Distribution>();
+	protected Map<Integer, Distribution> meanDistributions = new HashMap<Integer, Distribution>();
 	/** Mapping of just-before-event state probability distributions onto states used to enter the potato.
 	 *  I.e. if we enter the potato using state {@code key}, then {@code value} is the distribution
 	 *  saying which states we are in just before the event occurs on average. */
-	private Map<Integer, Distribution> meanDistributionsBeforeEvent = new HashMap<Integer, Distribution>();
-	private boolean meanDistributionsComputed = false;
+	protected Map<Integer, Distribution> meanDistributionsBeforeEvent = new HashMap<Integer, Distribution>();
+	protected boolean meanDistributionsComputed = false;
 	
 
 	/**
-	 * The only constructor
+	 * From the scratch constructor
 	 * @param actmc Associated ACTMC model. Must not be null!
 	 * @param event Event belonging to the ACTMC. Must not be null!
 	 * @param rewards Optional ACTMC Reward structure. May be null, but calls to
@@ -148,7 +148,7 @@ public class ACTMCPotatoData
 	 * @param target Bitset of target states (if doing reachability). May be null.
 	 * @throws Exception if the arguments break the above rules
 	 */
-	public ACTMCPotatoData(ACTMCSimple actmc, GSMPEvent event, 
+	public ACTMCPotato(ACTMCSimple actmc, GSMPEvent event, 
 			ACTMCRewardsSimple rewards, BitSet target) throws PrismException {
 		if (actmc == null || event == null) {
 			throw new NullPointerException("ACTMCPotatoData constructor has received a null object!");
@@ -161,6 +161,42 @@ public class ACTMCPotatoData
 		this.event = event;
 		this.rewards = rewards;
 		this.target = target;
+	}
+	
+	/**
+	 * Copy constructor
+	 */
+	public ACTMCPotato(ACTMCPotato other) {
+		this.actmc = other.actmc;
+		this.event = other.event;
+		this.rewards = other.rewards;
+		this.target = other.target;
+		
+		this.potato = other.potato;
+		this.entrances = other.entrances;
+		this.successors = other.successors;
+		this.statesComputed = other.statesComputed;
+		
+		this.potatoDTMC = other.potatoDTMC;
+		this.uniformizationRate = other.uniformizationRate;
+		this.ACTMCtoDTMC = other.ACTMCtoDTMC;
+		this.DTMCtoACTMC = other.DTMCtoACTMC;
+		this.potatoDTMCComputed = other.potatoDTMCComputed;
+		
+		this.kappa = other.kappa;
+		//If some different subclass is called, some computed values may no longer be valid. So recomputation is required.
+		this.foxGlynn = null;
+		this.foxGlynnComputed = false;
+		
+		this.meanRewards = new HashMap<Integer, Double>();
+		this.meanRewardsComputed = false;
+		
+		this.meanTimes = new HashMap<Integer, Distribution>();
+		this.meanTimesComputed = false;
+		
+		this.meanDistributions = new HashMap<Integer, Distribution>();
+		this.meanDistributionsBeforeEvent = new HashMap<Integer, Distribution>();
+		this.meanDistributionsComputed = false;
 	}
 	
 	/**
@@ -326,7 +362,7 @@ public class ACTMCPotatoData
 		return meanDistributions;
 	}
 	
-	private void computeStates() {
+	protected void computeStates() {
 		computePotato();
 		computeEntrances();
 		computeSuccessors();
@@ -334,7 +370,7 @@ public class ACTMCPotatoData
 		statesComputed = true;
 	}
 	
-	private void computePotato() {
+	protected void computePotato() {
 		BitSet potatoBs = event.getActive();
 		for (int ps = potatoBs.nextSetBit(0); ps >= 0; ps = potatoBs.nextSetBit(ps+1)) {
 			potato.add(ps);
@@ -342,7 +378,7 @@ public class ACTMCPotatoData
 	}
 	
 	/** Assumes that {@code computePotato()} has been called already */
-	private void computeEntrances() {
+	protected void computeEntrances() {
 		List<Integer> candidateEntrances = new ArrayList<Integer>(potato);
 		
 		// For each state of the ACTMC...
@@ -406,7 +442,7 @@ public class ACTMCPotatoData
 	
 	/** Assumes that {@code computePotato()} and {@code computeEntrances()}
 	 *  have been called already */
-	private void computeSuccessors() {
+	protected void computeSuccessors() {
 		for (int ps : potato) {
 			Set<Integer> support = new HashSet<Integer>(actmc.getTransitions(ps).getSupport());
 			support.removeIf( s -> potato.contains(s));
@@ -415,7 +451,7 @@ public class ACTMCPotatoData
 	}
 	
 	/** Assumes that {@code computeSuccessors()} has been called already. */
-	private void processTargets() {
+	protected void processTargets() {
 		if (target == null) {
 			return;
 		}
@@ -428,7 +464,7 @@ public class ACTMCPotatoData
 		}
 	}
 	
-	private void computePotatoDTMC() {
+	protected void computePotatoDTMC() {
 		if (!statesComputed) {
 			computeStates();
 		}
@@ -450,7 +486,7 @@ public class ACTMCPotatoData
 			}
 		}
 		
-		uniformizationRate = actmc.getMaxExitRate(); // TODO MAJO - maxExitRate of the potatoCTMC is enough!!!
+		uniformizationRate = actmc.getMaxExitRate(); // TODO MAJO - maxExitRate of the potatoCTMC is enough!!! // TODO MAJO - actually, I dont think its enough
 		// Construct the transition matrix of the new CTMC
 		for (int s : potatoACTMCStates) {
 			if (potato.contains(s)) {
@@ -474,262 +510,32 @@ public class ACTMCPotatoData
 		potatoDTMCComputed = true;
 	}
 	
-	/** Uses class FoxGlynn to pre-compute the Poisson distribution.
-	 *  Different approach is required for each event distribution type. */
-	private void computeFoxGlynn() throws PrismException {
-		if (!potatoDTMCComputed) {
-			computePotatoDTMC();
-		}
-		
-		if (kappa == null) {
-			kappa = new BigDecimal(1e-20); 
-			//if no kappa is preset, then use a default one. This should never happen however.
-			// TODO MAJO - maybe throw exception here?
-		}
-		
-		switch (event.getDistributionType().getEnum()) {
-		case DIRAC:
-			double fgRate = uniformizationRate * event.getFirstParameter();
-			foxGlynn = new FoxGlynn_BD(new BigDecimal(fgRate), new BigDecimal(1e-300), new BigDecimal(1e+300), kappa);
-			break;
-		case ERLANG:
-			throw new UnsupportedOperationException("ACTMCPotatoData does not yet support the Erlang distribution!");
-			// TODO MAJO - implement erlang distributed event support
-			//break;
-		case EXPONENTIAL:
-			throw new PrismException("ACTMCPotatoData received an event with exponential distribution!");
-			// TODO MAJO - implement exponentially distributed event support
-			//break;
-		case UNIFORM:
-			throw new UnsupportedOperationException("ACTMCPotatoData does not yet support the uniform distribution!");
-			// TODO MAJO - implement uniformly distributed event support
-			//break;
-		case WEIBULL:
-			throw new UnsupportedOperationException("ACTMCPotatoData does not yet support the Weibull distribution!");
-			// TODO MAJO - implement weibull distributed event support
-			//break;
-		default:
-			throw new PrismException("ACTMCPotatoData received an event with unrecognized distribution!");
-		}
-		if (foxGlynn.getRightTruncationPoint() < 0) {
-			throw new PrismException("Overflow in Fox-Glynn computation of the Poisson distribution!");
-		}
-		
-		foxGlynnComputed = true;
-	}
+	/** Uses class FoxGlynn to pre-compute the Poisson distribution. 
+	 *  <br>
+	 *  After calling this, {@code foxGlynnComputed} is set to true,
+	 *  and the result is saved within {@code foxGlynn} */
+	protected abstract void computeFoxGlynn() throws PrismException;
 
 	/**
 	 * For all potato entrances, computes the expected time spent within the potato
 	 * before leaving the potato, having entered from a particular entrance.
 	 * This is computed using the expected cumulative reward with reward 1
 	 * for the potato entrances, and with a time bound given by the potato event.
+	 * <br>
+	 * After calling this, {@code meanTimesComputed} is set to true,
+	 * and the result is saved within {@code meanTimes}.
 	 */
-	private void computeMeanTimes() throws PrismException {
-		if (!foxGlynnComputed) {
-			computeFoxGlynn();
-		}
-		
-		int numStates = potatoDTMC.getNumStates();
-		
-		// Prepare the FoxGlynn data
-		int left = foxGlynn.getLeftTruncationPoint();
-		int right = foxGlynn.getRightTruncationPoint();
-		///// Conversion from BigDecimal to Double!!! // TODO MAJO - convert EVERYTHING to BigDecimal
-		BigDecimal[] weights_BD = foxGlynn.getWeights().clone();
-		double[] weights = new double[weights_BD.length];
-		for (int i = 0 ; i < weights.length ; ++i) {
-			weights[i] = weights_BD[i].doubleValue();
-		}
-		BigDecimal totalWeight_BD = foxGlynn.getTotalWeight();
-		double totalWeight = totalWeight_BD.doubleValue();
-		/////
-		for (int i = left; i <= right; i++) {
-			weights[i - left] /= totalWeight;
-		}
-		for (int i = left+1; i <= right; i++) {
-			weights[i - left] += weights[i - 1 - left];
-		}
-		for (int i = left; i <= right; i++) {
-			weights[i - left] = (1 - weights[i - left]) / uniformizationRate;
-		}
-		
-		for (int entrance : entrances) {
-			
-			// Prepare solution arrays
-			double[] soln = new double[numStates];
-			double[] soln2 = new double[numStates];
-			double[] result = new double[numStates];
-			double[] tmpsoln = new double[numStates];
-
-			// Initialize the solution array by assigning reward
-			// 1 to the entrance and 0 to all others.
-			for (int i = 0; i < numStates; i++) {
-				soln[i] = 0;
-			}
-			soln[ACTMCtoDTMC.get(entrance)] = 1;
-
-			// do 0th element of summation (doesn't require any matrix powers)
-			result = new double[numStates];
-			if (left == 0) {
-				for (int i = 0; i < numStates; i++) {
-					result[i] += weights[0] * soln[i];
-				}
-			} else {
-				for (int i = 0; i < numStates; i++) {
-					result[i] += soln[i] / uniformizationRate;
-				}
-			}
-
-			// Start iterations
-			int iters = 1;
-			while (iters <= right) {
-				// Matrix-vector multiply
-				potatoDTMC.vmMult(soln, soln2);
-				// Swap vectors for next iter
-				tmpsoln = soln;
-				soln = soln2;
-				soln2 = tmpsoln;
-				// Add to sum
-				if (iters >= left) {
-					for (int i = 0; i < numStates; i++)
-						result[i] += weights[iters - left] * soln[i];
-				} else {
-					for (int i = 0; i < numStates; i++)
-						result[i] += soln[i] / uniformizationRate;
-				}
-				iters++;
-			}
-			
-			// We are done. 
-			// Convert the result to a distribution with original indexing and store it.
-			Distribution resultDistr = new Distribution();
-			for (int ps : potato) {
-				double time = result[ACTMCtoDTMC.get(ps)];
-				if (time != 0.0) {
-					resultDistr.add(ps, Math.abs(time)); // TODO MAJO - remove this abs() eventually
-				}
-			}
-			meanTimes.put(entrance, resultDistr);
-		}
-		meanTimesComputed = true;
-	}
+	protected abstract void computeMeanTimes() throws PrismException;
 	
 	/**
 	 * For all potato entrances, computes the expected distributions
 	 * on states after leaving the potato, having entered from a particular entrance.
 	 * I.e., on average, where does the ACTMC end up when it happens to enter a potato.
+	 * <br>
+	 * After calling this, {@code meanDistributionsComputed} is set to true,
+	 * and the result is saved within {@code meanDistributions} and {@code meanDistributionsBeforeEvent}.
 	 */
-	private void computeMeanDistributions() throws PrismException {
-		if (!foxGlynnComputed) {
-			computeFoxGlynn();
-		}
-		
-		int numStates = potatoDTMC.getNumStates();
-		
-		// Prepare the FoxGlynn data
-		int left = foxGlynn.getLeftTruncationPoint();
-		int right = foxGlynn.getRightTruncationPoint();
-		///// Conversion from BigDecimal to Double!!! // TODO MAJO - convert EVERYTHING to BigDecimal
-		BigDecimal[] weights_BD = foxGlynn.getWeights().clone();
-		double[] weights = new double[weights_BD.length];
-		for (int i = 0 ; i < weights.length ; ++i) {
-			weights[i] = weights_BD[i].doubleValue();
-		}
-		BigDecimal totalWeight_BD = foxGlynn.getTotalWeight();
-		double totalWeight = totalWeight_BD.doubleValue();
-		/////
-		for (int i = left; i <= right; i++) {
-			weights[i - left] /= totalWeight;
-		}
-		
-		for (int entrance : entrances) {
-			
-			// Prepare solution arrays // TODO MAJO - optimize, reuse the arrays!
-			double[] initDist = new double[numStates];
-			double[] soln;
-			double[] soln2 = new double[numStates];
-			double[] result = new double[numStates];
-			double[] tmpsoln = new double[numStates];
-			
-			// Build the initial distribution for this potato entrance
-			for (int s = 0; s < numStates  ; ++s) {
-				initDist[s] = 0;
-			}
-			initDist[ACTMCtoDTMC.get(entrance)] = 1;
-			soln = initDist;
-
-			// Initialize the result array
-			for (int i = 0; i < numStates; i++) {
-				result[i] = 0.0;
-			}
-
-			// If necessary, compute the 0th element of summation
-			// (doesn't require any matrix powers)
-			if (left == 0) {
-				for (int i = 0; i < numStates; i++) {
-					result[i] += weights[0] * soln[i];
-				}
-			}
-
-			// Compute the potatoDTMC solution vector just before the event occurs
-			int iters = 1;
-			while (iters <= right) {
-				// Matrix-vector multiply
-				potatoDTMC.vmMult(soln, soln2);
-				// Swap vectors for next iter
-				tmpsoln = soln;
-				soln = soln2;
-				soln2 = tmpsoln;
-				// Add to sum
-				if (iters >= left) {
-					for (int i = 0; i < numStates; i++)
-						result[i] += weights[iters - left] * soln[i];
-				}
-				iters++;
-			}
-			// Store the DTMC solution vector for later use by other methods
-			Distribution resultBeforeEvent = new Distribution();
-			for(int i = 0; i < numStates ; ++i ) {
-				resultBeforeEvent.add(DTMCtoACTMC.get(i), result[i]);
-			}
-			meanDistributionsBeforeEvent.put(entrance, resultBeforeEvent);
-			
-			// Lastly, if there is some probability that the potatoDTMC would 
-			// still be within the potato at the time of the event occurrence,
-			// these probabilities must be redistributed into the successor states
-			// using the event-defined distribution on states.
-			// (I.e. the actual event behavior is applied)
-			tmpsoln = result.clone();
-			for ( int ps : potato) {
-				result[ACTMCtoDTMC.get(ps)] = 0;
-			}
-			for ( int ps : potato) {
-				int psIndex = ACTMCtoDTMC.get(ps);
-				if (tmpsoln[psIndex] > 0) {
-					Distribution distr = event.getTransitions(ps);
-					Set<Integer> distrSupport = distr.getSupport();
-					for ( int successor : distrSupport) {
-						result[ACTMCtoDTMC.get(successor)] += tmpsoln[psIndex] * distr.get(successor);
-					}
-				}
-			}
-			
-			// We are done.
-			// Normalize the result array (it may not sum to 1 due to inaccuracy).
-			double probSum = 0;
-			for (int succState : successors) {
-				probSum += result[ACTMCtoDTMC.get(succState)];
-			}
-			// Convert the result to a distribution with original indexing and store it.
-			Distribution resultDistr = new Distribution();
-			for (int succState : successors) {
-				double prob = result[ACTMCtoDTMC.get(succState)];
-				resultDistr.add(succState, Math.abs(prob) / probSum); // TODO MAJO - remove this abs() eventually
-			}
-			meanDistributions.put(entrance, resultDistr);
-		}
-		meanDistributionsComputed = true;
-	}
+	protected abstract void computeMeanDistributions() throws PrismException;
 	
 	/**
 	 * For all potato entrances, computes the expected reward earned within the potato
@@ -738,95 +544,11 @@ public class ACTMCPotatoData
 	 * structure for states within the potato, and with a time bound
 	 * given by the potato event. Since this would only be the underlying CTMC behavior,
 	 * the potato event behavior is then applied as well.
+	 * <br>
+	 * After calling this, {@code meanRewardsComputed} is set to true,
+	 * and the result is saved within {@code meanRewards}.
 	 */
-	private void computeMeanRewards() throws PrismException {
-		if (!meanDistributionsComputed) {
-			computeMeanDistributions();
-		}
-		
-		int numStates = potatoDTMC.getNumStates();
-		
-		// Prepare the FoxGlynn data
-		int left = foxGlynn.getLeftTruncationPoint();
-		int right = foxGlynn.getRightTruncationPoint();
-		///// Conversion from BigDecimal to Double!!! // TODO MAJO - convert EVERYTHING to BigDecimal
-		BigDecimal[] weights_BD = foxGlynn.getWeights().clone();
-		double[] weights = new double[weights_BD.length];
-		for (int i = 0 ; i < weights.length ; ++i) {
-			weights[i] = weights_BD[i].doubleValue();
-		}
-		BigDecimal totalWeight_BD = foxGlynn.getTotalWeight();
-		double totalWeight = totalWeight_BD.doubleValue();
-		/////
-		for (int i = left; i <= right; i++) {
-			weights[i - left] /= totalWeight;
-		}
-		for (int i = left+1; i <= right; i++) {
-			weights[i - left] += weights[i - 1 - left];
-		}
-		for (int i = left; i <= right; i++) {
-			weights[i - left] = (1 - weights[i - left]) / uniformizationRate;
-		}
-		
-		// Prepare solution arrays
-		double[] soln = new double[numStates];
-		double[] soln2 = new double[numStates];
-		double[] result = new double[numStates];
-		double[] tmpsoln = new double[numStates];
-
-		// Initialize the solution array by assigning rewards to the potato states
-		for (int s = 0; s < numStates; s++) {
-			int index = DTMCtoACTMC.get(s);
-			if (potato.contains(index)) {
-				// NOTE: transition rewards have already been merged into state rewards
-				soln[s] = rewards.getStateReward(index);
-			} else {
-				soln[s] = 0;
-			}
-		}
-
-		// do 0th element of summation (doesn't require any matrix powers)
-		result = new double[numStates];
-		if (left == 0) {
-			for (int i = 0; i < numStates; i++) {
-				result[i] += weights[0] * soln[i];
-			}
-		} else {
-			for (int i = 0; i < numStates; i++) {
-				result[i] += soln[i] / uniformizationRate;
-			}
-		}
-
-		// Start iterations
-		int iters = 1;
-		while (iters <= right) {
-			// Matrix-vector multiply
-			potatoDTMC.mvMult(soln, soln2, null, false);
-			// Swap vectors for next iter
-			tmpsoln = soln;
-			soln = soln2;
-			soln2 = tmpsoln;
-			// Add to sum
-			if (iters >= left) {
-				for (int i = 0; i < numStates; i++)
-					result[i] += weights[iters - left] * soln[i];
-			} else {
-				for (int i = 0; i < numStates; i++)
-					result[i] += soln[i] / uniformizationRate;
-			}
-			iters++;
-		}
-		
-		//Now that we have the expected rewards for the underlying CTMC behavior,
-		//event behavior is applied.
-		applyEventRewards(result, false);
-		// Store the finalized expected rewards using the original indexing.
-		for (int entrance : entrances) {
-			meanRewards.put(entrance, result[ACTMCtoDTMC.get(entrance)]);
-		}
-		
-		meanRewardsComputed = true;
-	}
+	protected abstract  void computeMeanRewards() throws PrismException;
 	
 	/**
 	 * Applies the potato event transition rewards to a given reward vector.
@@ -839,8 +561,13 @@ public class ACTMCPotatoData
 	 *                         This should generally be true when this method is called from the outside.
 	 *                         However, when called from within, the array may be indexed differently.
 	 * @return {@code rewardsArray}, but with rewards increased by the potato event transition reward application.
+	 * @throws PrismException 
 	 */
-	public double[] applyEventRewards(double[] rewardsArray, boolean originalIndexing) {
+	public double[] applyEventRewards(double[] rewardsArray, boolean originalIndexing) throws PrismException {
+		if (!meanDistributionsComputed) {
+			computeMeanDistributions();
+		}
+		
 		for (int entrance : entrances) {
 			for (int ps : potato) {
 				Map<Integer, Double> rews = rewards.getEventTransitionRewards(ps);

@@ -246,9 +246,9 @@ public class GSMPModelChecker extends ProbModelChecker
 		long reduceTime = System.currentTimeMillis();
 		// Initialize necessary data structures
 		ACTMCReduction reduction = new ACTMCReduction(actmc, null, null, true, this);
-		Map<String, ACTMCPotatoData> pdMap = reduction.getPotatoData();
+		Map<String, ACTMCPotato> pdMap = reduction.getPotatoData();
 		Map<Integer, Distribution> timesWithinPotatoes = new HashMap<Integer, Distribution>();
-		for (Map.Entry<String, ACTMCPotatoData> pdEntry : pdMap.entrySet()) {
+		for (Map.Entry<String, ACTMCPotato> pdEntry : pdMap.entrySet()) {
 			timesWithinPotatoes.putAll(pdEntry.getValue().getMeanTimes());
 		}
 		
@@ -330,9 +330,9 @@ public class GSMPModelChecker extends ProbModelChecker
 		long reduceTime = System.currentTimeMillis();
 		// Initialize necessary data structures
 		ACTMCReduction reduction = new ACTMCReduction(actmc, actmcRew, null, true, this);
-		Map<String, ACTMCPotatoData> pdMap = reduction.getPotatoData();
+		Map<String, ACTMCPotato> pdMap = reduction.getPotatoData();
 		Map<Integer, Distribution> timesWithinPotatoes = new HashMap<Integer, Distribution>();
-		for (Map.Entry<String, ACTMCPotatoData> pdEntry : pdMap.entrySet()) {
+		for (Map.Entry<String, ACTMCPotato> pdEntry : pdMap.entrySet()) {
 			timesWithinPotatoes.putAll(pdEntry.getValue().getMeanTimes());
 		}
 		
