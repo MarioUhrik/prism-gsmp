@@ -27,9 +27,16 @@
 package explicit;
 
 import java.math.BigDecimal;
+import java.math.MathContext;
+import java.math.RoundingMode;
+import java.util.ArrayList;
 import java.util.BitSet;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 
+import ch.obermuhlner.math.big.BigDecimalMath;
+import common.polynomials.Polynomial;
 import explicit.rewards.ACTMCRewardsSimple;
 import prism.PrismException;
 
@@ -47,6 +54,8 @@ import prism.PrismException;
  */
 public class ACTMCPotatoUniform extends ACTMCPotato
 {
+	private MathContext mc;
+	
 	/** {@link ACTMCPotato#ACTMCPotato(ACTMCSimple, GSMPEvent, ACTMCRewardsSimple, BitSet)} */
 	public ACTMCPotatoUniform(ACTMCSimple actmc, GSMPEvent event, ACTMCRewardsSimple rewards, BitSet target) throws PrismException {
 		super(actmc, event, rewards, target);
@@ -55,40 +64,39 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 	public ACTMCPotatoUniform(ACTMCPotato other) {
 		super(other);
 	}
-	
-	//TODO MAJO - implement these methods !!!
 
-	/** Uses class FoxGlynn to pre-compute the Poisson distribution.
-	 *  Different approach is required for each event distribution type. */
+	@Override
 	protected void computeFoxGlynn() throws PrismException {
-		throw new PrismException("Not yet implemented!");
-		/*
 		if (!potatoDTMCComputed) {
 			computePotatoDTMC();
 		}
 		
 		if (kappa == null) {
-			kappa = new BigDecimal(1e-20); 
-			//if no kappa is preset, then use a default one. This should never happen however.
-			// TODO MAJO - maybe throw exception here?
+			// Precision must be specified by setKappa()
+			throw new PrismException("No precision specified for FoxGlynn!");
 		}
 		
-		double fgRate = uniformizationRate * event.getFirstParameter();
-		foxGlynn = new FoxGlynn_BD(new BigDecimal(fgRate), new BigDecimal(1e-300), new BigDecimal(1e+300), kappa);
+		BigDecimal fgRate = new BigDecimal(uniformizationRate); // Compute FoxGlynn only for the uniformization rate
+		foxGlynn = new FoxGlynn_BD(fgRate, new BigDecimal(1e-300), new BigDecimal(1e+300), kappa);
 		if (foxGlynn.getRightTruncationPoint() < 0) {
 			throw new PrismException("Overflow in Fox-Glynn computation of the Poisson distribution!");
 		}
+		int left = foxGlynn.getLeftTruncationPoint();
+		int right = foxGlynn.getRightTruncationPoint();
+		BigDecimal[] weights = foxGlynn.getWeights();
+		
+		//Get rid of the e^-lambda part, i.e. divide everything by e^-lambda
+		mc = new MathContext(foxGlynn.getWeights()[0].precision(), RoundingMode.HALF_UP); // TODO MAJO - test precision
+		BigDecimal factor = BigDecimalMath.exp(fgRate.negate(), mc);
+		for (int i = left; i <= right; i++) {
+			weights[i - left] = weights[i - left].divide(factor, mc);
+		}
 		
 		foxGlynnComputed = true;
-		*/
 	}
 
-	/**
-	 * For all potato entrances, computes the expected time spent within the potato
-	 * before leaving the potato, having entered from a particular entrance.
-	 * This is computed using the expected cumulative reward with reward 1
-	 * for the potato entrances, and with a time bound given by the potato event.
-	 */
+	//TODO MAJO - implement
+	@Override
 	protected void computeMeanTimes() throws PrismException {
 		throw new PrismException("Not yet implemented!");
 		/*
@@ -183,14 +191,9 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 		*/
 	}
 	
-	/**
-	 * For all potato entrances, computes the expected distributions
-	 * on states after leaving the potato, having entered from a particular entrance.
-	 * I.e., on average, where does the ACTMC end up when it happens to enter a potato.
-	 */
+	//TODO MAJO - implement
+	@Override
 	protected void computeMeanDistributions() throws PrismException {
-		throw new PrismException("Not yet implemented!");
-		/*
 		
 		if (!foxGlynnComputed) {
 			computeFoxGlynn();
@@ -221,6 +224,8 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 			double[] soln;
 			double[] soln2 = new double[numStates];
 			double[] result = new double[numStates];
+			Polynomial[] polynomials = new Polynomial[numStates];
+			Polynomial[] antiderivatives = new Polynomial[numStates];
 			double[] tmpsoln = new double[numStates];
 			
 			// Build the initial distribution for this potato entrance
@@ -230,20 +235,21 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 			initDist[ACTMCtoDTMC.get(entrance)] = 1;
 			soln = initDist;
 
-			// Initialize the result array
+			// Initialize the result p
 			for (int i = 0; i < numStates; i++) {
-				result[i] = 0.0;
+				polynomials[i] = new Polynomial(new ArrayList<BigDecimal>());
+				antiderivatives[i] = new Polynomial(new ArrayList<BigDecimal>());
 			}
 
 			// If necessary, compute the 0th element of summation
 			// (doesn't require any matrix powers)
 			if (left == 0) {
 				for (int i = 0; i < numStates; i++) {
-					result[i] += weights[0] * soln[i];
+					polynomials[i].coeffs.add(0, new BigDecimal(weights[0] * soln[i]));
 				}
 			}
 
-			// Compute the potatoDTMC solution vector just before the event occurs
+			// Compute the potatoDTMC solution polynomial just before the event occurs
 			int iters = 1;
 			while (iters <= right) {
 				// Matrix-vector multiply
@@ -255,10 +261,44 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 				// Add to sum
 				if (iters >= left) {
 					for (int i = 0; i < numStates; i++)
-						result[i] += weights[iters - left] * soln[i];
+						polynomials[i].coeffs.add(iters - left, new BigDecimal(weights[iters - left] * soln[i]));
 				}
 				iters++;
 			}
+			
+			//Compute antiderivatives of (e^(-lambda*time) * polynomial) for each polynomial using integration by parts
+			for (int n = 0; n < numStates ; ++n) {
+				Polynomial poly = polynomials[n];
+				int polyDegree = poly.degree();
+				
+				Polynomial derivative = antiderivatives[n];
+				for (int i = 0; i <= polyDegree ; i++) {
+					Polynomial tmp = new Polynomial(new ArrayList<BigDecimal>(poly.coeffs));
+					BigDecimal factor = new BigDecimal(-1/uniformizationRate);
+					tmp.multiplyWithScalar(factor);
+					factor = BigDecimalMath.pow(new BigDecimal(1/uniformizationRate), i, mc); // TODO MAJO - optimize
+					tmp.multiplyWithScalar(factor);
+					
+					derivative.add(tmp);		
+					poly = poly.derivative();
+				}
+			}
+			
+			//Compute the definite integral using the obtained antiderivative
+			for (int n = 0; n < numStates ; ++n) {
+				Polynomial antiderivative = antiderivatives[n];
+				double a = event.getFirstParameter();
+				double b = event.getSecondParameter();
+				double aFactor = Math.exp(-uniformizationRate * a);
+				double bFactor = Math.exp(-uniformizationRate * b);
+				double aVal = antiderivative.value(new BigDecimal(a)).doubleValue() * aFactor;
+				double bVal = antiderivative.value(new BigDecimal(b)).doubleValue() * bFactor;
+				double prob = 1 / (b - a);
+				
+				result[n] = prob * (bVal - aVal);
+			}
+			
+			
 			// Store the DTMC solution vector for later use by other methods
 			Distribution resultBeforeEvent = new Distribution();
 			for(int i = 0; i < numStates ; ++i ) {
@@ -301,17 +341,10 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 			meanDistributions.put(entrance, resultDistr);
 		}
 		meanDistributionsComputed = true;
-		*/
 	}
 	
-	/**
-	 * For all potato entrances, computes the expected reward earned within the potato
-	 * before leaving the potato, having entered from a particular entrance.
-	 * This is computed using the expected cumulative reward using the ACTMC reward
-	 * structure for states within the potato, and with a time bound
-	 * given by the potato event. Since this would only be the underlying CTMC behavior,
-	 * the potato event behavior is then applied as well.
-	 */
+	//TODO MAJO - implement
+	@Override
 	protected void computeMeanRewards() throws PrismException {
 		throw new PrismException("Not yet implemented!");
 		/*

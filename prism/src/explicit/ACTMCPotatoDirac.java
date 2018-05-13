@@ -56,17 +56,15 @@ public class ACTMCPotatoDirac extends ACTMCPotato
 		super(other);
 	}
 
-	/** Uses class FoxGlynn to pre-compute the Poisson distribution.
-	 *  Different approach is required for each event distribution type. */
+	@Override
 	protected void computeFoxGlynn() throws PrismException {
 		if (!potatoDTMCComputed) {
 			computePotatoDTMC();
 		}
 		
 		if (kappa == null) {
-			kappa = new BigDecimal(1e-20); 
-			//if no kappa is preset, then use a default one. This should never happen however.
-			// TODO MAJO - maybe throw exception here?
+			// Precision must be specified by setKappa()
+			throw new PrismException("No precision specified for FoxGlynn!");
 		}
 		
 		double fgRate = uniformizationRate * event.getFirstParameter();
@@ -78,12 +76,7 @@ public class ACTMCPotatoDirac extends ACTMCPotato
 		foxGlynnComputed = true;
 	}
 
-	/**
-	 * For all potato entrances, computes the expected time spent within the potato
-	 * before leaving the potato, having entered from a particular entrance.
-	 * This is computed using the expected cumulative reward with reward 1
-	 * for the potato entrances, and with a time bound given by the potato event.
-	 */
+	@Override
 	protected void computeMeanTimes() throws PrismException {
 		if (!foxGlynnComputed) {
 			computeFoxGlynn();
@@ -174,11 +167,7 @@ public class ACTMCPotatoDirac extends ACTMCPotato
 		meanTimesComputed = true;
 	}
 	
-	/**
-	 * For all potato entrances, computes the expected distributions
-	 * on states after leaving the potato, having entered from a particular entrance.
-	 * I.e., on average, where does the ACTMC end up when it happens to enter a potato.
-	 */
+	@Override
 	protected void computeMeanDistributions() throws PrismException {
 		if (!foxGlynnComputed) {
 			computeFoxGlynn();
@@ -291,14 +280,7 @@ public class ACTMCPotatoDirac extends ACTMCPotato
 		meanDistributionsComputed = true;
 	}
 	
-	/**
-	 * For all potato entrances, computes the expected reward earned within the potato
-	 * before leaving the potato, having entered from a particular entrance.
-	 * This is computed using the expected cumulative reward using the ACTMC reward
-	 * structure for states within the potato, and with a time bound
-	 * given by the potato event. Since this would only be the underlying CTMC behavior,
-	 * the potato event behavior is then applied as well.
-	 */
+	@Override
 	protected void computeMeanRewards() throws PrismException {
 		if (!meanDistributionsComputed) {
 			computeMeanDistributions();

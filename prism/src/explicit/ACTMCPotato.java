@@ -200,8 +200,10 @@ public abstract class ACTMCPotato
 	}
 	
 	/**
-	 * This method allows external insertion of custom kappa allowed error bounds.
+	 * Mandatory method for insertion of kappa allowed error bounds.
 	 * Kappa is the required accuracy for computation of FoxGlynn.
+	 * <br>
+	 * IMPORTANT: This method must be called as soon as possible!
 	 * @param kappa kappa allowed error bound
 	 */
 	public void setKappa(BigDecimal kappa) {
@@ -512,7 +514,8 @@ public abstract class ACTMCPotato
 	
 	/** Uses class FoxGlynn to pre-compute the Poisson distribution. 
 	 *  <br>
-	 *  After calling this, {@code foxGlynnComputed} is set to true,
+	 *  Before calling this method, {@code computePotatoDTMC()} must be called first.
+	 *  After calling this method, {@code foxGlynnComputed} is set to true,
 	 *  and the result is saved within {@code foxGlynn} */
 	protected abstract void computeFoxGlynn() throws PrismException;
 
@@ -522,7 +525,8 @@ public abstract class ACTMCPotato
 	 * This is computed using the expected cumulative reward with reward 1
 	 * for the potato entrances, and with a time bound given by the potato event.
 	 * <br>
-	 * After calling this, {@code meanTimesComputed} is set to true,
+	 * Before calling this method, {@code computeFoxGlynn()} must be called first.
+	 * After calling this method, {@code meanTimesComputed} is set to true,
 	 * and the result is saved within {@code meanTimes}.
 	 */
 	protected abstract void computeMeanTimes() throws PrismException;
@@ -532,7 +536,8 @@ public abstract class ACTMCPotato
 	 * on states after leaving the potato, having entered from a particular entrance.
 	 * I.e., on average, where does the ACTMC end up when it happens to enter a potato.
 	 * <br>
-	 * After calling this, {@code meanDistributionsComputed} is set to true,
+	 * Before calling this method, {@code computeFoxGlynn()} must be called first.
+	 * After calling this method, {@code meanDistributionsComputed} is set to true,
 	 * and the result is saved within {@code meanDistributions} and {@code meanDistributionsBeforeEvent}.
 	 */
 	protected abstract void computeMeanDistributions() throws PrismException;
@@ -545,7 +550,8 @@ public abstract class ACTMCPotato
 	 * given by the potato event. Since this would only be the underlying CTMC behavior,
 	 * the potato event behavior is then applied as well.
 	 * <br>
-	 * After calling this, {@code meanRewardsComputed} is set to true,
+	 * Before calling this method, {@code computeMeanDistributions()} must be called first.
+	 * After calling this method, {@code meanRewardsComputed} is set to true,
 	 * and the result is saved within {@code meanRewards}.
 	 */
 	protected abstract  void computeMeanRewards() throws PrismException;
