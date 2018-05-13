@@ -68,7 +68,7 @@ public class ACTMCPotatoDirac extends ACTMCPotato
 		}
 		
 		double fgRate = uniformizationRate * event.getFirstParameter();
-		foxGlynn = new FoxGlynn_BD(new BigDecimal(fgRate), new BigDecimal(1e-300), new BigDecimal(1e+300), kappa);
+		foxGlynn = new FoxGlynn_BD(new BigDecimal(fgRate, mc), new BigDecimal(1e-300), new BigDecimal(1e+300), kappa);
 		if (foxGlynn.getRightTruncationPoint() < 0) {
 			throw new PrismException("Overflow in Fox-Glynn computation of the Poisson distribution!");
 		}
@@ -144,11 +144,13 @@ public class ACTMCPotatoDirac extends ACTMCPotato
 				soln2 = tmpsoln;
 				// Add to sum
 				if (iters >= left) {
-					for (int i = 0; i < numStates; i++)
+					for (int i = 0; i < numStates; i++) {
 						result[i] += weights[iters - left] * soln[i];
+					}
 				} else {
-					for (int i = 0; i < numStates; i++)
+					for (int i = 0; i < numStates; i++) {
 						result[i] += soln[i] / uniformizationRate;
+					}
 				}
 				iters++;
 			}
@@ -220,7 +222,7 @@ public class ACTMCPotatoDirac extends ACTMCPotato
 				}
 			}
 
-			// Compute the potatoDTMC solution vector just before the event occurs
+			// Start iterations
 			int iters = 1;
 			while (iters <= right) {
 				// Matrix-vector multiply
@@ -231,8 +233,9 @@ public class ACTMCPotatoDirac extends ACTMCPotato
 				soln2 = tmpsoln;
 				// Add to sum
 				if (iters >= left) {
-					for (int i = 0; i < numStates; i++)
+					for (int i = 0; i < numStates; i++) {
 						result[i] += weights[iters - left] * soln[i];
+					}
 				}
 				iters++;
 			}
@@ -350,11 +353,13 @@ public class ACTMCPotatoDirac extends ACTMCPotato
 			soln2 = tmpsoln;
 			// Add to sum
 			if (iters >= left) {
-				for (int i = 0; i < numStates; i++)
+				for (int i = 0; i < numStates; i++) {
 					result[i] += weights[iters - left] * soln[i];
+				}
 			} else {
-				for (int i = 0; i < numStates; i++)
-					result[i] += soln[i] / uniformizationRate;
+				for (int i = 0; i < numStates; i++) {
+					result[i] += soln[i] / uniformizationRate; 
+				}
 			}
 			iters++;
 		}

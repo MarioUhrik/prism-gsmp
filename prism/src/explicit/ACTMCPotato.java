@@ -27,6 +27,8 @@
 package explicit;
 
 import java.math.BigDecimal;
+import java.math.MathContext;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.HashMap;
@@ -37,6 +39,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Vector;
 
+import common.BigDecimalUtils;
 import explicit.rewards.ACTMCRewardsSimple;
 import prism.PrismException;
 
@@ -138,6 +141,9 @@ public abstract class ACTMCPotato
 	protected Map<Integer, Distribution> meanDistributionsBeforeEvent = new HashMap<Integer, Distribution>();
 	protected boolean meanDistributionsComputed = false;
 	
+	/** Mathcontext to use within this class for BigDecimal arithmetics. Derived from {@code kappa}. */
+	protected MathContext mc;
+	
 
 	/**
 	 * From the scratch constructor
@@ -197,6 +203,8 @@ public abstract class ACTMCPotato
 		this.meanDistributions = new HashMap<Integer, Distribution>();
 		this.meanDistributionsBeforeEvent = new HashMap<Integer, Distribution>();
 		this.meanDistributionsComputed = false;
+		
+		this.mc = other.mc;
 	}
 	
 	/**
@@ -208,6 +216,7 @@ public abstract class ACTMCPotato
 	 */
 	public void setKappa(BigDecimal kappa) {
 		this.kappa = kappa;
+		mc = new MathContext(BigDecimalUtils.decimalDigits(kappa), RoundingMode.HALF_UP);
 		// force this class to recompute all data with the new kappa
 		foxGlynnComputed = false;
 		meanTimesComputed = false;
