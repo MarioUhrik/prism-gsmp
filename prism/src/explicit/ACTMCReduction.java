@@ -173,7 +173,7 @@ public class ACTMCReduction extends PrismComponent
 	}
 	
 	private void computeEquivalentDTMC() throws PrismException {
-		if (computeKappa) {
+		if (computeKappa && !pdMap.isEmpty()) {
 			setKappa(computeKappa());
 		} else {
 			setKappa(constantKappa);
@@ -272,7 +272,6 @@ public class ACTMCReduction extends PrismComponent
 			DTMCModelChecker mc1 = new DTMCModelChecker(this);
 			mc1.termCritParam = pre_epsilon.doubleValue();
 			mc1.linEqMethod = LinEqMethod.GAUSS_SEIDEL; // TODO MAJO - maybe this can go away, but reliability is priority!
-			mc1.maxIters = 250000;
 			mc1.setLog(new PrismDevNullLog()); // mute the reachability computation log messages
 			for (int s = relevantStates.nextSetBit(0); s >= 0; s = relevantStates.nextSetBit(s+1)) {
 				boolean isEntranceTarget = target.get(s);
@@ -311,7 +310,6 @@ public class ACTMCReduction extends PrismComponent
 			DTMCModelChecker mc2 = new DTMCModelChecker(this);
 			mc2.termCritParam = pre_epsilon.doubleValue();
 			mc2.linEqMethod = LinEqMethod.GAUSS_SEIDEL; // TODO MAJO - maybe this can go away, but reliability is priority!
-			mc2.maxIters = 250000;
 			mc2.setLog(new PrismDevNullLog()); // mute the reachability computation log messages
 			for (int s = relevantStates.nextSetBit(0); s >= 0; s = relevantStates.nextSetBit(s+1)) {
 				boolean isEntranceTarget = target.get(s);
