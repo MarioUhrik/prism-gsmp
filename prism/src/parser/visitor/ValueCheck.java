@@ -76,7 +76,7 @@ public class ValueCheck extends ASTTraverse
 		}
 	}
 	
-	public void visitPost(DistributionList e) throws PrismLangException
+	public void visitPost(DistributionList e) throws PrismLangException // TODO MAJO - currently unused, and rather done later at build time.
 	{
 		int i, n;
 		n = e.size();

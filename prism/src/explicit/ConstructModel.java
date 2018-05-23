@@ -285,7 +285,7 @@ public class ConstructModel extends PrismComponent
 							String eventIdent = ((ModulesFileModelGenerator)modelGen).getEventIdentOfChoice(i, j);
 							String actionLabel = (String)modelGen.getTransitionAction(i, j);
 							GSMPEvent event = ((ModulesFileModelGenerator)modelGen).generateGSMPEvent(eventIdent);
-							if (gsmp.getEvent(event.getIdentifier()) == null) {
+							if (gsmp.getEvent(event.getIdentifier()) == null) { // TODO MAJO - only generate a new event if its needed! performance!
 								gsmp.addEvent(event);
 							}
 							gsmp.addToProbability(src, dest, modelGen.getTransitionProbability(i, j), event.getIdentifier(), actionLabel);

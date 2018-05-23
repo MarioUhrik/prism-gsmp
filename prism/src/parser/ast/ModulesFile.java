@@ -749,8 +749,6 @@ public class ModulesFile extends ASTElement implements ModelInfo
 		doSemanticChecks();
 		// Type checking
 		typeCheck();
-		// Value checking (introduced for GSMP distribution attributes, might be useful for others too)
-		valueCheck(constantList.evaluateSomeConstants(null, null));
 		
 		// If there are no undefined constants, set up values for constants
 		// (to avoid need for a later call to setUndefinedConstants).

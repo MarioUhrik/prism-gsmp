@@ -531,13 +531,14 @@ public class ModulesFileModelGenerator extends DefaultModelGenerator
 	 * Creates a new GSMP event from an astEvent of a modulesFile.
 	 * @param astEvent
 	 * @return GSMPEvent
-	 * @throws PrismLangException The distribution parameters could not be evaluated. This should never happen at this point.
+	 * @throws PrismLangException The distribution parameters are invalid.
 	 */
 	public GSMPEvent generateGSMPEvent(String eventName) throws PrismLangException {
 		//find the distribution assigned to the astEvent;
 		Event astEvent = modulesFile.getEvent(eventName);
 		DistributionList distributions = astEvent.getParent().getParent().getDistributionList();
 		int distrIndex = distributions.getDistributionIndex(astEvent.getDistributionName());
+		
 		//obtain the distribution parameters
 		TypeDistribution distributionType = distributions.getDistributionType(distrIndex);
 		String eventNameWithSuffix = eventName + "\"=" + distributionType.getTypeString();
@@ -552,6 +553,14 @@ public class ModulesFileModelGenerator extends DefaultModelGenerator
 			eventNameWithSuffix += "," + secondParameter;
 		}
 		eventNameWithSuffix += ")";
+		
+		//check whether the event distribution parameters are valid
+		try {
+			distributionType.parameterValueCheck(distributions.getFirstParameter(distrIndex), distributions.getSecondParameter(distrIndex), mfConstants);
+		} catch (PrismLangException e) { //rethrow the exception with better positioning info!
+			throw new PrismLangException(e.getMessage(), distributions.getDistributionNameIdent(distrIndex));
+		}
+		
 		return (new GSMPEvent(distributionType, firstParameter, secondParameter, eventNameWithSuffix));
 	}
 	
