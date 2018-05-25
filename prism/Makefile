@@ -299,7 +299,7 @@ JAVA_INCLUDES = -I $(JAVA_JNI_H_DIR) -I $(JAVA_JNI_MD_H_DIR)
 # Main part of Makefile #
 #########################
 
-MAKE_DIRS = dd jdd odd dv prism mtbdd sparse hybrid parser settings userinterface pepa/compiler simulator jltl2ba jltl2dstar explicit pta param strat automata
+MAKE_DIRS = dd jdd odd dv prism mtbdd sparse hybrid parser settings userinterface pepa/compiler simulator jltl2ba jltl2dstar explicit pta param strat automata common cex
 
 EXT_PACKAGES = lpsolve55 lp_solve_5.5_java
 
@@ -408,16 +408,29 @@ make_dirs:
 	  for lib in `ls *$(LIBSUFFIX)`; do ln -fs $$lib `echo $$lib | sed s/$(LIBSUFFIX)/.jnilib/`; done;); \
 	fi
 
+# Run a single test case
+test:
+	bin/prism ../prism-tests/functionality/verify/dtmcs/dtmc_pctl.pm ../prism-tests/functionality/verify/dtmcs/dtmc_pctl.pm.props -prop 2 -test
+
+# Run all tests (in ../prism-tests and ./tests)
+# Optionally, extra arguments for prism-auto are picked up via variable TESTS_ARGS
 tests: testslocal
-	@if [ -d ~/prism/prism-tests ]; then \
-	  cd ~/prism/prism-tests && $(PWD)/etc/scripts/prism-auto -t -m . -p $(PWD)/bin/prism --nailgun --ngprism $(PWD)/bin/ngprism; \
+	@if [ -d ../prism-tests ]; then \
+	  cd ../prism-tests && "$(PWD)"/etc/scripts/prism-auto -t -m . -p "$(PWD)"/bin/prism --nailgun --ngprism "$(PWD)"/bin/ngprism $(TESTS_ARGS); \
 	else \
 	  echo "Skipping tests"; \
 	fi
 
+# Just display the command to run the test suite on this version of PRISM
+# Optionally, extra arguments for prism-auto are picked up via variable TESTS_ARGS
+testsecho:
+	@echo etc/scripts/prism-auto -t -m --nailgun --ngprism bin/ngprism ../prism-tests -p bin/prism $(TESTS_ARGS)
+
+# Run local tests (in ./tests)
+# Optionally, extra arguments for prism-auto are picked up via variable TESTS_ARGS
 testslocal:
 	@if [ -d tests ]; then \
-	  cd tests && $(PWD)/etc/scripts/prism-auto -t -m . -p $(PWD)/bin/prism --nailgun --ngprism $(PWD)/bin/ngprism; \
+	  cd tests && "$(PWD)"/etc/scripts/prism-auto -t -m . -p "$(PWD)"/bin/prism --nailgun --ngprism "$(PWD)"/bin/ngprism $(TESTS_ARGS); \
 	else \
 	  echo "Skipping local tests"; \
 	fi
@@ -505,7 +518,7 @@ dist_tidy:
 	@find . \( -type d -o -type s \) -exec chmod 755 {} \;
 	@find . -type f  \( -name '*.sh' -o -name '*.so' -o -name '*.dll' \) -exec chmod 755 {} \;
 	@find examples -type f -name 'auto' -exec chmod 755 {} \; || test 1
-	@find bin -type f -exec chmod 755 {} \;
+	@find bin -type f -exec chmod 755 {} \; || test 1
 	@find src/bin -type f -exec chmod 755 {} \;
 	@find etc/scripts -type f -exec chmod 755 {} \;
 

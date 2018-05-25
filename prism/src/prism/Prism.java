@@ -3,7 +3,6 @@
 //	Authors:
 //	* Dave Parker <david.parker@comlab.ox.ac.uk> (University of Oxford, formerly University of Birmingham)
 //	* Andrew Hinton <ug60axh@cs.bham.ac.uk> (University of Birmingham)
-//	* Mario Uhrik <433501@mail.muni.cz> (Masaryk University)
 //	
 //------------------------------------------------------------------------------
 //	
@@ -203,7 +202,7 @@ public class Prism extends PrismComponent implements PrismSettingsListener
 	// Generate/store a strategy during model checking?
 	protected boolean genStrat = false;
 	// Should any generated strategies should be restricted to the states reachable under them?
-	protected boolean restrictStratToReach = false;
+	protected boolean restrictStratToReach = true;
 	// Do bisimulation minimisation before model checking?
 	protected boolean doBisim = false;
 
@@ -311,7 +310,7 @@ public class Prism extends PrismComponent implements PrismSettingsListener
 	}
 
 	/**
-	 * Read in PRISM settings from the default file (.prism in user's home directory).
+	 * Read in PRISM settings from the default file (see PrismSettings.getLocationForSettingsFile()).
 	 * If no file exists, attempt to create a new one with default settings.
 	 */
 	public void loadUserSettingsFile()
@@ -321,7 +320,7 @@ public class Prism extends PrismComponent implements PrismSettingsListener
 
 	/**
 	 * Read in PRISM settings from a specified file.
-	 * If the file is null, use the default (.prism in user's home directory).
+	 * If the file is null, use the default (see PrismSettings.getLocationForSettingsFile()).
 	 * If no file exists, attempt to create a new one with default settings.
 	 */
 	public void loadUserSettingsFile(File settingsFile)
@@ -2398,9 +2397,7 @@ public class Prism extends PrismComponent implements PrismSettingsListener
 				PrismLog out = getPrismLogForFile(fileToUse);
 				explicit.StateModelChecker mcExpl = createModelCheckerExplicit(null);
 				((explicit.ProbModelChecker) mcExpl).exportStateRewardsToFile(currentModelExpl, r, exportType, out);
-				if (out != mainLog) {
-					out.close();
-				}
+				out.close();
 			}
 		}
 		
@@ -2866,7 +2863,7 @@ public class Prism extends PrismComponent implements PrismSettingsListener
 	 */
 	public Result modelCheck(String propertyString) throws PrismException
 	{
-		PropertiesFile propertiesFile = parsePropertiesString(currentModelGenerator, propertyString);
+		PropertiesFile propertiesFile = parsePropertiesString(currentModelInfo, propertyString);
 		if (propertiesFile.getNumProperties() != 1) {
 			throw new PrismException("There should be exactly one property to check (there are " + propertiesFile.getNumProperties() + ")");
 		}
@@ -3845,6 +3842,7 @@ public class Prism extends PrismComponent implements PrismSettingsListener
 		mc.setExportProductVectorFilename(exportProductVectorFilename);
 		mc.setStoreVector(storeVector);
 		mc.setGenStrat(genStrat);
+		mc.setRestrictStratToReach(restrictStratToReach);
 		mc.setDoBisim(doBisim);
 		mc.setDoIntervalIteration(settings.getBoolean(PrismSettings.PRISM_INTERVAL_ITER));
 		mc.setDoTopologicalValueIteration(settings.getBoolean(PrismSettings.PRISM_TOPOLOGICAL_VI));

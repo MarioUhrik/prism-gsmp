@@ -48,13 +48,13 @@ import parser.type.Type;
 import parser.type.TypeDistribution;
 import parser.type.TypeDistributionExponential;
 import parser.type.TypeDouble;
-import prism.DefaultModelGenerator;
+import prism.ModelGenerator;
 import prism.ModelType;
 import prism.PrismComponent;
 import prism.PrismException;
 import prism.PrismLangException;
 
-public class ModulesFileModelGenerator extends DefaultModelGenerator
+public class ModulesFileModelGenerator implements ModelGenerator
 {
 	// Parent PrismComponent (logs, settings etc.)
 	protected PrismComponent parent;
