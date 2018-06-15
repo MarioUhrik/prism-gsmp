@@ -1,10 +1,10 @@
 //==============================================================================
 //	
-//	Copyright (c) 2002-
+//	Copyright (c) 2018-
 //	Authors:
+//  * Mario Uhrik <433501@mail.muni.cz> (Masaryk University)
 //	* Dave Parker <david.parker@comlab.ox.ac.uk> (University of Oxford, formerly University of Birmingham)
 //	* Vojtech Forejt <forejt@fi.muni.cz> (Masaryk University)
-//  * Mario Uhrik <433501@mail.muni.cz> (Masaryk University)
 //	
 //------------------------------------------------------------------------------
 //	
@@ -42,9 +42,9 @@ import prism.PrismException;
 public final class FoxGlynn_BD
 {
 	// Math context for specifying BigDecimal accuracy
-	MathContext mc;
-	MathContext ceil;
-	int decimalPrecision;
+	private MathContext mc;
+	private MathContext ceil;
+	private int decimalPrecision;
 	
 	// constructor parameters
 	private BigDecimal underflow;
