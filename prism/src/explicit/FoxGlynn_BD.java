@@ -89,6 +89,12 @@ public final class FoxGlynn_BD
 	{
 		return totalWeight;
 	}
+	
+	/** Use with caution! */
+	public final void setTotalWeight(BigDecimal totalWeight)
+	{
+		this.totalWeight = totalWeight;
+	}
 
 	private final void run() throws PrismException
 	{

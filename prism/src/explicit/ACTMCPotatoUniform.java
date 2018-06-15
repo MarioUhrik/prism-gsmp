@@ -27,7 +27,6 @@
 package explicit;
 
 import java.math.BigDecimal;
-import java.math.MathContext;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Set;
@@ -86,6 +85,7 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 		for (int i = left; i <= right; i++) {
 			weights[i - left] = weights[i - left].divide(factor, mc);
 		}
+		foxGlynn.setTotalWeight(foxGlynn.getTotalWeight().divide(factor, mc));
 		
 		foxGlynnComputed = true;
 	}
@@ -101,17 +101,14 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 		// Prepare the FoxGlynn data
 		int left = foxGlynn.getLeftTruncationPoint();
 		int right = foxGlynn.getRightTruncationPoint();
-		///// Conversion from BigDecimal to Double!!! // TODO MAJO - convert EVERYTHING to BigDecimal
 		BigDecimal[] weights_BD = foxGlynn.getWeights().clone();
+		BigDecimal totalWeight_BD = foxGlynn.getTotalWeight();
+		for (int i = left; i <= right; i++) {
+			weights_BD[i - left] = weights_BD[i - left].divide(totalWeight_BD.multiply(new BigDecimal(uniformizationRate, mc), mc), mc);
+		}
 		double[] weights = new double[weights_BD.length];
 		for (int i = 0 ; i < weights.length ; ++i) {
 			weights[i] = weights_BD[i].doubleValue();
-		}
-		BigDecimal totalWeight_BD = foxGlynn.getTotalWeight();
-		double totalWeight = totalWeight_BD.doubleValue();
-		/////
-		for (int i = left; i <= right; i++) {
-			weights[i - left] /= totalWeight * uniformizationRate;
 		}
 		
 		for (int entrance : entrances) {
@@ -154,11 +151,15 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 				tmpsoln = soln;
 				soln = soln2;
 				soln2 = tmpsoln;
+				// Initialize new polynomial coefficient
+				for (int i = 0; i < numStates; i++) {
+					polynomials[i].coeffs.add(iters, BigDecimal.ZERO);
+				}
 				// Add to sum
 				if (iters >= left) {
 					for (int i = 0; i < numStates; i++) {
-						polynomials[i].coeffs.add(iters, new BigDecimal(weights[iters - left] * soln[i], mc));
-						for (int j = left ; j < iters - left ; ++j) {
+						polynomials[i].coeffs.set(iters, new BigDecimal(weights[iters - left] * soln[i], mc));
+						for (int j = left ; j < iters - left; ++j) {
 							BigDecimal tmp = polynomials[i].coeffs.get(j).add(new BigDecimal(weights[j - left] * soln[i], mc), mc);
 							polynomials[i].coeffs.set(j, tmp);
 						}
@@ -231,17 +232,14 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 		// Prepare the FoxGlynn data
 		int left = foxGlynn.getLeftTruncationPoint();
 		int right = foxGlynn.getRightTruncationPoint();
-		///// Conversion from BigDecimal to Double!!! // TODO MAJO - convert EVERYTHING to BigDecimal
 		BigDecimal[] weights_BD = foxGlynn.getWeights().clone();
+		BigDecimal totalWeight_BD = foxGlynn.getTotalWeight();
+		for (int i = left; i <= right; i++) {
+			weights_BD[i - left] = weights_BD[i - left].divide(totalWeight_BD, mc);
+		}
 		double[] weights = new double[weights_BD.length];
 		for (int i = 0 ; i < weights.length ; ++i) {
 			weights[i] = weights_BD[i].doubleValue();
-		}
-		BigDecimal totalWeight_BD = foxGlynn.getTotalWeight();
-		double totalWeight = totalWeight_BD.doubleValue();
-		/////
-		for (int i = left; i <= right; i++) {
-			weights[i - left] /= totalWeight;
 		}
 		
 		for (int entrance : entrances) {
@@ -275,6 +273,11 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 				for (int i = 0; i < numStates; i++) {
 					polynomials[i].coeffs.add(0, new BigDecimal(weights[0] * soln[i], mc));
 				}
+			} else {
+				// Initialise new polynomial coefficient
+				for (int i = 0; i < numStates; i++) {
+					polynomials[i].coeffs.add(0, BigDecimal.ZERO);
+				}
 			}
 
 			// Start iterations
@@ -290,6 +293,11 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 				if (iters >= left) {
 					for (int i = 0; i < numStates; i++) {
 						polynomials[i].coeffs.add(iters, new BigDecimal(weights[iters - left] * soln[i], mc));
+					}
+				} else {
+					// Initialize new polynomial coefficient
+					for (int i = 0; i < numStates; i++) {
+						polynomials[i].coeffs.add(iters, BigDecimal.ZERO);
 					}
 				}
 				iters++;
@@ -384,17 +392,14 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 		// Prepare the FoxGlynn data
 		int left = foxGlynn.getLeftTruncationPoint();
 		int right = foxGlynn.getRightTruncationPoint();
-		///// Conversion from BigDecimal to Double!!! // TODO MAJO - convert EVERYTHING to BigDecimal
 		BigDecimal[] weights_BD = foxGlynn.getWeights().clone();
+		BigDecimal totalWeight_BD = foxGlynn.getTotalWeight();
+		for (int i = left; i <= right; i++) {
+			weights_BD[i - left] = weights_BD[i - left].divide(totalWeight_BD.multiply(new BigDecimal(uniformizationRate, mc), mc), mc);
+		}
 		double[] weights = new double[weights_BD.length];
 		for (int i = 0 ; i < weights.length ; ++i) {
 			weights[i] = weights_BD[i].doubleValue();
-		}
-		BigDecimal totalWeight_BD = foxGlynn.getTotalWeight();
-		double totalWeight = totalWeight_BD.doubleValue();
-		/////
-		for (int i = left; i <= right; i++) {
-			weights[i - left] /= totalWeight * uniformizationRate;
 		}
 		
 		// Prepare solution arrays
@@ -440,11 +445,15 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 			tmpsoln = soln;
 			soln = soln2;
 			soln2 = tmpsoln;
+			// Initialize new polynomial coefficient
+			for (int i = 0; i < numStates; i++) {
+				polynomials[i].coeffs.add(iters, BigDecimal.ZERO);
+			}
 			// Add to sum
 			if (iters >= left) {
 				for (int i = 0; i < numStates; i++) {
-					polynomials[i].coeffs.add(iters, new BigDecimal(weights[iters - left] * soln[i], mc));
-					for (int j = left ; j < iters - left ; ++j) {
+					polynomials[i].coeffs.set(iters, new BigDecimal(weights[iters - left] * soln[i], mc));
+					for (int j = left ; j < iters - left; ++j) {
 						BigDecimal tmp = polynomials[i].coeffs.get(j).add(new BigDecimal(weights[j - left] * soln[i], mc), mc);
 						polynomials[i].coeffs.set(j, tmp);
 					}

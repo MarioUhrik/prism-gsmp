@@ -87,23 +87,20 @@ public class ACTMCPotatoDirac extends ACTMCPotato
 		// Prepare the FoxGlynn data
 		int left = foxGlynn.getLeftTruncationPoint();
 		int right = foxGlynn.getRightTruncationPoint();
-		///// Conversion from BigDecimal to Double!!! // TODO MAJO - convert EVERYTHING to BigDecimal
 		BigDecimal[] weights_BD = foxGlynn.getWeights().clone();
+		BigDecimal totalWeight_BD = foxGlynn.getTotalWeight();
+		for (int i = left; i <= right; i++) {
+			weights_BD[i - left] = weights_BD[i - left].divide(totalWeight_BD, mc);
+		}
+		for (int i = left+1; i <= right; i++) {
+			weights_BD[i - left] = weights_BD[i - left].add(weights_BD[i - 1 - left], mc);
+		}
+		for (int i = left; i <= right; i++) {
+			weights_BD[i - left] = (BigDecimal.ONE.subtract(weights_BD[i - left], mc)).divide(new BigDecimal(uniformizationRate, mc), mc);
+		}
 		double[] weights = new double[weights_BD.length];
 		for (int i = 0 ; i < weights.length ; ++i) {
 			weights[i] = weights_BD[i].doubleValue();
-		}
-		BigDecimal totalWeight_BD = foxGlynn.getTotalWeight();
-		double totalWeight = totalWeight_BD.doubleValue();
-		/////
-		for (int i = left; i <= right; i++) {
-			weights[i - left] /= totalWeight;
-		}
-		for (int i = left+1; i <= right; i++) {
-			weights[i - left] += weights[i - 1 - left];
-		}
-		for (int i = left; i <= right; i++) {
-			weights[i - left] = (1 - weights[i - left]) / uniformizationRate;
 		}
 		
 		for (int entrance : entrances) {
@@ -180,17 +177,14 @@ public class ACTMCPotatoDirac extends ACTMCPotato
 		// Prepare the FoxGlynn data
 		int left = foxGlynn.getLeftTruncationPoint();
 		int right = foxGlynn.getRightTruncationPoint();
-		///// Conversion from BigDecimal to Double!!! // TODO MAJO - convert EVERYTHING to BigDecimal
 		BigDecimal[] weights_BD = foxGlynn.getWeights().clone();
+		BigDecimal totalWeight_BD = foxGlynn.getTotalWeight();
+		for (int i = left; i <= right; i++) {
+			weights_BD[i - left] = weights_BD[i - left].divide(totalWeight_BD, mc);
+		}
 		double[] weights = new double[weights_BD.length];
 		for (int i = 0 ; i < weights.length ; ++i) {
 			weights[i] = weights_BD[i].doubleValue();
-		}
-		BigDecimal totalWeight_BD = foxGlynn.getTotalWeight();
-		double totalWeight = totalWeight_BD.doubleValue();
-		/////
-		for (int i = left; i <= right; i++) {
-			weights[i - left] /= totalWeight;
 		}
 		
 		for (int entrance : entrances) {
@@ -294,23 +288,20 @@ public class ACTMCPotatoDirac extends ACTMCPotato
 		// Prepare the FoxGlynn data
 		int left = foxGlynn.getLeftTruncationPoint();
 		int right = foxGlynn.getRightTruncationPoint();
-		///// Conversion from BigDecimal to Double!!! // TODO MAJO - convert EVERYTHING to BigDecimal
 		BigDecimal[] weights_BD = foxGlynn.getWeights().clone();
+		BigDecimal totalWeight_BD = foxGlynn.getTotalWeight();
+		for (int i = left; i <= right; i++) {
+			weights_BD[i - left] = weights_BD[i - left].divide(totalWeight_BD, mc);
+		}
+		for (int i = left+1; i <= right; i++) {
+			weights_BD[i - left] = weights_BD[i - left].add(weights_BD[i - 1 - left], mc);
+		}
+		for (int i = left; i <= right; i++) {
+			weights_BD[i - left] = (BigDecimal.ONE.subtract(weights_BD[i - left], mc)).divide(new BigDecimal(uniformizationRate, mc), mc);
+		}
 		double[] weights = new double[weights_BD.length];
 		for (int i = 0 ; i < weights.length ; ++i) {
 			weights[i] = weights_BD[i].doubleValue();
-		}
-		BigDecimal totalWeight_BD = foxGlynn.getTotalWeight();
-		double totalWeight = totalWeight_BD.doubleValue();
-		/////
-		for (int i = left; i <= right; i++) {
-			weights[i - left] /= totalWeight;
-		}
-		for (int i = left+1; i <= right; i++) {
-			weights[i - left] += weights[i - 1 - left];
-		}
-		for (int i = left; i <= right; i++) {
-			weights[i - left] = (1 - weights[i - left]) / uniformizationRate;
 		}
 		
 		// Prepare solution arrays
