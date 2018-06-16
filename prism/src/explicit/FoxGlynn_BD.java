@@ -188,6 +188,11 @@ public final class FoxGlynn_BD
 				
 				this.left = m - (k.multiply(sqrtq).subtract(new BigDecimal("1.5")).intValue());
 				
+				if (this.left < 0) { // TODO MAJO - LEFT bound checking - make sure it is correct
+					this.right = this.right - this.left;
+					this.left = 0;
+				}
+				
 				//According to the paper, we should check underflow of lower bound.
 				//However, it seems that for no reasonable values this can happen.
 				//And neither the original implementation checked it

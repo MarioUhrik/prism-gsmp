@@ -85,7 +85,6 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 		for (int i = left; i <= right; i++) {
 			weights[i - left] = weights[i - left].divide(factor, mc);
 		}
-		foxGlynn.setTotalWeight(foxGlynn.getTotalWeight().divide(factor, mc));
 		
 		foxGlynnComputed = true;
 	}
@@ -104,7 +103,7 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 		BigDecimal[] weights_BD = foxGlynn.getWeights().clone();
 		BigDecimal totalWeight_BD = foxGlynn.getTotalWeight();
 		for (int i = left; i <= right; i++) {
-			weights_BD[i - left] = weights_BD[i - left].divide(totalWeight_BD.multiply(new BigDecimal(uniformizationRate, mc), mc), mc);
+			weights_BD[i - left] = weights_BD[i - left].divide(totalWeight_BD, mc);
 		}
 		double[] weights = new double[weights_BD.length];
 		for (int i = 0 ; i < weights.length ; ++i) {
@@ -159,7 +158,7 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 				if (iters >= left) {
 					for (int i = 0; i < numStates; i++) {
 						polynomials[i].coeffs.set(iters, new BigDecimal(weights[iters - left] * soln[i], mc));
-						for (int j = left ; j < iters - left; ++j) {
+						for (int j = left ; j < iters; ++j) {
 							BigDecimal tmp = polynomials[i].coeffs.get(j).add(new BigDecimal(weights[j - left] * soln[i], mc), mc);
 							polynomials[i].coeffs.set(j, tmp);
 						}
@@ -173,7 +172,7 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 				iters++;
 			}
 			
-			//Compute antiderivatives of (e^(-lambda*time) * polynomial) for each polynomial using integration by parts
+			//Compute antiderivative of (e^(-lambda*time) * polynomial) using integration by parts
 			for (int n = 0; n < numStates ; ++n) {
 				Polynomial poly = polynomials[n];
 				int polyDegree = poly.degree();
@@ -183,10 +182,9 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 					Polynomial tmp = new Polynomial(new ArrayList<BigDecimal>(poly.coeffs));
 					BigDecimal factor = new BigDecimal(-1/uniformizationRate, mc);
 					tmp.multiplyWithScalar(factor);
-					factor = BigDecimalMath.pow(new BigDecimal(1/uniformizationRate, mc), i, mc); // TODO MAJO - optimize
-					tmp.multiplyWithScalar(factor);
 					
-					antiderivative.add(tmp);		
+					antiderivative.add(tmp);	
+					poly.multiplyWithScalar(factor.negate());
 					poly = poly.derivative();
 				}
 			}
@@ -203,8 +201,7 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 				BigDecimal prob = BigDecimal.ONE.divide(b.subtract(a, mc), mc);
 				
 				BigDecimal res = prob.multiply(bVal.subtract(aVal, mc), mc);
-				BigDecimal resFixed = polynomials[n].coeffs.get(0).subtract(res, mc);
-				result[n] = resFixed.doubleValue();
+				result[n] = res.doubleValue();
 			}
 			
 			// We are done. 
@@ -303,7 +300,7 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 				iters++;
 			}
 			
-			//Compute antiderivatives of (e^(-lambda*time) * polynomial) for each polynomial using integration by parts
+			//Compute antiderivative of (e^(-lambda*time) * polynomial) using integration by parts
 			for (int n = 0; n < numStates ; ++n) {
 				Polynomial poly = polynomials[n];
 				int polyDegree = poly.degree();
@@ -313,10 +310,9 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 					Polynomial tmp = new Polynomial(new ArrayList<BigDecimal>(poly.coeffs));
 					BigDecimal factor = new BigDecimal(-1/uniformizationRate, mc);
 					tmp.multiplyWithScalar(factor);
-					factor = BigDecimalMath.pow(new BigDecimal(1/uniformizationRate, mc), i, mc); // TODO MAJO - optimize
-					tmp.multiplyWithScalar(factor);
 					
-					antiderivative.add(tmp);		
+					antiderivative.add(tmp);
+					poly.multiplyWithScalar(factor.negate());
 					poly = poly.derivative();
 				}
 			}
@@ -395,7 +391,7 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 		BigDecimal[] weights_BD = foxGlynn.getWeights().clone();
 		BigDecimal totalWeight_BD = foxGlynn.getTotalWeight();
 		for (int i = left; i <= right; i++) {
-			weights_BD[i - left] = weights_BD[i - left].divide(totalWeight_BD.multiply(new BigDecimal(uniformizationRate, mc), mc), mc);
+			weights_BD[i - left] = weights_BD[i - left].divide(totalWeight_BD, mc);
 		}
 		double[] weights = new double[weights_BD.length];
 		for (int i = 0 ; i < weights.length ; ++i) {
@@ -453,7 +449,7 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 			if (iters >= left) {
 				for (int i = 0; i < numStates; i++) {
 					polynomials[i].coeffs.set(iters, new BigDecimal(weights[iters - left] * soln[i], mc));
-					for (int j = left ; j < iters - left; ++j) {
+					for (int j = left ; j < iters; ++j) {
 						BigDecimal tmp = polynomials[i].coeffs.get(j).add(new BigDecimal(weights[j - left] * soln[i], mc), mc);
 						polynomials[i].coeffs.set(j, tmp);
 					}
@@ -467,7 +463,7 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 			iters++;
 		}
 		
-		//Compute antiderivatives of (e^(-lambda*time) * polynomial) for each polynomial using integration by parts
+		//Compute antiderivative of (e^(-lambda*time) * polynomial) using integration by parts
 		for (int n = 0; n < numStates ; ++n) {
 			Polynomial poly = polynomials[n];
 			int polyDegree = poly.degree();
@@ -477,10 +473,9 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 				Polynomial tmp = new Polynomial(new ArrayList<BigDecimal>(poly.coeffs));
 				BigDecimal factor = new BigDecimal(-1/uniformizationRate, mc);
 				tmp.multiplyWithScalar(factor);
-				factor = BigDecimalMath.pow(new BigDecimal(1/uniformizationRate, mc), i, mc); // TODO MAJO - optimize
-				tmp.multiplyWithScalar(factor);
 				
-				antiderivative.add(tmp);		
+				antiderivative.add(tmp);	
+				poly.multiplyWithScalar(factor.negate());
 				poly = poly.derivative();
 			}
 		}
@@ -497,8 +492,7 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 			BigDecimal prob = BigDecimal.ONE.divide(b.subtract(a, mc), mc);
 			
 			BigDecimal res = prob.multiply(bVal.subtract(aVal, mc), mc);
-			BigDecimal resFixed = polynomials[n].coeffs.get(0).subtract(res, mc);
-			result[n] = resFixed.doubleValue();
+			result[n] = res.doubleValue();
 		}
 		
 		//Now that we have the expected rewards for the underlying CTMC behavior,
