@@ -174,7 +174,7 @@ public class ACTMCReduction extends PrismComponent
 	
 	private void computeEquivalentDTMC() throws PrismException {
 		if (computeKappa && !pdMap.isEmpty()) {
-			setKappa(computeKappa());
+			setKappa(BigDecimalUtils.min(computeKappa(), constantKappa));
 		} else {
 			setKappa(constantKappa);
 		}

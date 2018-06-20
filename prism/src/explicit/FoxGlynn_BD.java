@@ -189,7 +189,7 @@ public final class FoxGlynn_BD
 				this.left = m - (k.multiply(sqrtq).subtract(new BigDecimal("1.5")).intValue());
 				
 				if (this.left < 0) { // TODO MAJO - LEFT bound checking - make sure it is correct
-					this.right = this.right - this.left;
+					this.right = this.right + this.left;
 					this.left = 0;
 				}
 				
