@@ -158,7 +158,7 @@ public class ACTMCPotatoDirac extends ACTMCPotato
 			for (int ps : potato) {
 				double time = result[ACTMCtoDTMC.get(ps)];
 				if (time != 0.0) {
-					resultDistr.add(ps, Math.abs(time)); // TODO MAJO - remove this abs() eventually
+					resultDistr.add(ps, time);
 				}
 			}
 			meanTimes.put(entrance, resultDistr);
@@ -270,7 +270,9 @@ public class ACTMCPotatoDirac extends ACTMCPotato
 			Distribution resultDistr = new Distribution();
 			for (int succState : successors) {
 				double prob = result[ACTMCtoDTMC.get(succState)];
-				resultDistr.add(succState, Math.abs(prob) / probSum); // TODO MAJO - remove this abs() eventually
+				if (prob != 0.0) {
+					resultDistr.add(succState, prob / probSum); 
+				}
 			}
 			meanDistributions.put(entrance, resultDistr);
 		}

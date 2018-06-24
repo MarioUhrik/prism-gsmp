@@ -87,7 +87,7 @@ public class BigDecimalUtils {
 	public static BigDecimal allowedError(int decimalDigits) {
 		// TODO MAJO - maybe the increase by 3 is not so nice in general
 		MathContext mc = new MathContext(decimalDigits, RoundingMode.HALF_UP);
-		return BigDecimalMath.pow(BigDecimal.TEN, new BigDecimal(decimalDigits + 3).negate(), mc);
+		return BigDecimalMath.pow(BigDecimal.TEN, new BigDecimal(decimalDigits + 3, mc).negate(), mc);
 	}
 	
 	/**

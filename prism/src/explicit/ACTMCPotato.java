@@ -523,7 +523,8 @@ public abstract class ACTMCPotato
 	
 	/** Uses class FoxGlynn to pre-compute the Poisson distribution. 
 	 *  <br>
-	 *  Before calling this method, {@code computePotatoDTMC()} must be called first.
+	 *  Before calling this method, {@code computePotatoDTMC()} must be called first,
+	 *  and kappa error bounds must be set through {@code setKappa()}.
 	 *  After calling this method, {@code foxGlynnComputed} is set to true,
 	 *  and the result is saved within {@code foxGlynn} */
 	protected abstract void computeFoxGlynn() throws PrismException;

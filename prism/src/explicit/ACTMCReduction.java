@@ -348,6 +348,8 @@ public class ACTMCReduction extends PrismComponent
 			kappa = BigDecimalUtils.min(kappaSteps, BigDecimalUtils.min(kappaTR, BigDecimalUtils.min(aAccurate, bAccurate)));
 		}
 		
+		// Adjust kappa for termination epsilon (just to be safe)
+		kappa = kappa.multiply(epsilon, mc);
 		return kappa;
 	}
 	

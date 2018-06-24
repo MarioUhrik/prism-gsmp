@@ -3,6 +3,7 @@
 //	Copyright (c) 2017-
 //	Authors:
 //  * Adrian Elgyutt <396222@mail.muni.cz> (Masaryk University)
+//  * Mario Uhrik <433501@mail.muni.cz> (Masaryk University)
 //	
 //------------------------------------------------------------------------------
 //	
@@ -28,6 +29,7 @@ package common.polynomials;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.math.MathContext;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -130,16 +132,49 @@ public class Polynomial {
 	}
 	
 	/**
+	 * Compute the derivative of this using the given MathContext
+	 * @param mc MathContext to use
+	 * @return derivative of this
+	 */
+	public Polynomial derivative(MathContext mc){
+		if(derivative != null) return derivative;
+
+		List<BigDecimal> derivCoeffs = new ArrayList<>();
+		
+		for(int i = 1; i < coeffs.size(); i++){
+			derivCoeffs.add(coeffs.get(i).multiply(new BigDecimal(i, mc), mc));
+		}
+		derivative = new Polynomial(derivCoeffs);
+		return derivative;
+	}
+	
+	/**
 	 * Evaluate this polynomial in x
 	 * @param	x	x to evaluate
 	 * @return 	value of this in x
 	 */
 	public BigDecimal value(BigDecimal x){
-		BigDecimal sum = new BigDecimal("0");
+		BigDecimal sum = BigDecimal.ZERO;
 		BigDecimal xpower = BigDecimal.ONE;
 		for(int i = 0; i < coeffs.size(); i++){
 			sum = sum.add(coeffs.get(i).multiply(xpower));
 			xpower = xpower.multiply(x);
+		}
+		return sum;
+	}
+	
+	/**
+	 * Evaluate this polynomial in x using the given MathContext
+	 * @param	x	x to evaluate
+	 * @param   mc MathContext to use for the evaluation
+	 * @return 	value of this in x
+	 */
+	public BigDecimal value(BigDecimal x, MathContext mc){
+		BigDecimal sum = BigDecimal.ZERO;
+		BigDecimal xpower = BigDecimal.ONE;
+		for(int i = 0; i < coeffs.size(); i++){
+			sum = sum.add(coeffs.get(i).multiply(xpower, mc), mc);
+			xpower = xpower.multiply(x, mc);
 		}
 		return sum;
 	}
@@ -220,6 +255,21 @@ public class Polynomial {
 		}
 	}
 	/**
+	 * Adds other polynomial to this using the given MathContext
+	 * @param other	polynomial
+	 * @param mc MathContext to use for the addition
+	 */
+	public void add(Polynomial other, MathContext mc){
+		for(int i = 0; i < coeffs.size() && i < other.coeffs.size(); i++){
+			coeffs.set(i, coeffs.get(i).add(other.coeffs.get(i), mc));
+		}
+		if (coeffs.size() < other.coeffs.size()){
+			for(int i = coeffs.size(); i < other.coeffs.size(); i++){
+				coeffs.add(other.coeffs.get(i));
+			}
+		}
+	}
+	/**
 	 * Substracts other polynomial from this
 	 * @param other	polynomial
 	 */
@@ -250,12 +300,22 @@ public class Polynomial {
 		this.coeffs = newc;
 	}
 	/**
-	 * Multipies this polynomial with scalar
+	 * Multiplies this polynomial with scalar
 	 * @param scalar scalar to multiply with
 	 */
 	public void multiplyWithScalar(BigDecimal scalar){
 		for(int i = 0; i < coeffs.size(); i++){
 			coeffs.set(i, coeffs.get(i).multiply(scalar));
+		}
+	}
+	/**
+	 * Multiplies this polynomial with scalar using the given MathContext
+	 * @param scalar scalar to multiply with
+	 * @param mc MathContext to use for the multiplication
+	 */
+	public void multiplyWithScalar(BigDecimal scalar, MathContext mc){
+		for(int i = 0; i < coeffs.size(); i++){
+			coeffs.set(i, coeffs.get(i).multiply(scalar, mc));
 		}
 	}
 	/**

@@ -32,6 +32,7 @@ import java.util.BitSet;
 import java.util.Set;
 
 import ch.obermuhlner.math.big.BigDecimalMath;
+import common.BigDecimalUtils;
 import common.polynomials.Polynomial;
 import explicit.rewards.ACTMCRewardsSimple;
 import prism.PrismException;
@@ -58,6 +59,18 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 	
 	public ACTMCPotatoUniform(ACTMCPotato other) {
 		super(other);
+	}
+	
+	@Override
+	public void setKappa(BigDecimal kappa) {
+		// ACTMCPotatoUniform usually requires massively better precision.
+		// This is because precise computation of expressions such as (e^(-lambda * b)
+		// and (b^(foxGlynn.right)) is performed.
+		int basePrecision = BigDecimalUtils.decimalDigits(kappa); // TODO MAJO - I think b*(kappa + lambda) is needed, but thats extremely high!
+		int uniformPrecision =  basePrecision + (int)Math.ceil((Math.log10(basePrecision * actmc.getMaxExitRate())) * event.getSecondParameter());
+
+		BigDecimal uniformKappa = BigDecimalUtils.allowedError(uniformPrecision);
+		super.setKappa(uniformKappa);
 	}
 
 	@Override
@@ -103,11 +116,7 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 		BigDecimal[] weights_BD = foxGlynn.getWeights().clone();
 		BigDecimal totalWeight_BD = foxGlynn.getTotalWeight();
 		for (int i = left; i <= right; i++) {
-			weights_BD[i - left] = weights_BD[i - left].divide(totalWeight_BD, mc);
-		}
-		double[] weights = new double[weights_BD.length];
-		for (int i = 0 ; i < weights.length ; ++i) {
-			weights[i] = weights_BD[i].doubleValue();
+			weights_BD[i - left] = weights_BD[i - left].divide(totalWeight_BD.multiply(new BigDecimal(uniformizationRate, mc), mc), mc);
 		}
 		
 		for (int entrance : entrances) {
@@ -133,7 +142,7 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 			result = new double[numStates];
 			if (left == 0) {
 				for (int i = 0; i < numStates; i++) {
-					polynomials[i].coeffs.add(0, new BigDecimal(weights[0] * soln[i], mc));
+					polynomials[i].coeffs.add(0, new BigDecimal(soln[i], mc).multiply(weights_BD[0], mc));
 				}
 			} else {
 				for (int i = 0; i < numStates; i++) {
@@ -157,9 +166,9 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 				// Add to sum
 				if (iters >= left) {
 					for (int i = 0; i < numStates; i++) {
-						polynomials[i].coeffs.set(iters, new BigDecimal(weights[iters - left] * soln[i], mc));
+						polynomials[i].coeffs.set(iters, new BigDecimal(soln[i], mc).multiply(weights_BD[iters - left], mc));
 						for (int j = left ; j < iters; ++j) {
-							BigDecimal tmp = polynomials[i].coeffs.get(j).add(new BigDecimal(weights[j - left] * soln[i], mc), mc);
+							BigDecimal tmp = polynomials[i].coeffs.get(j).add(new BigDecimal(soln[i], mc).multiply(weights_BD[j - left], mc), mc);
 							polynomials[i].coeffs.set(j, tmp);
 						}
 					}
@@ -181,11 +190,11 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 				for (int i = 0; i <= polyDegree ; i++) {
 					Polynomial tmp = new Polynomial(new ArrayList<BigDecimal>(poly.coeffs));
 					BigDecimal factor = new BigDecimal(-1/uniformizationRate, mc);
-					tmp.multiplyWithScalar(factor);
+					tmp.multiplyWithScalar(factor, mc);
 					
-					antiderivative.add(tmp);	
-					poly.multiplyWithScalar(factor.negate());
-					poly = poly.derivative();
+					antiderivative.add(tmp, mc);	
+					poly = poly.derivative(mc);
+					poly.multiplyWithScalar(factor.negate(), mc);
 				}
 			}
 			
@@ -196,11 +205,11 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 				BigDecimal b = new BigDecimal(event.getSecondParameter(), mc);
 				BigDecimal aFactor = BigDecimalMath.exp(new BigDecimal(uniformizationRate, mc).negate().multiply(a, mc), mc);
 				BigDecimal bFactor = BigDecimalMath.exp(new BigDecimal(uniformizationRate, mc).negate().multiply(b, mc), mc);
-				BigDecimal aVal = antiderivative.value(a).multiply(aFactor, mc);
-				BigDecimal bVal = antiderivative.value(b).multiply(bFactor, mc);
+				BigDecimal aVal = antiderivative.value(a, mc).multiply(aFactor, mc);
+				BigDecimal bVal = antiderivative.value(b, mc).multiply(bFactor, mc);
 				BigDecimal prob = BigDecimal.ONE.divide(b.subtract(a, mc), mc);
 				
-				BigDecimal res = prob.multiply(bVal.subtract(aVal, mc), mc);
+				BigDecimal res = polynomials[n].coeffs.get(0).subtract(prob.multiply(bVal.subtract(aVal, mc), mc), mc);
 				result[n] = res.doubleValue();
 			}
 			
@@ -210,7 +219,7 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 			for (int ps : potato) {
 				double time = result[ACTMCtoDTMC.get(ps)];
 				if (time != 0.0) {
-					resultDistr.add(ps, Math.abs(time)); // TODO MAJO - remove this abs() eventually
+					resultDistr.add(ps, time);
 				}
 			}
 			meanTimes.put(entrance, resultDistr);
@@ -233,10 +242,6 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 		BigDecimal totalWeight_BD = foxGlynn.getTotalWeight();
 		for (int i = left; i <= right; i++) {
 			weights_BD[i - left] = weights_BD[i - left].divide(totalWeight_BD, mc);
-		}
-		double[] weights = new double[weights_BD.length];
-		for (int i = 0 ; i < weights.length ; ++i) {
-			weights[i] = weights_BD[i].doubleValue();
 		}
 		
 		for (int entrance : entrances) {
@@ -268,7 +273,7 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 			// (doesn't require any matrix powers)
 			if (left == 0) {
 				for (int i = 0; i < numStates; i++) {
-					polynomials[i].coeffs.add(0, new BigDecimal(weights[0] * soln[i], mc));
+					polynomials[i].coeffs.add(0, new BigDecimal(soln[i], mc).multiply(weights_BD[0], mc));
 				}
 			} else {
 				// Initialise new polynomial coefficient
@@ -289,7 +294,7 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 				// Add to sum
 				if (iters >= left) {
 					for (int i = 0; i < numStates; i++) {
-						polynomials[i].coeffs.add(iters, new BigDecimal(weights[iters - left] * soln[i], mc));
+						polynomials[i].coeffs.add(iters, new BigDecimal(soln[i], mc).multiply(weights_BD[iters - left], mc));
 					}
 				} else {
 					// Initialize new polynomial coefficient
@@ -309,11 +314,11 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 				for (int i = 0; i <= polyDegree ; i++) {
 					Polynomial tmp = new Polynomial(new ArrayList<BigDecimal>(poly.coeffs));
 					BigDecimal factor = new BigDecimal(-1/uniformizationRate, mc);
-					tmp.multiplyWithScalar(factor);
+					tmp.multiplyWithScalar(factor, mc);
 					
-					antiderivative.add(tmp);
-					poly.multiplyWithScalar(factor.negate());
-					poly = poly.derivative();
+					antiderivative.add(tmp, mc);
+					poly = poly.derivative(mc);
+					poly.multiplyWithScalar(factor.negate(), mc);
 				}
 			}
 			
@@ -324,8 +329,8 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 				BigDecimal b = new BigDecimal(event.getSecondParameter(), mc);
 				BigDecimal aFactor = BigDecimalMath.exp(new BigDecimal(uniformizationRate, mc).negate().multiply(a, mc), mc);
 				BigDecimal bFactor = BigDecimalMath.exp(new BigDecimal(uniformizationRate, mc).negate().multiply(b, mc), mc);
-				BigDecimal aVal = antiderivative.value(a).multiply(aFactor, mc);
-				BigDecimal bVal = antiderivative.value(b).multiply(bFactor, mc);
+				BigDecimal aVal = antiderivative.value(a, mc).multiply(aFactor, mc);
+				BigDecimal bVal = antiderivative.value(b, mc).multiply(bFactor, mc);
 				BigDecimal prob = BigDecimal.ONE.divide(b.subtract(a, mc), mc);
 				
 				BigDecimal res = prob.multiply(bVal.subtract(aVal, mc), mc);
@@ -370,7 +375,9 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 			Distribution resultDistr = new Distribution();
 			for (int succState : successors) {
 				double prob = result[ACTMCtoDTMC.get(succState)];
-				resultDistr.add(succState, Math.abs(prob) / probSum); // TODO MAJO - remove this abs() eventually
+				if (prob != 0.0) {
+					resultDistr.add(succState, prob / probSum); 
+				}
 			}
 			meanDistributions.put(entrance, resultDistr);
 		}
@@ -391,11 +398,7 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 		BigDecimal[] weights_BD = foxGlynn.getWeights().clone();
 		BigDecimal totalWeight_BD = foxGlynn.getTotalWeight();
 		for (int i = left; i <= right; i++) {
-			weights_BD[i - left] = weights_BD[i - left].divide(totalWeight_BD, mc);
-		}
-		double[] weights = new double[weights_BD.length];
-		for (int i = 0 ; i < weights.length ; ++i) {
-			weights[i] = weights_BD[i].doubleValue();
+			weights_BD[i - left] = weights_BD[i - left].divide(totalWeight_BD.multiply(new BigDecimal(uniformizationRate, mc), mc), mc);
 		}
 		
 		// Prepare solution arrays
@@ -424,7 +427,7 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 		result = new double[numStates];
 		if (left == 0) {
 			for (int i = 0; i < numStates; i++) {
-				polynomials[i].coeffs.add(0, new BigDecimal(weights[0] * soln[i], mc));
+				polynomials[i].coeffs.add(0, new BigDecimal(soln[i], mc).multiply(weights_BD[0], mc));
 			}
 		} else {
 			for (int i = 0; i < numStates; i++) {
@@ -448,9 +451,9 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 			// Add to sum
 			if (iters >= left) {
 				for (int i = 0; i < numStates; i++) {
-					polynomials[i].coeffs.set(iters, new BigDecimal(weights[iters - left] * soln[i], mc));
+					polynomials[i].coeffs.set(iters, new BigDecimal(soln[i], mc).multiply(weights_BD[iters - left], mc));
 					for (int j = left ; j < iters; ++j) {
-						BigDecimal tmp = polynomials[i].coeffs.get(j).add(new BigDecimal(weights[j - left] * soln[i], mc), mc);
+						BigDecimal tmp = polynomials[i].coeffs.get(j).add(new BigDecimal(soln[i], mc).multiply(weights_BD[j - left], mc), mc);
 						polynomials[i].coeffs.set(j, tmp);
 					}
 				}
@@ -472,11 +475,11 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 			for (int i = 0; i <= polyDegree ; i++) {
 				Polynomial tmp = new Polynomial(new ArrayList<BigDecimal>(poly.coeffs));
 				BigDecimal factor = new BigDecimal(-1/uniformizationRate, mc);
-				tmp.multiplyWithScalar(factor);
+				tmp.multiplyWithScalar(factor, mc);
 				
-				antiderivative.add(tmp);	
-				poly.multiplyWithScalar(factor.negate());
-				poly = poly.derivative();
+				antiderivative.add(tmp, mc);	
+				poly = poly.derivative(mc);
+				poly.multiplyWithScalar(factor.negate(), mc);
 			}
 		}
 		
@@ -487,11 +490,11 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 			BigDecimal b = new BigDecimal(event.getSecondParameter(), mc);
 			BigDecimal aFactor = BigDecimalMath.exp(new BigDecimal(uniformizationRate, mc).negate().multiply(a, mc), mc);
 			BigDecimal bFactor = BigDecimalMath.exp(new BigDecimal(uniformizationRate, mc).negate().multiply(b, mc), mc);
-			BigDecimal aVal = antiderivative.value(a).multiply(aFactor, mc);
-			BigDecimal bVal = antiderivative.value(b).multiply(bFactor, mc);
+			BigDecimal aVal = antiderivative.value(a, mc).multiply(aFactor, mc);
+			BigDecimal bVal = antiderivative.value(b, mc).multiply(bFactor, mc);
 			BigDecimal prob = BigDecimal.ONE.divide(b.subtract(a, mc), mc);
 			
-			BigDecimal res = prob.multiply(bVal.subtract(aVal, mc), mc);
+			BigDecimal res = polynomials[n].coeffs.get(0).subtract(prob.multiply(bVal.subtract(aVal, mc), mc), mc);
 			result[n] = res.doubleValue();
 		}
 		
