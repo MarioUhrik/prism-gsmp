@@ -210,8 +210,12 @@ public abstract class ACTMCPotato
 	/**
 	 * Mandatory method for insertion of kappa allowed error bounds.
 	 * Kappa is the required accuracy for computation of FoxGlynn.
+	 * This method also creates a MathContext object with necessary precision to handle {@code kappa}.
 	 * <br>
 	 * IMPORTANT: This method must be called as soon as possible!
+	 * <br>
+	 * IMPORTANT: If you choose to override this method, make sure you also call {@code super.setKappa()}.
+	 * This is because boolean attributes such as {@code foxGlynnComputed} need to be set to false.
 	 * @param kappa kappa allowed error bound
 	 */
 	public void setKappa(BigDecimal kappa) {
@@ -333,20 +337,6 @@ public abstract class ACTMCPotato
 	
 	/**
 	 * Gets a map where the keys are entrances into the potato, and
-	 * the values are mean accumulated rewards until leaving the potato
-	 * if entered from state {@code key}.
-	 * <br>
-	 * If this is the first call, this method computes it before returning it.
-	 */
-	public Map<Integer, Double> getMeanRewards() throws PrismException {
-		if (!meanRewardsComputed) {
-			computeMeanRewards();
-		}
-		return meanRewards;
-	}
-	
-	/**
-	 * Gets a map where the keys are entrances into the potato, and
 	 * the value is a distribution of time spent within the states of the potato
 	 * until first leaving the potato, having entered from state {@code key}.
 	 * <br>
@@ -371,6 +361,20 @@ public abstract class ACTMCPotato
 			computeMeanDistributions();
 		}
 		return meanDistributions;
+	}
+	
+	/**
+	 * Gets a map where the keys are entrances into the potato, and
+	 * the values are mean accumulated rewards until leaving the potato
+	 * if entered from state {@code key}.
+	 * <br>
+	 * If this is the first call, this method computes it before returning it.
+	 */
+	public Map<Integer, Double> getMeanRewards() throws PrismException {
+		if (!meanRewardsComputed) {
+			computeMeanRewards();
+		}
+		return meanRewards;
 	}
 	
 	protected void computeStates() {

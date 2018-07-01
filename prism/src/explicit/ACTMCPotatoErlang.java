@@ -38,8 +38,8 @@ import explicit.rewards.ACTMCRewardsSimple;
 import prism.PrismException;
 
 /**
- * Class for storage and computation of single uniformly distributed potato-related data for ACTMCs,
- * I.e. this implementation treats the event as uniformly distributed.
+ * Class for storage and computation of single Erlang distributed potato-related data for ACTMCs,
+ * I.e. this implementation treats the event as Erlang distributed.
  * <br>
  * Potato is a subset of states of an ACTMC in which a given event is active.
  * <br><br>
@@ -49,28 +49,28 @@ import prism.PrismException;
  * entering and leaving a potato. Then, these expected values are used in
  * regular CTMC/DTMC model checking methods.
  */
-public class ACTMCPotatoUniform extends ACTMCPotato
+public class ACTMCPotatoErlang extends ACTMCPotato
 {
 	
 	/** {@link ACTMCPotato#ACTMCPotato(ACTMCSimple, GSMPEvent, ACTMCRewardsSimple, BitSet)} */
-	public ACTMCPotatoUniform(ACTMCSimple actmc, GSMPEvent event, ACTMCRewardsSimple rewards, BitSet target) throws PrismException {
+	public ACTMCPotatoErlang(ACTMCSimple actmc, GSMPEvent event, ACTMCRewardsSimple rewards, BitSet target) throws PrismException {
 		super(actmc, event, rewards, target);
 	}
 	
-	public ACTMCPotatoUniform(ACTMCPotato other) {
+	public ACTMCPotatoErlang(ACTMCPotato other) {
 		super(other);
 	}
 	
 	@Override
 	public void setKappa(BigDecimal kappa) {
-		// ACTMCPotatoUniform usually requires better precision, dependent on the distribution parameters.
-		// This is because precise computation of expressions such as (e^(-lambda * b)
-		// and (b^(foxGlynn.right)) is performed.
-		int basePrecision = BigDecimalUtils.decimalDigits(kappa); // TODO MAJO - I think b*(kappa + lambda) is needed, but thats extremely high!
-		int uniformPrecision = Math.max(basePrecision, (int)(Math.ceil(Math.log(event.getSecondParameter() * actmc.getMaxExitRate())) * basePrecision));
-
-		BigDecimal uniformKappa = BigDecimalUtils.allowedError(uniformPrecision);
-		super.setKappa(uniformKappa);
+		// ACTMCPotatoErlang usually requires better precision, dependent on the distribution parameters.
+		// This is because precise computation of expressions such as (e^(-(erlangRate + CTMCRate) * [upper_bound])
+		// and ([upper_bound]^(foxGlynn.right + k)) is performed.
+		int basePrecision = BigDecimalUtils.decimalDigits(kappa); // TODO MAJO - I think [upper_bound]*(kappa + lambda) is needed, but thats extremely high!
+		int erlangPrecision = basePrecision + ((int)Math.ceil(Math.log(((event.getFirstParameter() + uniformizationRate) * basePrecision * event.getSecondParameter()))));
+		
+		BigDecimal erlangKappa = BigDecimalUtils.allowedError(erlangPrecision);
+		super.setKappa(erlangKappa);
 	}
 
 	@Override
@@ -181,6 +181,13 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 				iters++;
 			}
 			
+			//Increase the polynomial degrees by t^(k-1)
+			for (int n = 0; n < numStates  ; ++n) {
+				for (int k = 0; k < (int)(event.getSecondParameter() - 1); ++k) {
+					polynomials[n].coeffs.add(0, BigDecimal.ZERO);
+				}
+			}
+			
 			//Compute antiderivative of (e^(-lambda*time) * polynomial) using integration by parts
 			for (int n = 0; n < numStates ; ++n) {
 				Polynomial poly = polynomials[n];
@@ -189,7 +196,7 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 				Polynomial antiderivative = antiderivatives[n];
 				for (int i = 0; i <= polyDegree ; i++) {
 					Polynomial tmp = new Polynomial(new ArrayList<BigDecimal>(poly.coeffs));
-					BigDecimal factor = new BigDecimal(-1/uniformizationRate, mc);
+					BigDecimal factor = new BigDecimal((-1/(uniformizationRate + event.getFirstParameter())), mc);
 					tmp.multiplyWithScalar(factor, mc);
 					
 					antiderivative.add(tmp, mc);	
@@ -201,15 +208,17 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 			//Compute the definite integral using the obtained antiderivative
 			for (int n = 0; n < numStates ; ++n) {
 				Polynomial antiderivative = antiderivatives[n];
-				BigDecimal a = new BigDecimal(event.getFirstParameter(), mc);
-				BigDecimal b = new BigDecimal(event.getSecondParameter(), mc);
-				BigDecimal aFactor = BigDecimalMath.exp(new BigDecimal(uniformizationRate, mc).negate().multiply(a, mc), mc);
-				BigDecimal bFactor = BigDecimalMath.exp(new BigDecimal(uniformizationRate, mc).negate().multiply(b, mc), mc);
+				BigDecimal a = BigDecimal.ZERO;
+				BigDecimal b = new BigDecimal(BigDecimalUtils.decimalDigits(kappa) * 2.5, mc); // sufficiently high upper bound (supposed to be infinity)
+				BigDecimal aFactor = BigDecimalMath.exp(new BigDecimal(uniformizationRate + event.getFirstParameter(), mc).negate().multiply(a, mc), mc);
+				BigDecimal bFactor = BigDecimalMath.exp(new BigDecimal(uniformizationRate + event.getFirstParameter(), mc).negate().multiply(b, mc), mc);
 				BigDecimal aVal = antiderivative.value(a, mc).multiply(aFactor, mc);
 				BigDecimal bVal = antiderivative.value(b, mc).multiply(bFactor, mc);
-				BigDecimal prob = BigDecimal.ONE.divide(b.subtract(a, mc), mc);
+				BigDecimal firstFactor = BigDecimal.ONE.divide(BigDecimalMath.factorial((int)(event.getSecondParameter() - 1)), mc);
+				BigDecimal secondFactor = BigDecimalMath.pow(new BigDecimal(event.getFirstParameter(), mc), new BigDecimal(event.getSecondParameter(), mc), mc);
+				BigDecimal totalFactor = firstFactor.multiply(secondFactor, mc);
 				
-				BigDecimal res = polynomials[n].coeffs.get(0).subtract(prob.multiply(bVal.subtract(aVal, mc), mc), mc);
+				BigDecimal res = polynomials[n].coeffs.get((int)(event.getSecondParameter() - 1)).subtract(bVal.subtract(aVal, mc).multiply(totalFactor, mc), mc);
 				result[n] = res.doubleValue();
 			}
 			
@@ -305,6 +314,13 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 				iters++;
 			}
 			
+			//Increase the polynomial degrees by t^(k-1)
+			for (int n = 0; n < numStates  ; ++n) {
+				for (int k = 0; k < (int)(event.getSecondParameter() - 1); ++k) {
+					polynomials[n].coeffs.add(0, BigDecimal.ZERO);
+				}
+			}
+			
 			//Compute antiderivative of (e^(-lambda*time) * polynomial) using integration by parts
 			for (int n = 0; n < numStates ; ++n) {
 				Polynomial poly = polynomials[n];
@@ -313,7 +329,7 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 				Polynomial antiderivative = antiderivatives[n];
 				for (int i = 0; i <= polyDegree ; i++) {
 					Polynomial tmp = new Polynomial(new ArrayList<BigDecimal>(poly.coeffs));
-					BigDecimal factor = new BigDecimal(-1/uniformizationRate, mc);
+					BigDecimal factor = new BigDecimal((-1/(uniformizationRate + event.getFirstParameter())), mc);
 					tmp.multiplyWithScalar(factor, mc);
 					
 					antiderivative.add(tmp, mc);
@@ -325,15 +341,17 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 			//Compute the definite integral using the obtained antiderivative
 			for (int n = 0; n < numStates ; ++n) {
 				Polynomial antiderivative = antiderivatives[n];
-				BigDecimal a = new BigDecimal(event.getFirstParameter(), mc);
-				BigDecimal b = new BigDecimal(event.getSecondParameter(), mc);
-				BigDecimal aFactor = BigDecimalMath.exp(new BigDecimal(uniformizationRate, mc).negate().multiply(a, mc), mc);
-				BigDecimal bFactor = BigDecimalMath.exp(new BigDecimal(uniformizationRate, mc).negate().multiply(b, mc), mc);
+				BigDecimal a = BigDecimal.ZERO;
+				BigDecimal b = new BigDecimal(BigDecimalUtils.decimalDigits(kappa) * 2.5, mc); // sufficiently high upper bound  (supposed to be infinity)
+				BigDecimal aFactor = BigDecimalMath.exp(new BigDecimal(uniformizationRate + event.getFirstParameter(), mc).negate().multiply(a, mc), mc);
+				BigDecimal bFactor = BigDecimalMath.exp(new BigDecimal(uniformizationRate + event.getFirstParameter(), mc).negate().multiply(b, mc), mc);
 				BigDecimal aVal = antiderivative.value(a, mc).multiply(aFactor, mc);
 				BigDecimal bVal = antiderivative.value(b, mc).multiply(bFactor, mc);
-				BigDecimal prob = BigDecimal.ONE.divide(b.subtract(a, mc), mc);
+				BigDecimal firstFactor = BigDecimal.ONE.divide(BigDecimalMath.factorial((int)(event.getSecondParameter() - 1)), mc);
+				BigDecimal secondFactor = BigDecimalMath.pow(new BigDecimal(event.getFirstParameter(), mc), new BigDecimal(event.getSecondParameter(), mc), mc);
+				BigDecimal totalFactor = firstFactor.multiply(secondFactor, mc);
 				
-				BigDecimal res = prob.multiply(bVal.subtract(aVal, mc), mc);
+				BigDecimal res = bVal.subtract(aVal, mc).multiply(totalFactor, mc);
 				result[n] = res.doubleValue();
 			}
 			
@@ -466,6 +484,13 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 			iters++;
 		}
 		
+		//Increase the polynomial degrees by t^(k-1)
+		for (int n = 0; n < numStates  ; ++n) {
+			for (int k = 0; k < (int)(event.getSecondParameter() - 1); ++k) {
+				polynomials[n].coeffs.add(0, BigDecimal.ZERO);
+			}
+		}
+		
 		//Compute antiderivative of (e^(-lambda*time) * polynomial) using integration by parts
 		for (int n = 0; n < numStates ; ++n) {
 			Polynomial poly = polynomials[n];
@@ -474,7 +499,7 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 			Polynomial antiderivative = antiderivatives[n];
 			for (int i = 0; i <= polyDegree ; i++) {
 				Polynomial tmp = new Polynomial(new ArrayList<BigDecimal>(poly.coeffs));
-				BigDecimal factor = new BigDecimal(-1/uniformizationRate, mc);
+				BigDecimal factor = new BigDecimal((-1/(uniformizationRate + event.getFirstParameter())), mc);
 				tmp.multiplyWithScalar(factor, mc);
 				
 				antiderivative.add(tmp, mc);	
@@ -486,15 +511,17 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 		//Compute the definite integral using the obtained antiderivative
 		for (int n = 0; n < numStates ; ++n) {
 			Polynomial antiderivative = antiderivatives[n];
-			BigDecimal a = new BigDecimal(event.getFirstParameter(), mc);
-			BigDecimal b = new BigDecimal(event.getSecondParameter(), mc);
-			BigDecimal aFactor = BigDecimalMath.exp(new BigDecimal(uniformizationRate, mc).negate().multiply(a, mc), mc);
-			BigDecimal bFactor = BigDecimalMath.exp(new BigDecimal(uniformizationRate, mc).negate().multiply(b, mc), mc);
+			BigDecimal a = BigDecimal.ZERO;
+			BigDecimal b = new BigDecimal(BigDecimalUtils.decimalDigits(kappa) * 2.5, mc); // sufficiently high upper bound  (supposed to be infinity)
+			BigDecimal aFactor = BigDecimalMath.exp(new BigDecimal(uniformizationRate + event.getFirstParameter(), mc).negate().multiply(a, mc), mc);
+			BigDecimal bFactor = BigDecimalMath.exp(new BigDecimal(uniformizationRate + event.getFirstParameter(), mc).negate().multiply(b, mc), mc);
 			BigDecimal aVal = antiderivative.value(a, mc).multiply(aFactor, mc);
 			BigDecimal bVal = antiderivative.value(b, mc).multiply(bFactor, mc);
-			BigDecimal prob = BigDecimal.ONE.divide(b.subtract(a, mc), mc);
+			BigDecimal firstFactor = BigDecimal.ONE.divide(BigDecimalMath.factorial((int)(event.getSecondParameter() - 1)), mc);
+			BigDecimal secondFactor = BigDecimalMath.pow(new BigDecimal(event.getFirstParameter(), mc), new BigDecimal(event.getSecondParameter(), mc), mc);
+			BigDecimal totalFactor = firstFactor.multiply(secondFactor, mc);
 			
-			BigDecimal res = polynomials[n].coeffs.get(0).subtract(prob.multiply(bVal.subtract(aVal, mc), mc), mc);
+			BigDecimal res = polynomials[n].coeffs.get((int)(event.getSecondParameter() - 1)).subtract(bVal.subtract(aVal, mc).multiply(totalFactor, mc), mc);
 			result[n] = res.doubleValue();
 		}
 		

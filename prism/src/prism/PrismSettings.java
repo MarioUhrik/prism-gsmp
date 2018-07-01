@@ -384,10 +384,10 @@ public class PrismSettings implements Observer
 			// GSMP SETTINGS:
 			{ BOOLEAN_TYPE,		PRISM_EXP_SYNC_BACKWARD_COMPATIBLE,		"Allow synchronization of exponential GSMP events",		"4.4beta",			new Boolean(true),								"",
 			"ExpSyncBackwardCompatible\nIf this option is true, exponential events are allowed to be synchronized with each other instead of producing an error. Just like in CTMCs, the product exponential event obtains a rate equal to the product of rates of the synchronized events.\n The GSMP must be re-parsed in order for changes to take effect!" },
-			{ BOOLEAN_TYPE,		PRISM_ACTMC_COMPUTE_KAPPA,		"Compute precision for ACTMC (GSMP) reduction",		"4.4beta",			new Boolean(true),								"",
-			"If this option is true, kappa will be computed. Kappa is the allowed error of reducing ACTMC to DTMC in GSMP model checking so that the error of model checking on the reduced DTMC is guaranteed to be within certain bounds. However, this computed kappa will only be actually used if it is more precise than the constant specified by \"ACTMC (GSMP) reduction constant precision (decimal digits)\". Kappa is computed in BigDecimal and it's value tends to be very small for larger models, so consider using constant kappa for larger models by setting this to false and specifying \"ACTMC (GSMP) reduction constant precision\"." },
-			{ INTEGER_TYPE,		PRISM_ACTMC_CONSTANT_KAPPA_DECIMAL_DIGITS,		"ACTMC (GSMP) reduction constant precision (decimal digits)",		"4.4beta",			new Integer(500),								"0,",
-			"If \"Compute precision for ACTMC (GSMP) reduction\" is set to false, constant kappa will be used. Kappa is the allowed error of reducing ACTMC to DTMC in GSMP model checking. Specify the number of decimal digits of the precision, i.e. constant kappa = 1.0E-(this number). " },
+			{ BOOLEAN_TYPE,		PRISM_ACTMC_COMPUTE_KAPPA,		"Compute precision for ACTMC (GSMP) reduction",		"4.4beta",			new Boolean(false),								"",
+			"If this option is true, kappa will be computed. Kappa is the allowed error of reducing ACTMC to DTMC. This option will compute kappa such that the error of model checking on the reduced DTMC is guaranteed to be within termination epsilon. However, this computed kappa will only be actually used if it is more precise than the constant specified by \"ACTMC (GSMP) reduction constant precision (decimal digits)\". Kappa usually takes a relatively long time to compute and it's value tends to be very small for larger models, so only use this if computation time is unimportant and precision is the priority." },
+			{ INTEGER_TYPE,		PRISM_ACTMC_CONSTANT_KAPPA_DECIMAL_DIGITS,		"ACTMC (GSMP) reduction constant precision (decimal digits)",		"4.4beta",			new Integer(330),								"0,",
+			"If \"Compute precision for ACTMC (GSMP) reduction\" is set to false, constant kappa will be used. Kappa is the allowed error of reducing ACTMC to DTMC in GSMP model checking. Specify the number of decimal digits of the precision, i.e. constant kappa = 1.0E-(this number). Consider using less precision to obtain better performance." },
 		},
 		{
 			{ INTEGER_TYPE,		SIMULATOR_DEFAULT_NUM_SAMPLES,			"Default number of samples",			"4.0",		new Integer(1000),			"1,",
@@ -1438,8 +1438,8 @@ public class PrismSettings implements Observer
 			}
 		} else if (sw.equals("ExpSyncBackwardCompatible")) {
 			set(PRISM_EXP_SYNC_BACKWARD_COMPATIBLE, false);
-		} else if (sw.equals("ACTMCConstantKappa")) {
-			set(PRISM_ACTMC_COMPUTE_KAPPA, false);
+		} else if (sw.equals("ACTMCComputeKappa")) {
+			set(PRISM_ACTMC_COMPUTE_KAPPA, true);
 		} else if (sw.equals("ACTMCConstantKappaValue")) {
 			if (i < args.length - 1) {
 				try {
@@ -1848,8 +1848,8 @@ public class PrismSettings implements Observer
 		mainLog.println("-exportiterations .............. Export vectors for iteration algorithms to file");
 		mainLog.println("-pmaxquotient .................. For Pmax computations in MDPs, compute in the MEC quotient");
 		mainLog.println("-ExpSyncBackwardCompatible ..... Disable synchronization of exponential events for GSMPs");
-		mainLog.println("-ACTMCConstantKappa ............ Disable computatation of kappa allowed error for ACTMC reduction (use constant kappa)");
-		mainLog.println("-ACTMCConstantKappaValue <n> ... Set decimal digit precision of constant kappa allowed error [default: 500]");
+		mainLog.println("-ACTMCComputeKappa ............. Enable computatation of kappa allowed error for ACTMC reduction. Takes quite a long time.");
+		mainLog.println("-ACTMCConstantKappaValue <n> ... Set decimal digit precision of constant kappa allowed error [default: 330]");
 		
 		mainLog.println();
 		mainLog.println("MULTI-OBJECTIVE MODEL CHECKING:");

@@ -576,11 +576,11 @@ public class ACTMCReduction extends PrismComponent
 
 	/**
 	 * Creates a map where the keys are string identifiers of the GSMPEvents,
-	 * and the values are corresponding ACTMCPotatoData structures.
-	 * This is useful as to enable reusage of the ACTMCPotatoData structures efficiently.
-	 * @param actmc ACTMC model for which to create the ACTMCPotatoData structures
+	 * and the values are corresponding ACTMCPotato structures.
+	 * This is useful as to enable reusage of the ACTMCPotato structures efficiently.
+	 * @param actmc ACTMC model for which to create the ACTMCPotato structures
 	 * @param rew Optional rewards associated with {@code actmc}. May be null, but calls
-	 *            to {@code ACTMCPotatoData.getMeanReward()} will throw an exception!
+	 *            to {@code ACTMCPotato.getMeanReward()} will throw an exception!
 	 */
 	private Map<String, ACTMCPotato> createPotatoDataMap(ACTMCSimple actmc,
 			ACTMCRewardsSimple rew, BitSet target) throws PrismException {
@@ -595,13 +595,11 @@ public class ACTMCReduction extends PrismComponent
 				potatoData = new ACTMCPotatoDirac(actmc, event, rew, target);
 				break;
 			case ERLANG:
-				throw new UnsupportedOperationException("ACTMCReduction does not yet support the Erlang distribution!");
-				// TODO MAJO - implement erlang distributed event support
-				//break;
+				potatoData = new ACTMCPotatoErlang(actmc, event, rew, target);
+				break;
 			case EXPONENTIAL:
-				throw new PrismException("ACTMCReduction received an event with exponential distribution!");
-				// TODO MAJO - implement exponentially distributed event support
-				//break;
+				potatoData = new ACTMCPotatoExponential(actmc, event, rew, target);
+				break;
 			case UNIFORM:
 				potatoData = new ACTMCPotatoUniform(actmc, event, rew, target);
 				break;
