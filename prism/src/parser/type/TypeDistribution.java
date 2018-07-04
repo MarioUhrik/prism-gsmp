@@ -59,7 +59,7 @@ public class TypeDistribution extends Type {
 	@Override
 	public String getTypeString()
 	{
-		return "distribution";
+		return "Distribution";
 	}
 	
 	/**
@@ -84,7 +84,7 @@ public class TypeDistribution extends Type {
 	 */
 	public int canAssign(Type firstType, Type secondType)
 	{
-		// Play safe: assume not possible
+		// Play safe: assume wrong parameters
 		return 1;
 	}
 	
@@ -95,6 +95,7 @@ public class TypeDistribution extends Type {
 	 * @throws PrismLangException if the parameters don't have sensible values
 	 */
 	public boolean parameterValueCheck(Expression firstParameter, Expression secondParameter, Values constantValues)  throws PrismLangException{
+		// Play safe: assume wrong parameters
 		return false;
 	}
 	
