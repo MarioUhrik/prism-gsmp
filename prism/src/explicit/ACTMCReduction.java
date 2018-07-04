@@ -439,7 +439,6 @@ public class ACTMCReduction extends PrismComponent
 	 * Uses {@code actmc} and current {@code pdMap} to construct
 	 * equivalent uniformized {@code dtmc}. The DTMC is uniformized in accordance to how much
 	 * time is spent within each potato having entered from a particular entrance.
-	 * This is suitable for reachability rewards.
 	 * @return Uniformized fully {@code dtmc} equivalent to {@code actmc} according to the current {@code pdMap}
 	 */
 	private DTMCSimple constructUniformizedDTMC() throws PrismException {

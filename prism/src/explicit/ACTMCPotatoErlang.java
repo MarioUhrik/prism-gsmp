@@ -146,7 +146,7 @@ public class ACTMCPotatoErlang extends ACTMCPotato
 				}
 			} else {
 				for (int i = 0; i < numStates; i++) {
-					polynomials[i].coeffs.add(0, new BigDecimal(soln[i] / uniformizationRate, mc));
+					polynomials[i].coeffs.add(0, new BigDecimal(soln[i], mc).divide(new BigDecimal(uniformizationRate, mc), mc));
 				}
 			}
 
@@ -174,7 +174,7 @@ public class ACTMCPotatoErlang extends ACTMCPotato
 					}
 				} else {
 					for (int i = 0; i < numStates; i++) {
-						BigDecimal tmp = new BigDecimal(soln[i] / uniformizationRate, mc).add(polynomials[i].coeffs.get(0), mc);
+						BigDecimal tmp = new BigDecimal(soln[i], mc).divide(new BigDecimal(uniformizationRate, mc), mc).add(polynomials[i].coeffs.get(0), mc);
 						polynomials[i].coeffs.set(0, tmp);
 					}
 				}
@@ -188,21 +188,9 @@ public class ACTMCPotatoErlang extends ACTMCPotato
 				}
 			}
 			
-			//Compute antiderivative of (e^(-lambda*time) * polynomial) using integration by parts
+			//Compute antiderivative of (e^(-(lambda + erlangRate) * time) * polynomial) using integration by parts
 			for (int n = 0; n < numStates ; ++n) {
-				Polynomial poly = polynomials[n];
-				int polyDegree = poly.degree();
-				
-				Polynomial antiderivative = antiderivatives[n];
-				for (int i = 0; i <= polyDegree ; i++) {
-					Polynomial tmp = new Polynomial(new ArrayList<BigDecimal>(poly.coeffs));
-					BigDecimal factor = new BigDecimal((-1/(uniformizationRate + event.getFirstParameter())), mc);
-					tmp.multiplyWithScalar(factor, mc);
-					
-					antiderivative.add(tmp, mc);	
-					poly = poly.derivative(mc);
-					poly.multiplyWithScalar(factor.negate(), mc);
-				}
+				antiderivatives[n] = computeAntiderivative(polynomials[n]);
 			}
 			
 			//Compute the definite integral using the obtained antiderivative
@@ -321,21 +309,9 @@ public class ACTMCPotatoErlang extends ACTMCPotato
 				}
 			}
 			
-			//Compute antiderivative of (e^(-lambda*time) * polynomial) using integration by parts
+			//Compute antiderivative of (e^(-(lambda + erlangRate) * time) * polynomial) using integration by parts
 			for (int n = 0; n < numStates ; ++n) {
-				Polynomial poly = polynomials[n];
-				int polyDegree = poly.degree();
-				
-				Polynomial antiderivative = antiderivatives[n];
-				for (int i = 0; i <= polyDegree ; i++) {
-					Polynomial tmp = new Polynomial(new ArrayList<BigDecimal>(poly.coeffs));
-					BigDecimal factor = new BigDecimal((-1/(uniformizationRate + event.getFirstParameter())), mc);
-					tmp.multiplyWithScalar(factor, mc);
-					
-					antiderivative.add(tmp, mc);
-					poly = poly.derivative(mc);
-					poly.multiplyWithScalar(factor.negate(), mc);
-				}
+				antiderivatives[n] = computeAntiderivative(polynomials[n]);
 			}
 			
 			//Compute the definite integral using the obtained antiderivative
@@ -449,7 +425,7 @@ public class ACTMCPotatoErlang extends ACTMCPotato
 			}
 		} else {
 			for (int i = 0; i < numStates; i++) {
-				polynomials[i].coeffs.add(0, new BigDecimal(soln[i] / uniformizationRate, mc));
+				polynomials[i].coeffs.add(0, new BigDecimal(soln[i], mc).divide(new BigDecimal(uniformizationRate, mc), mc));
 			}
 		}
 
@@ -477,7 +453,7 @@ public class ACTMCPotatoErlang extends ACTMCPotato
 				}
 			} else {
 				for (int i = 0; i < numStates; i++) {
-					BigDecimal tmp = new BigDecimal(soln[i] / uniformizationRate, mc).add(polynomials[i].coeffs.get(0), mc);
+					BigDecimal tmp = new BigDecimal(soln[i], mc).divide(new BigDecimal(uniformizationRate, mc), mc).add(polynomials[i].coeffs.get(0), mc);
 					polynomials[i].coeffs.set(0, tmp);
 				}
 			}
@@ -491,21 +467,9 @@ public class ACTMCPotatoErlang extends ACTMCPotato
 			}
 		}
 		
-		//Compute antiderivative of (e^(-lambda*time) * polynomial) using integration by parts
+		//Compute antiderivative of (e^(-(lambda + erlangRate) * time) * polynomial) using integration by parts
 		for (int n = 0; n < numStates ; ++n) {
-			Polynomial poly = polynomials[n];
-			int polyDegree = poly.degree();
-			
-			Polynomial antiderivative = antiderivatives[n];
-			for (int i = 0; i <= polyDegree ; i++) {
-				Polynomial tmp = new Polynomial(new ArrayList<BigDecimal>(poly.coeffs));
-				BigDecimal factor = new BigDecimal((-1/(uniformizationRate + event.getFirstParameter())), mc);
-				tmp.multiplyWithScalar(factor, mc);
-				
-				antiderivative.add(tmp, mc);	
-				poly = poly.derivative(mc);
-				poly.multiplyWithScalar(factor.negate(), mc);
-			}
+			antiderivatives[n] = computeAntiderivative(polynomials[n]);
 		}
 		
 		//Compute the definite integral using the obtained antiderivative
@@ -534,6 +498,51 @@ public class ACTMCPotatoErlang extends ACTMCPotato
 		}
 		
 		meanRewardsComputed = true;
+	}
+	
+	/**
+	 * Computes antiderivative of (e^(-(lambda + erlangRate) * time) * polynomial) using integration by parts
+	 * @param polynomial
+	 * @return antiderivative polynomial of (e^(-(lambda + erlangRate) * time) * polynomial)
+	 */
+	private Polynomial computeAntiderivative(Polynomial polynomial) {
+		//Unoptimized version
+		/*for (int n = 0; n < numStates ; ++n) {
+			Polynomial poly = new Polynomial(new ArrayList<BigDecimal>(polynomials[n].coeffs));
+			Polynomial antiderivative = antiderivatives[n];
+			
+			BigDecimal factor = new BigDecimal((-1/(uniformizationRate + event.getFirstParameter())), mc);
+			int polyDegree = poly.degree();
+			for (int i = 0; i <= polyDegree ; i++) {
+				poly.multiplyWithScalar(factor, mc);
+				antiderivative.add(poly, mc);	
+				
+				poly.multiplyWithScalar(BigDecimal.ONE.negate(), mc);
+				poly = poly.derivative(mc);
+			}
+		}*/
+		
+		Polynomial poly = new Polynomial(new ArrayList<BigDecimal>(polynomial.coeffs));
+		Polynomial antiderivative = new Polynomial(new ArrayList<BigDecimal>());
+		BigDecimal factor = BigDecimal.ONE.negate().divide
+				(new BigDecimal(uniformizationRate, mc).add(new BigDecimal(event.getFirstParameter(),mc), mc), mc);
+		
+		int polyDegree = poly.degree();
+		for (int e = 0 ; e <= polyDegree ; ++e) {
+			BigDecimal coeff = poly.coeffs.get(e);
+			antiderivative.coeffs.add(e, BigDecimal.ZERO);
+			for ( int i = e ; i >= 0 ; --i) {
+				coeff = coeff.multiply(factor, mc);
+				if (coeff.compareTo(BigDecimal.ZERO) >= 0) {
+					coeff = coeff.multiply(BigDecimal.ONE.negate(), mc);
+				}
+				antiderivative.coeffs.set(i, antiderivative.coeffs.get(i).add(coeff, mc));
+				
+				coeff = coeff.multiply(new BigDecimal(i, mc), mc);
+			}
+		}
+		
+		return antiderivative;
 	}
 
 }
