@@ -67,8 +67,8 @@ public class ACTMCPotatoDirac extends ACTMCPotato
 			throw new PrismException("No precision specified for FoxGlynn!");
 		}
 		
-		double fgRate = uniformizationRate * event.getFirstParameter();
-		foxGlynn = new FoxGlynn_BD(new BigDecimal(fgRate, mc), new BigDecimal(1e-300), new BigDecimal(1e+300), kappa);
+		BigDecimal fgRate = new BigDecimal(String.valueOf(uniformizationRate), mc).multiply(new BigDecimal(String.valueOf(event.getFirstParameter()), mc), mc);
+		foxGlynn = new FoxGlynn_BD(fgRate, new BigDecimal(1e-300), new BigDecimal(1e+300), kappa);
 		if (foxGlynn.getRightTruncationPoint() < 0) {
 			throw new PrismException("Overflow in Fox-Glynn computation of the Poisson distribution!");
 		}
@@ -96,7 +96,7 @@ public class ACTMCPotatoDirac extends ACTMCPotato
 			weights_BD[i - left] = weights_BD[i - left].add(weights_BD[i - 1 - left], mc);
 		}
 		for (int i = left; i <= right; i++) {
-			weights_BD[i - left] = (BigDecimal.ONE.subtract(weights_BD[i - left], mc)).divide(new BigDecimal(uniformizationRate, mc), mc);
+			weights_BD[i - left] = (BigDecimal.ONE.subtract(weights_BD[i - left], mc)).divide(new BigDecimal(String.valueOf(uniformizationRate), mc), mc);
 		}
 		double[] weights = new double[weights_BD.length];
 		for (int i = 0 ; i < weights.length ; ++i) {
@@ -154,14 +154,21 @@ public class ACTMCPotatoDirac extends ACTMCPotato
 			
 			// We are done. 
 			// Convert the result to a distribution with original indexing and store it.
+			// Also, store the solution vector using the original indexing.
 			Distribution resultDistr = new Distribution();
+			Distribution solnDistr = new Distribution();
 			for (int ps : potato) {
 				double time = result[ACTMCtoDTMC.get(ps)];
 				if (time != 0.0) {
 					resultDistr.add(ps, time);
 				}
+				double sol = soln[ACTMCtoDTMC.get(ps)];
+				if (sol != 0.0) {
+					solnDistr.add(ps, sol);
+				}
 			}
 			meanTimes.put(entrance, resultDistr);
+			meanTimesSoln.put(entrance, solnDistr);
 		}
 		meanTimesComputed = true;
 	}
@@ -261,6 +268,17 @@ public class ACTMCPotatoDirac extends ACTMCPotato
 			}
 			
 			// We are done.
+			// Store the solution vector using the original indexing.
+			Distribution solnDistr = new Distribution();
+			for (int ps : potato) {
+				double sol = soln[ACTMCtoDTMC.get(ps)];
+				if (sol != 0.0) {
+					solnDistr.add(ps, sol);
+				}
+			}
+			meanDistributionsSoln.put(entrance, solnDistr);
+			
+			
 			// Normalize the result array (it may not sum to 1 due to inaccuracy).
 			double probSum = 0;
 			for (int succState : successors) {
@@ -299,7 +317,7 @@ public class ACTMCPotatoDirac extends ACTMCPotato
 			weights_BD[i - left] = weights_BD[i - left].add(weights_BD[i - 1 - left], mc);
 		}
 		for (int i = left; i <= right; i++) {
-			weights_BD[i - left] = (BigDecimal.ONE.subtract(weights_BD[i - left], mc)).divide(new BigDecimal(uniformizationRate, mc), mc);
+			weights_BD[i - left] = (BigDecimal.ONE.subtract(weights_BD[i - left], mc)).divide(new BigDecimal(String.valueOf(uniformizationRate), mc), mc);
 		}
 		double[] weights = new double[weights_BD.length];
 		for (int i = 0 ; i < weights.length ; ++i) {
@@ -357,12 +375,26 @@ public class ACTMCPotatoDirac extends ACTMCPotato
 			iters++;
 		}
 		
+		// Store the rewards just before the event behavior using the original indexing.
+		for (int entrance : entrances) {
+			meanRewardsBeforeEvent.add(entrance, result[ACTMCtoDTMC.get(entrance)]);
+		}
+		
 		//Now that we have the expected rewards for the underlying CTMC behavior,
 		//event behavior is applied.
 		applyEventRewards(result, false);
+		
+		// Store the solution vector using the original indexing.
+		for (int ps : potato) {
+			double sol = soln[ACTMCtoDTMC.get(ps)];
+			if (sol != 0.0) {
+				meanRewardsSoln.add(ps, sol);
+			}
+		}
+		
 		// Store the finalized expected rewards using the original indexing.
 		for (int entrance : entrances) {
-			meanRewards.put(entrance, result[ACTMCtoDTMC.get(entrance)]);
+			meanRewards.add(entrance, result[ACTMCtoDTMC.get(entrance)]);
 		}
 		
 		meanRewardsComputed = true;

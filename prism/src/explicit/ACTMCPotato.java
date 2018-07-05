@@ -121,14 +121,12 @@ public abstract class ACTMCPotato
 	protected FoxGlynn_BD foxGlynn;
 	protected boolean foxGlynnComputed = false;
 	
-	/** Mapping of expected accumulated rewards until leaving the potato onto states used to enter the potato */
-	protected Map<Integer, Double> meanRewards = new HashMap<Integer, Double>();
-	protected boolean meanRewardsComputed = false;
-	
 	/** Mapping of expected times spent in individual states of the potato before leaving the potato
 	 * onto individual states used to enter the potato.
 	 * Sum of this distribution yields the total expected time spent within the potato. */
 	protected Map<Integer, Distribution> meanTimes = new HashMap<Integer, Distribution>();
+	/** Mapping of the solution vectors used to compute meanTimes onto individual states used to enter the potato*/
+	protected Map<Integer, Distribution> meanTimesSoln = new HashMap<Integer, Distribution>();
 	protected boolean meanTimesComputed = false;
 	
 	/** Mapping of expected outcome state probability distributions onto states used to enter the potato.
@@ -139,7 +137,17 @@ public abstract class ACTMCPotato
 	 *  I.e. if we enter the potato using state {@code key}, then {@code value} is the distribution
 	 *  saying which states we are in just before the event occurs on average. */
 	protected Map<Integer, Distribution> meanDistributionsBeforeEvent = new HashMap<Integer, Distribution>();
+	/** Mapping of the solution vectors used to compute meanDistributions onto individual states used to enter the potato*/
+	protected Map<Integer, Distribution> meanDistributionsSoln = new HashMap<Integer, Distribution>();
 	protected boolean meanDistributionsComputed = false;
+	
+	/** Mapping of expected accumulated rewards just after leaving the potato onto states used to enter the potato */
+	protected Distribution meanRewards = new Distribution();
+	/** Mapping of expected accumulated rewards until just before leaving the potato onto states used to enter the potato */
+	protected Distribution meanRewardsBeforeEvent = new Distribution();
+	/** Solution vector used to compute meanRewards */
+	protected Distribution meanRewardsSoln = new Distribution();
+	protected boolean meanRewardsComputed = false;
 	
 	/** Mathcontext to use within this class for BigDecimal arithmetics. Derived from {@code kappa}. */
 	protected MathContext mc;
@@ -194,15 +202,18 @@ public abstract class ACTMCPotato
 		this.foxGlynn = null;
 		this.foxGlynnComputed = false;
 		
-		this.meanRewards = new HashMap<Integer, Double>();
-		this.meanRewardsComputed = false;
-		
 		this.meanTimes = new HashMap<Integer, Distribution>();
+		this.meanTimesSoln = new HashMap<Integer, Distribution>();
 		this.meanTimesComputed = false;
 		
 		this.meanDistributions = new HashMap<Integer, Distribution>();
 		this.meanDistributionsBeforeEvent = new HashMap<Integer, Distribution>();
+		this.meanDistributionsSoln = new HashMap<Integer, Distribution>();
 		this.meanDistributionsComputed = false;
+		
+		this.meanRewards = new Distribution();
+		this.meanRewardsSoln = new Distribution();
+		this.meanRewardsComputed = false;
 		
 		this.mc = other.mc;
 	}
@@ -370,7 +381,7 @@ public abstract class ACTMCPotato
 	 * <br>
 	 * If this is the first call, this method computes it before returning it.
 	 */
-	public Map<Integer, Double> getMeanRewards() throws PrismException {
+	public Distribution getMeanRewards() throws PrismException {
 		if (!meanRewardsComputed) {
 			computeMeanRewards();
 		}
@@ -542,6 +553,7 @@ public abstract class ACTMCPotato
 	 * Before calling this method, {@code computeFoxGlynn()} must be called first.
 	 * After calling this method, {@code meanTimesComputed} is set to true,
 	 * and the result is saved within {@code meanTimes}.
+	 * Also,  {@code meanTimesSoln} is updated.
 	 */
 	protected abstract void computeMeanTimes() throws PrismException;
 	
@@ -553,6 +565,7 @@ public abstract class ACTMCPotato
 	 * Before calling this method, {@code computeFoxGlynn()} must be called first.
 	 * After calling this method, {@code meanDistributionsComputed} is set to true,
 	 * and the result is saved within {@code meanDistributions} and {@code meanDistributionsBeforeEvent}.
+	 * Also,  {@code meanDistributionsSoln} is updated.
 	 */
 	protected abstract void computeMeanDistributions() throws PrismException;
 	
@@ -567,6 +580,7 @@ public abstract class ACTMCPotato
 	 * Before calling this method, {@code computeMeanDistributions()} must be called first.
 	 * After calling this method, {@code meanRewardsComputed} is set to true,
 	 * and the result is saved within {@code meanRewards}.
+	 * Also, {@code meanRewardsBeforeEvent} and {@code meanRewardsSoln} are updated.
 	 */
 	protected abstract  void computeMeanRewards() throws PrismException;
 	

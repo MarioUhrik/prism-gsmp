@@ -124,7 +124,7 @@ public class ACTMCPotatoExponential extends ACTMCPotato
 	}
 	
 	@Override
-	public Map<Integer, Double> getMeanRewards() throws PrismException {
+	public Distribution getMeanRewards() throws PrismException {
 		return erlang.getMeanRewards();
 	}
 	

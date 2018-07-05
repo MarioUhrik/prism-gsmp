@@ -101,7 +101,7 @@ public final class FoxGlynn_BD
 		if (q_tmax.compareTo(BigDecimal.ZERO) == 0) {
 			throw new PrismException("Overflow: TA parameter qtmax = time * maxExitRate = 0.");
 		}
-		else if (q_tmax.compareTo(new BigDecimal("400.0")) < 0)
+		else if (q_tmax.compareTo(new BigDecimal("400.0", mc)) < 0)
 		{ //here naive approach should have better performance than Fox Glynn
 			final BigDecimal expcoef = BigDecimalMath.exp(q_tmax.negate(), mc); //the "e^-lambda" part of p.m.f. of Poisson dist.
 			int k; //denotes that we work with event "k steps occur"
