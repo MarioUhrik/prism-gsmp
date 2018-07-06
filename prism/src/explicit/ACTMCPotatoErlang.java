@@ -67,7 +67,8 @@ public class ACTMCPotatoErlang extends ACTMCPotato
 		// This is because precise computation of expressions such as (e^(-(erlangRate + CTMCRate) * [upper_bound])
 		// and ([upper_bound]^(foxGlynn.right + k)) is performed.
 		int basePrecision = BigDecimalUtils.decimalDigits(kappa); // TODO MAJO - I think [upper_bound]*(kappa + lambda) is needed, but thats extremely high!
-		int erlangPrecision = basePrecision + ((int)Math.ceil(Math.log(((event.getFirstParameter() + uniformizationRate) * basePrecision * event.getSecondParameter()))));
+		int erlangPrecision = basePrecision + (int)actmc.getMaxExitRate() + (int)event.getSecondParameter() +
+				((int)Math.ceil(Math.log(((event.getFirstParameter() + uniformizationRate) * basePrecision * event.getSecondParameter()))));
 		
 		BigDecimal erlangKappa = BigDecimalUtils.allowedError(erlangPrecision);
 		super.setKappa(erlangKappa);
@@ -138,15 +139,23 @@ public class ACTMCPotatoErlang extends ACTMCPotato
 			}
 			soln[ACTMCtoDTMC.get(entrance)] = 1;
 
-			// do 0th element of summation (doesn't require any matrix powers)
+			// do 0th element of summation (doesn't require any matrix powers), and initialize the coefficients
 			result = new double[numStates];
 			if (left == 0) {
 				for (int i = 0; i < numStates; i++) {
-					polynomials[i].coeffs.add(0, new BigDecimal(soln[i], mc).multiply(weights_BD[0], mc));
+					polynomials[i].coeffs.add(left, BigDecimal.ZERO);
+					for (int j = left + 1; j <= right; ++j) {
+						polynomials[i].coeffs.add(j, new BigDecimal(soln[i], mc).multiply(weights_BD[j - left], mc));
+					}
 				}
 			} else {
 				for (int i = 0; i < numStates; i++) {
-					polynomials[i].coeffs.add(0, new BigDecimal(soln[i], mc).divide(new BigDecimal(String.valueOf(uniformizationRate), mc), mc));
+					for (int j = 0; j <= left; ++j) {
+						polynomials[i].coeffs.add(j, BigDecimal.ZERO);
+					}
+					for (int j = left; j <= right; ++j) {
+						polynomials[i].coeffs.add(j, new BigDecimal(soln[i], mc).divide(new BigDecimal(String.valueOf(uniformizationRate), mc), mc));
+					}
 				}
 			}
 
@@ -159,29 +168,26 @@ public class ACTMCPotatoErlang extends ACTMCPotato
 				tmpsoln = soln;
 				soln = soln2;
 				soln2 = tmpsoln;
-				// Initialize new polynomial coefficient
-				for (int i = 0; i < numStates; i++) {
-					polynomials[i].coeffs.add(iters, BigDecimal.ZERO);
-				}
 				// Add to sum
 				if (iters >= left) {
 					for (int i = 0; i < numStates; i++) {
-						polynomials[i].coeffs.set(iters, new BigDecimal(soln[i], mc).multiply(weights_BD[iters - left], mc));
-						for (int j = left ; j < iters; ++j) {
+						for (int j = iters + 1; j <= right; ++j) {
 							BigDecimal tmp = polynomials[i].coeffs.get(j).add(new BigDecimal(soln[i], mc).multiply(weights_BD[j - left], mc), mc);
 							polynomials[i].coeffs.set(j, tmp);
 						}
 					}
 				} else {
 					for (int i = 0; i < numStates; i++) {
-						BigDecimal tmp = new BigDecimal(soln[i], mc).divide(new BigDecimal(String.valueOf(uniformizationRate), mc), mc).add(polynomials[i].coeffs.get(0), mc);
-						polynomials[i].coeffs.set(0, tmp);
+						for (int j = left; j <= right; ++j) {
+							BigDecimal tmp = polynomials[i].coeffs.get(j).add(new BigDecimal(soln[i], mc).divide(new BigDecimal(String.valueOf(uniformizationRate), mc), mc), mc);
+							polynomials[i].coeffs.set(j, tmp);
+						}
 					}
 				}
 				iters++;
 			}
 			
-			//Increase the polynomial degrees by t^(k-1)
+			//Multiply the polynomial by t^(k-1)
 			for (int n = 0; n < numStates  ; ++n) {
 				for (int k = 0; k < (int)(event.getSecondParameter() - 1); ++k) {
 					polynomials[n].coeffs.add(0, BigDecimal.ZERO);
@@ -207,7 +213,7 @@ public class ACTMCPotatoErlang extends ACTMCPotato
 				BigDecimal secondFactor = BigDecimalMath.pow(new BigDecimal(String.valueOf(event.getFirstParameter()), mc), new BigDecimal(String.valueOf(event.getSecondParameter()), mc), mc);
 				BigDecimal totalFactor = firstFactor.multiply(secondFactor, mc);
 				
-				BigDecimal res = polynomials[n].coeffs.get((int)(event.getSecondParameter() - 1)).subtract(bVal.subtract(aVal, mc).multiply(totalFactor, mc), mc);
+				BigDecimal res = bVal.subtract(aVal, mc).multiply(totalFactor, mc);
 				result[n] = res.doubleValue();
 			}
 			
@@ -436,15 +442,23 @@ public class ACTMCPotatoErlang extends ACTMCPotato
 			antiderivatives[s] = new Polynomial(new ArrayList<BigDecimal>());
 		}
 
-		// do 0th element of summation (doesn't require any matrix powers)
+		// do 0th element of summation (doesn't require any matrix powers), and initialize the coefficients
 		result = new double[numStates];
 		if (left == 0) {
 			for (int i = 0; i < numStates; i++) {
-				polynomials[i].coeffs.add(0, new BigDecimal(soln[i], mc).multiply(weights_BD[0], mc));
+				polynomials[i].coeffs.add(left, BigDecimal.ZERO);
+				for (int j = left + 1; j <= right; ++j) {
+					polynomials[i].coeffs.add(j, new BigDecimal(soln[i], mc).multiply(weights_BD[j - left], mc));
+				}
 			}
 		} else {
 			for (int i = 0; i < numStates; i++) {
-				polynomials[i].coeffs.add(0, new BigDecimal(soln[i], mc).divide(new BigDecimal(String.valueOf(uniformizationRate), mc), mc));
+				for (int j = 0; j <= left; ++j) {
+					polynomials[i].coeffs.add(j, BigDecimal.ZERO);
+				}
+				for (int j = left; j <= right; ++j) {
+					polynomials[i].coeffs.add(j, new BigDecimal(soln[i], mc).divide(new BigDecimal(String.valueOf(uniformizationRate), mc), mc));
+				}
 			}
 		}
 
@@ -457,29 +471,26 @@ public class ACTMCPotatoErlang extends ACTMCPotato
 			tmpsoln = soln;
 			soln = soln2;
 			soln2 = tmpsoln;
-			// Initialize new polynomial coefficient
-			for (int i = 0; i < numStates; i++) {
-				polynomials[i].coeffs.add(iters, BigDecimal.ZERO);
-			}
 			// Add to sum
 			if (iters >= left) {
 				for (int i = 0; i < numStates; i++) {
-					polynomials[i].coeffs.set(iters, new BigDecimal(soln[i], mc).multiply(weights_BD[iters - left], mc));
-					for (int j = left ; j < iters; ++j) {
+					for (int j = iters + 1; j <= right; ++j) {
 						BigDecimal tmp = polynomials[i].coeffs.get(j).add(new BigDecimal(soln[i], mc).multiply(weights_BD[j - left], mc), mc);
 						polynomials[i].coeffs.set(j, tmp);
 					}
 				}
 			} else {
 				for (int i = 0; i < numStates; i++) {
-					BigDecimal tmp = new BigDecimal(soln[i], mc).divide(new BigDecimal(String.valueOf(uniformizationRate), mc), mc).add(polynomials[i].coeffs.get(0), mc);
-					polynomials[i].coeffs.set(0, tmp);
+					for (int j = left; j <= right; ++j) {
+						BigDecimal tmp = polynomials[i].coeffs.get(j).add(new BigDecimal(soln[i], mc).divide(new BigDecimal(String.valueOf(uniformizationRate), mc), mc), mc);
+						polynomials[i].coeffs.set(j, tmp);
+					}
 				}
 			}
 			iters++;
 		}
 		
-		//Increase the polynomial degrees by t^(k-1)
+		//Multiply the polynomial by t^(k-1)
 		for (int n = 0; n < numStates  ; ++n) {
 			for (int k = 0; k < (int)(event.getSecondParameter() - 1); ++k) {
 				polynomials[n].coeffs.add(0, BigDecimal.ZERO);
@@ -505,7 +516,7 @@ public class ACTMCPotatoErlang extends ACTMCPotato
 			BigDecimal secondFactor = BigDecimalMath.pow(new BigDecimal(String.valueOf(event.getFirstParameter()), mc), new BigDecimal(String.valueOf(event.getSecondParameter()), mc), mc);
 			BigDecimal totalFactor = firstFactor.multiply(secondFactor, mc);
 			
-			BigDecimal res = polynomials[n].coeffs.get((int)(event.getSecondParameter() - 1)).subtract(bVal.subtract(aVal, mc).multiply(totalFactor, mc), mc);
+			BigDecimal res = bVal.subtract(aVal, mc).multiply(totalFactor, mc);
 			result[n] = res.doubleValue();
 		}
 		
