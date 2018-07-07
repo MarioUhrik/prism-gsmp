@@ -36,19 +36,14 @@ import explicit.rewards.ACTMCRewardsSimple;
 import prism.PrismException;
 
 /**
- * Class for storage and computation of single exponentially distributed potato-related data for ACTMCs,
- * I.e. this implementation treats the event as exponentially distributed.
- * Exponential transitions are normally embedded into the underlying CTMC,
- * so this class is useful only when, for example, parameter synthesis for the exponential rate is done.
- * Even then, this class is merely a wrapper for ACTMCPotatoErlang with k=1.
+ * See parent class documentation for more basic info. {@link ACTMCPotato}
  * <br>
- * Potato is a subset of states of an ACTMC in which a given event is active.
- * <br><br>
- * This data is fundamental for ACTMC model checking methods based on reduction
- * of ACTMC to DTMC. The reduction works by pre-computing the expected behavior
- * (rewards, spent time, resulting distribution...) occurring between
- * entering and leaving a potato. Then, these expected values are used in
- * regular CTMC/DTMC model checking methods.
+ * This extension implements high-precision precomputation
+ * of exponentially-distributed potatoes using class BigDecimal.
+ * <br>
+ * HOW IT'S DONE:
+ * This class is implemented as Erlang distribution with k=1.
+ * See {@link ACTMCPotatoErlang} for details.
  */
 public class ACTMCPotatoExponential extends ACTMCPotato
 {

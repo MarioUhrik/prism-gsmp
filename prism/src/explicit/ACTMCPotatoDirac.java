@@ -34,16 +34,18 @@ import explicit.rewards.ACTMCRewardsSimple;
 import prism.PrismException;
 
 /**
- * Class for storage and computation of single Dirac-distributed potato-related data for ACTMCs,
- * I.e. this implementation treats the event as Dirac-distributed.
+ * See parent class documentation for more basic info. {@link ACTMCPotato}
  * <br>
- * Potato is a subset of states of an ACTMC in which a given event is active.
- * <br><br>
- * This data is fundamental for ACTMC model checking methods based on reduction
- * of ACTMC to DTMC. The reduction works by pre-computing the expected behavior
- * (rewards, spent time, resulting distribution...) occurring between
- * entering and leaving a potato. Then, these expected values are used in
- * regular CTMC/DTMC model checking methods.
+ * This extension implements high-precision precomputation
+ * of Dirac-distributed potatoes using class BigDecimal.
+ * <br>
+ * HOW IT'S DONE:
+ * Dirac distribution has one parameter, timeout t.
+ * The data is computed directly for the given timeout t
+ * instead of computing a general polynomial P(t), so it is more efficient.
+ * Basically, these algorithms are high-precision BigDecimal versions of
+ * {@link CTMCModelChecker#computeTransientProbs(CTMC, double, double[])} and
+ * {@link CTMCModelChecker#computeCumulativeRewards(CTMC, explicit.rewards.MCRewards, double)}.
  */
 public class ACTMCPotatoDirac extends ACTMCPotato
 {

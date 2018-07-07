@@ -38,16 +38,20 @@ import explicit.rewards.ACTMCRewardsSimple;
 import prism.PrismException;
 
 /**
- * Class for storage and computation of single uniformly distributed potato-related data for ACTMCs,
- * I.e. this implementation treats the event as uniformly distributed.
+ * See parent class documentation for more basic info. {@link ACTMCPotato}
  * <br>
- * Potato is a subset of states of an ACTMC in which a given event is active.
- * <br><br>
- * This data is fundamental for ACTMC model checking methods based on reduction
- * of ACTMC to DTMC. The reduction works by pre-computing the expected behavior
- * (rewards, spent time, resulting distribution...) occurring between
- * entering and leaving a potato. Then, these expected values are used in
- * regular CTMC/DTMC model checking methods.
+ * This extension implements high-precision precomputation
+ * of uniformly-distributed potatoes using class BigDecimal.
+ * <br>
+ * HOW IT'S DONE:
+ * Uniform distribution has two parameters - lower bound a, and upper bound b.
+ * First, Dirac behavior of the time before a is evaluated using
+ * {@link ACTMCPotatoDirac} with timeout a.
+ * After that, the uniform behavior is evaluated without specific distribution parameters.
+ * This yields a general polynomial P(t), where t is the firing time.
+ * Then, let F(t) = P(t) * e^(-uniformizationRate * t).
+ * Now, computing Riemann integral from 0 to (b-a) of (F(t) * dt)
+ * yields the desired results.
  */
 public class ACTMCPotatoUniform extends ACTMCPotato
 {

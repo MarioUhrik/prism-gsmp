@@ -38,16 +38,19 @@ import explicit.rewards.ACTMCRewardsSimple;
 import prism.PrismException;
 
 /**
- * Class for storage and computation of single Erlang distributed potato-related data for ACTMCs,
- * I.e. this implementation treats the event as Erlang distributed.
+ * See parent class documentation for more basic info. {@link ACTMCPotato}
  * <br>
- * Potato is a subset of states of an ACTMC in which a given event is active.
- * <br><br>
- * This data is fundamental for ACTMC model checking methods based on reduction
- * of ACTMC to DTMC. The reduction works by pre-computing the expected behavior
- * (rewards, spent time, resulting distribution...) occurring between
- * entering and leaving a potato. Then, these expected values are used in
- * regular CTMC/DTMC model checking methods.
+ * This extension implements high-precision precomputation
+ * of Erlang-distributed potatoes using class BigDecimal.
+ * <br>
+ * HOW IT'S DONE:
+ * Erlang distribution has two parameters, erlangRate and k.
+ * First, the data is evaluated without specific distribution parameters.
+ * This yields a general polynomial P(t), where t is the firing time.
+ * Then, let F(t,erlangRate,k) = P(t) * t^(k-1) * e^(-t *(uniformizationRate + erlangRate)),
+ * where erlangRate and k are already given as the event parameters.
+ * Now, computing Riemann integral from 0 to sufficiently-high n of (F(t) * dt)
+ * yields the desired results.
  */
 public class ACTMCPotatoErlang extends ACTMCPotato
 {

@@ -48,11 +48,13 @@ import prism.PrismException;
  * <br>
  * Potato is a subset of states of an ACTMC in which a given event is active.
  * <br><br>
- * This data is fundamental for ACTMC model checking methods based on reduction
+ * This superclass only provides very general functionality valid for any event distribution.
+ * Children classes are expected to implement their own functionality for specific event distributions.
+ * These computations are fundamental for ACTMC model checking methods based on reduction
  * of ACTMC to DTMC. The reduction works by pre-computing the expected behavior
  * (rewards, spent time, resulting distribution...) occurring between
- * entering and leaving a potato. Then, these expected values are used in
- * regular CTMC/DTMC model checking methods.
+ * entering and leaving a potato (i.e. inbetween regenerative states).
+ * Then, these expected values are used in regular CTMC/DTMC model checking methods.
  */
 public abstract class ACTMCPotato
 {
