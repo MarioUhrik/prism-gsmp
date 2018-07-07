@@ -198,7 +198,7 @@ public class ACTMCPotatoDirac extends ACTMCPotato
 		
 		for (int entrance : entrances) {
 			
-			// Prepare solution arrays // TODO MAJO - optimize, reuse the arrays!
+			// Prepare solution arrays
 			double[] initDist = new double[numStates];
 			double[] soln;
 			double[] soln2 = new double[numStates];

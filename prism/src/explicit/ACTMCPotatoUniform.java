@@ -49,7 +49,7 @@ import prism.PrismException;
  * {@link ACTMCPotatoDirac} with timeout a.
  * After that, the uniform behavior is evaluated without specific distribution parameters.
  * This yields a general polynomial P(t), where t is the firing time.
- * Then, let F(t) = P(t) * e^(-uniformizationRate * t).
+ * Then, let expolynomial F(t) = P(t) * e^(-uniformizationRate * t).
  * Now, computing Riemann integral from 0 to (b-a) of (F(t) * dt)
  * yields the desired results.
  */
@@ -288,7 +288,7 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 		
 		for (int entrance : entrances) {
 			
-			// Prepare solution arrays // TODO MAJO - optimize, reuse the arrays!
+			// Prepare solution arrays
 			double[] initDist = new double[numStates];
 			double[] soln;
 			double[] soln2 = new double[numStates];

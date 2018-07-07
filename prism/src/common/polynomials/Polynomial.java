@@ -149,6 +149,16 @@ public class Polynomial {
 	}
 	
 	/**
+	 * Compute the antiderivative of this using the given MathContext
+	 * @param mc MathContext to use
+	 * @return antiderivative of this
+	 */
+	public Polynomial antiderivative(MathContext mc){
+		//TODO MAJO - implement
+		return new Polynomial(this.coeffs);
+	}
+	
+	/**
 	 * Evaluate this polynomial in x
 	 * @param	x	x to evaluate
 	 * @return 	value of this in x
@@ -285,7 +295,7 @@ public class Polynomial {
 	}
 	
 	/**
-	 * Multipies this polynomial with other
+	 * Multiplies this polynomial with other
 	 * @param other other polynomial
 	 */
 	public void multiply(Polynomial other){
@@ -299,6 +309,24 @@ public class Polynomial {
 		}
 		this.coeffs = newc;
 	}
+	
+	/**
+	 * Multiplies this polynomial with other using the given MathContext
+	 * @param other other polynomial
+	 * @param mc MathContext to use
+	 */
+	public void multiply(Polynomial other, MathContext mc){
+		List<BigDecimal> newc = new ArrayList<>();
+		for(int i = 0; i < coeffs.size() + other.coeffs.size() - 1; i++)
+			newc.add(BigDecimal.ZERO);
+		for(int i = 0; i < coeffs.size(); i++){
+			for(int j = 0; j < other.coeffs.size(); j++){
+				newc.set(i+j, newc.get(i+j).add(coeffs.get(i).multiply(other.coeffs.get(j), mc)));
+			}
+		}
+		this.coeffs = newc;
+	}
+	
 	/**
 	 * Multiplies this polynomial with scalar
 	 * @param scalar scalar to multiply with

@@ -41,41 +41,43 @@ import prism.PrismException;
  * See parent class documentation for more basic info. {@link ACTMCPotato}
  * <br>
  * This extension implements high-precision precomputation
- * of Erlang-distributed potatoes using class BigDecimal.
+ * of Weibull-distributed potatoes using class BigDecimal.
  * <br>
  * HOW IT'S DONE:
- * Erlang distribution has two parameters, erlangRate and k.
+ * Weibull distribution has two parameters, weibullRate and k.
  * First, the data is evaluated without specific distribution parameters.
  * This yields a general polynomial P(t), where t is the firing time.
- * Then, let F(t, erlangRate, k) = P(t) * t^(k-1) * e^(-t *(uniformizationRate + erlangRate)).
- * However, erlangRate and k are already given as the event parameters,
+ * Then, let F(t, weibullRate, k) = P(t) * t^(k-1) * e^(-((t/weibullRate)^k) - uniformizationRate * t).
+ * However, weibullRate and k are already given as the event parameters,
  * so F becomes expolynomial F(t).
- * Now, computing Riemann integral from 0 to sufficiently-high n of (F(t) * dt)
- * yields the desired results.
+ * Computing Riemann integral from 0 to sufficiently-high n of (F(t) * dt) would yield the desired results,
+ * but finding the antiderivative of F(t) is exceedingly difficult, so another approach is needed.
+ * Instead, we approximate e^(-((t/weibullRate)^k) - uniformizationRate * t) with Taylor series
+ * to obtain polynomial T(t).
+ * Instead of using F(t), we use polynomial F'(t) = P(t) * t^(k-1) * T(t).
+ * Lastly, compute Riemann integral from 0 to sufficiently-high n of (F'(t) * dt).
  */
-public class ACTMCPotatoErlang extends ACTMCPotato
+public class ACTMCPotatoWeibull_polyTailor extends ACTMCPotato
 {
 	
 	/** {@link ACTMCPotato#ACTMCPotato(ACTMCSimple, GSMPEvent, ACTMCRewardsSimple, BitSet)} */
-	public ACTMCPotatoErlang(ACTMCSimple actmc, GSMPEvent event, ACTMCRewardsSimple rewards, BitSet target) throws PrismException {
+	public ACTMCPotatoWeibull_polyTailor(ACTMCSimple actmc, GSMPEvent event, ACTMCRewardsSimple rewards, BitSet target) throws PrismException {
 		super(actmc, event, rewards, target);
 	}
 	
-	public ACTMCPotatoErlang(ACTMCPotato other) {
+	public ACTMCPotatoWeibull_polyTailor(ACTMCPotato other) {
 		super(other);
 	}
 	
 	@Override
 	public void setKappa(BigDecimal kappa) {
-		// ACTMCPotatoErlang usually requires better precision, dependent on the distribution parameters.
-		// This is because precise computation of expressions such as (e^(-(erlangRate + CTMCRate) * [upper_bound])
-		// and ([upper_bound]^(foxGlynn.right + k)) is performed.
+		// ACTMCPotatoWeibull usually requires better precision, dependent on the distribution parameters.
 		int basePrecision = BigDecimalUtils.decimalDigits(kappa); // TODO MAJO - I think [upper_bound]*(kappa + lambda) is needed, but thats extremely high!
-		int erlangPrecision = basePrecision + (int)actmc.getMaxExitRate() + (int)event.getSecondParameter() +
+		int weibullPrecision = basePrecision + (int)actmc.getMaxExitRate() + (int)event.getSecondParameter() +
 				((int)Math.ceil(Math.log(((event.getFirstParameter() + uniformizationRate) * basePrecision * event.getSecondParameter()))));
 		
-		BigDecimal erlangKappa = BigDecimalUtils.allowedError(erlangPrecision);
-		super.setKappa(erlangKappa);
+		BigDecimal weibullKappa = BigDecimalUtils.allowedError(weibullPrecision);
+		super.setKappa(weibullKappa);
 	}
 
 	@Override
@@ -123,6 +125,11 @@ public class ACTMCPotatoErlang extends ACTMCPotato
 		for (int i = left; i <= right; i++) {
 			weights_BD[i - left] = weights_BD[i - left].divide(totalWeight_BD.multiply(new BigDecimal(String.valueOf(uniformizationRate), mc), mc), mc);
 		}
+		
+		// Prepare the Taylor series representation of e^(-((t/weibullRate)^k) - uniformizationRate * t)
+		Polynomial taylor = computeTaylorSeries(
+				new BigDecimal(String.valueOf(event.getFirstParameter()), mc),
+				new BigDecimal(String.valueOf(event.getSecondParameter()), mc));
 		
 		for (int entrance : entrances) {
 			
@@ -191,6 +198,11 @@ public class ACTMCPotatoErlang extends ACTMCPotato
 				iters++;
 			}
 			
+			//Factor the Taylor series representation into the polynomial
+			for (int n = 0; n < numStates ; ++n) {
+				polynomials[n].multiply(taylor, mc);
+			}
+			
 			//Multiply the polynomial by t^(k-1)
 			for (int n = 0; n < numStates  ; ++n) {
 				for (int k = 0; k < (int)(event.getSecondParameter() - 1); ++k) {
@@ -198,9 +210,9 @@ public class ACTMCPotatoErlang extends ACTMCPotato
 				}
 			}
 			
-			//Compute antiderivative of (e^(-(lambda + erlangRate) * time) * polynomial) using integration by parts
+			//Compute the antiderivatives of the polynomial
 			for (int n = 0; n < numStates ; ++n) {
-				antiderivatives[n] = computeAntiderivative(polynomials[n]);
+				antiderivatives[n] = polynomials[n].antiderivative(mc);
 			}
 			
 			//Compute the definite integral using the obtained antiderivative
@@ -208,13 +220,10 @@ public class ACTMCPotatoErlang extends ACTMCPotato
 				Polynomial antiderivative = antiderivatives[n];
 				BigDecimal a = BigDecimal.ZERO;
 				BigDecimal b = new BigDecimal(BigDecimalUtils.decimalDigits(kappa) * 2.5, mc); // sufficiently high upper bound (supposed to be infinity
-				BigDecimal lambdas = new BigDecimal(String.valueOf(uniformizationRate), mc).add(new BigDecimal(String.valueOf(event.getFirstParameter()), mc), mc);
-				BigDecimal aFactor = BigDecimalMath.exp(lambdas.negate().multiply(a, mc), mc);
-				BigDecimal bFactor = BigDecimalMath.exp(lambdas.negate().multiply(b, mc), mc);
-				BigDecimal aVal = antiderivative.value(a, mc).multiply(aFactor, mc);
-				BigDecimal bVal = antiderivative.value(b, mc).multiply(bFactor, mc);
-				BigDecimal firstFactor = BigDecimal.ONE.divide(BigDecimalMath.factorial((int)(event.getSecondParameter() - 1)), mc);
-				BigDecimal secondFactor = BigDecimalMath.pow(new BigDecimal(String.valueOf(event.getFirstParameter()), mc), new BigDecimal(String.valueOf(event.getSecondParameter()), mc), mc);
+				BigDecimal aVal = antiderivative.value(a, mc);
+				BigDecimal bVal = antiderivative.value(b, mc);
+				BigDecimal firstFactor = new BigDecimal(String.valueOf(event.getSecondParameter()), mc).divide(new BigDecimal(String.valueOf(event.getFirstParameter()), mc), mc);
+				BigDecimal secondFactor = BigDecimal.ONE.divide(BigDecimalMath.pow(new BigDecimal(String.valueOf(event.getFirstParameter()), mc), new BigDecimal(String.valueOf(event.getSecondParameter()), mc).subtract(BigDecimal.ONE, mc), mc), mc);
 				BigDecimal totalFactor = firstFactor.multiply(secondFactor, mc);
 				
 				BigDecimal res = bVal.subtract(aVal, mc).multiply(totalFactor, mc);
@@ -258,6 +267,11 @@ public class ACTMCPotatoErlang extends ACTMCPotato
 		for (int i = left; i <= right; i++) {
 			weights_BD[i - left] = weights_BD[i - left].divide(totalWeight_BD, mc);
 		}
+		
+		// Prepare the Taylor series representation of e^(-((t/weibullRate)^k) - uniformizationRate * t)
+		Polynomial taylor = computeTaylorSeries(
+				new BigDecimal(String.valueOf(event.getFirstParameter()), mc),
+				new BigDecimal(String.valueOf(event.getSecondParameter()), mc));
 		
 		for (int entrance : entrances) {
 			
@@ -320,6 +334,11 @@ public class ACTMCPotatoErlang extends ACTMCPotato
 				iters++;
 			}
 			
+			//Factor the Taylor series representation into the polynomial
+			for (int n = 0; n < numStates ; ++n) {
+				polynomials[n].multiply(taylor, mc);
+			}
+			
 			//Multiply the polynomial by t^(k-1)
 			for (int n = 0; n < numStates  ; ++n) {
 				for (int k = 0; k < (int)(event.getSecondParameter() - 1); ++k) {
@@ -327,9 +346,9 @@ public class ACTMCPotatoErlang extends ACTMCPotato
 				}
 			}
 			
-			//Compute antiderivative of (e^(-(lambda + erlangRate) * time) * polynomial) using integration by parts
+			//Compute the antiderivatives of the polynomial
 			for (int n = 0; n < numStates ; ++n) {
-				antiderivatives[n] = computeAntiderivative(polynomials[n]);
+				antiderivatives[n] = polynomials[n].antiderivative(mc);
 			}
 			
 			//Compute the definite integral using the obtained antiderivative
@@ -337,13 +356,10 @@ public class ACTMCPotatoErlang extends ACTMCPotato
 				Polynomial antiderivative = antiderivatives[n];
 				BigDecimal a = BigDecimal.ZERO;
 				BigDecimal b = new BigDecimal(BigDecimalUtils.decimalDigits(kappa) * 2.5, mc); // sufficiently high upper bound (supposed to be infinity
-				BigDecimal lambdas = new BigDecimal(String.valueOf(uniformizationRate), mc).add(new BigDecimal(String.valueOf(event.getFirstParameter()), mc), mc);
-				BigDecimal aFactor = BigDecimalMath.exp(lambdas.negate().multiply(a, mc), mc);
-				BigDecimal bFactor = BigDecimalMath.exp(lambdas.negate().multiply(b, mc), mc);
-				BigDecimal aVal = antiderivative.value(a, mc).multiply(aFactor, mc);
-				BigDecimal bVal = antiderivative.value(b, mc).multiply(bFactor, mc);
-				BigDecimal firstFactor = BigDecimal.ONE.divide(BigDecimalMath.factorial((int)(event.getSecondParameter() - 1)), mc);
-				BigDecimal secondFactor = BigDecimalMath.pow(new BigDecimal(String.valueOf(event.getFirstParameter()), mc), new BigDecimal(String.valueOf(event.getSecondParameter()), mc), mc);
+				BigDecimal aVal = antiderivative.value(a, mc);
+				BigDecimal bVal = antiderivative.value(b, mc);
+				BigDecimal firstFactor = new BigDecimal(String.valueOf(event.getSecondParameter()), mc).divide(new BigDecimal(String.valueOf(event.getFirstParameter()), mc), mc);
+				BigDecimal secondFactor = BigDecimal.ONE.divide(BigDecimalMath.pow(new BigDecimal(String.valueOf(event.getFirstParameter()), mc), new BigDecimal(String.valueOf(event.getSecondParameter()), mc).subtract(BigDecimal.ONE, mc), mc), mc);
 				BigDecimal totalFactor = firstFactor.multiply(secondFactor, mc);
 				
 				BigDecimal res = bVal.subtract(aVal, mc).multiply(totalFactor, mc);
@@ -424,6 +440,11 @@ public class ACTMCPotatoErlang extends ACTMCPotato
 			weights_BD[i - left] = weights_BD[i - left].divide(totalWeight_BD.multiply(new BigDecimal(String.valueOf(uniformizationRate), mc), mc), mc);
 		}
 		
+		// Prepare the Taylor series representation of e^(-((t/weibullRate)^k) - uniformizationRate * t)
+		Polynomial taylor = computeTaylorSeries(
+				new BigDecimal(String.valueOf(event.getFirstParameter()), mc),
+				new BigDecimal(String.valueOf(event.getSecondParameter()), mc));
+		
 		// Prepare solution arrays
 		double[] soln = new double[numStates];
 		double[] soln2 = new double[numStates];
@@ -494,6 +515,11 @@ public class ACTMCPotatoErlang extends ACTMCPotato
 			iters++;
 		}
 		
+		//Factor the Taylor series representation into the polynomial
+		for (int n = 0; n < numStates ; ++n) {
+			polynomials[n].multiply(taylor, mc);
+		}
+		
 		//Multiply the polynomial by t^(k-1)
 		for (int n = 0; n < numStates  ; ++n) {
 			for (int k = 0; k < (int)(event.getSecondParameter() - 1); ++k) {
@@ -501,9 +527,9 @@ public class ACTMCPotatoErlang extends ACTMCPotato
 			}
 		}
 		
-		//Compute antiderivative of (e^(-(lambda + erlangRate) * time) * polynomial) using integration by parts
+		//Compute the antiderivatives of the polynomial
 		for (int n = 0; n < numStates ; ++n) {
-			antiderivatives[n] = computeAntiderivative(polynomials[n]);
+			antiderivatives[n] = polynomials[n].antiderivative(mc);
 		}
 		
 		//Compute the definite integral using the obtained antiderivative
@@ -511,13 +537,10 @@ public class ACTMCPotatoErlang extends ACTMCPotato
 			Polynomial antiderivative = antiderivatives[n];
 			BigDecimal a = BigDecimal.ZERO;
 			BigDecimal b = new BigDecimal(BigDecimalUtils.decimalDigits(kappa) * 2.5, mc); // sufficiently high upper bound (supposed to be infinity
-			BigDecimal lambdas = new BigDecimal(String.valueOf(uniformizationRate), mc).add(new BigDecimal(String.valueOf(event.getFirstParameter()), mc), mc);
-			BigDecimal aFactor = BigDecimalMath.exp(lambdas.negate().multiply(a, mc), mc);
-			BigDecimal bFactor = BigDecimalMath.exp(lambdas.negate().multiply(b, mc), mc);
-			BigDecimal aVal = antiderivative.value(a, mc).multiply(aFactor, mc);
-			BigDecimal bVal = antiderivative.value(b, mc).multiply(bFactor, mc);
-			BigDecimal firstFactor = BigDecimal.ONE.divide(BigDecimalMath.factorial((int)(event.getSecondParameter() - 1)), mc);
-			BigDecimal secondFactor = BigDecimalMath.pow(new BigDecimal(String.valueOf(event.getFirstParameter()), mc), new BigDecimal(String.valueOf(event.getSecondParameter()), mc), mc);
+			BigDecimal aVal = antiderivative.value(a, mc);
+			BigDecimal bVal = antiderivative.value(b, mc);
+			BigDecimal firstFactor = new BigDecimal(String.valueOf(event.getSecondParameter()), mc).divide(new BigDecimal(String.valueOf(event.getFirstParameter()), mc), mc);
+			BigDecimal secondFactor = BigDecimal.ONE.divide(BigDecimalMath.pow(new BigDecimal(String.valueOf(event.getFirstParameter()), mc), new BigDecimal(String.valueOf(event.getSecondParameter()), mc).subtract(BigDecimal.ONE, mc), mc), mc);
 			BigDecimal totalFactor = firstFactor.multiply(secondFactor, mc);
 			
 			BigDecimal res = bVal.subtract(aVal, mc).multiply(totalFactor, mc);
@@ -550,48 +573,14 @@ public class ACTMCPotatoErlang extends ACTMCPotato
 	}
 	
 	/**
-	 * Computes antiderivative of (e^(-(lambda + erlangRate) * time) * polynomial) using integration by parts
-	 * @param polynomial
-	 * @return antiderivative polynomial of (e^(-(lambda + erlangRate) * time) * polynomial)
+	 * Computes the Taylor series representation of e^(-((t/weibullRate)^k) - uniformizationRate * t)
+	 * @param wRate Weibull Rate/scale (first) parameter
+	 * @param wK Weibull shape (second) parameter
+	 * @return polynomial that is the Taylor series representation of e^(-((t/weibullRate)^k) - uniformizationRate * t)
 	 */
-	private Polynomial computeAntiderivative(Polynomial polynomial) {
-		//Unoptimized version
-		/*for (int n = 0; n < numStates ; ++n) {
-			Polynomial poly = new Polynomial(new ArrayList<BigDecimal>(polynomials[n].coeffs));
-			Polynomial antiderivative = antiderivatives[n];
-			
-			BigDecimal factor = new BigDecimal((-1/(uniformizationRate + event.getFirstParameter())), mc);
-			int polyDegree = poly.degree();
-			for (int i = 0; i <= polyDegree ; i++) {
-				poly.multiplyWithScalar(factor, mc);
-				antiderivative.add(poly, mc);	
-				
-				poly.multiplyWithScalar(BigDecimal.ONE.negate(), mc);
-				poly = poly.derivative(mc);
-			}
-		}*/
-		
-		Polynomial poly = new Polynomial(new ArrayList<BigDecimal>(polynomial.coeffs));
-		Polynomial antiderivative = new Polynomial(new ArrayList<BigDecimal>());
-		BigDecimal factor = BigDecimal.ONE.negate().divide
-				(new BigDecimal(String.valueOf(uniformizationRate), mc).add(new BigDecimal(String.valueOf(event.getFirstParameter()),mc), mc), mc);
-		
-		int polyDegree = poly.degree();
-		for (int e = 0 ; e <= polyDegree ; ++e) {
-			BigDecimal coeff = poly.coeffs.get(e);
-			antiderivative.coeffs.add(e, BigDecimal.ZERO);
-			for ( int i = e ; i >= 0 ; --i) {
-				coeff = coeff.multiply(factor, mc);
-				if (coeff.compareTo(BigDecimal.ZERO) >= 0) {
-					coeff = coeff.multiply(BigDecimal.ONE.negate(), mc);
-				}
-				antiderivative.coeffs.set(i, antiderivative.coeffs.get(i).add(coeff, mc));
-				
-				coeff = coeff.multiply(new BigDecimal(i, mc), mc);
-			}
-		}
-		
-		return antiderivative;
+	private Polynomial computeTaylorSeries(BigDecimal wRate, BigDecimal wK) {
+		//TODO MAJO - implement
+		return new Polynomial(new ArrayList<BigDecimal>());
 	}
 
 }
