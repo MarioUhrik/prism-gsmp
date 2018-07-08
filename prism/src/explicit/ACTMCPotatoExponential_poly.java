@@ -39,18 +39,18 @@ import prism.PrismException;
  * <br>
  * HOW IT'S DONE:
  * This class is implemented as Erlang distribution with k=1.
- * See {@link ACTMCPotatoErlang} for details.
+ * See {@link ACTMCPotatoErlang_poly} for details.
  */
-public class ACTMCPotatoExponential extends ACTMCPotatoErlang
+public class ACTMCPotatoExponential_poly extends ACTMCPotatoErlang_poly
 {
 	
 	/** {@link ACTMCPotato#ACTMCPotato(ACTMCSimple, GSMPEvent, ACTMCRewardsSimple, BitSet)} */
-	public ACTMCPotatoExponential(ACTMCSimple actmc, GSMPEvent event, ACTMCRewardsSimple rewards, BitSet target) throws PrismException {
+	public ACTMCPotatoExponential_poly(ACTMCSimple actmc, GSMPEvent event, ACTMCRewardsSimple rewards, BitSet target) throws PrismException {
 		super(actmc, event, rewards, target);
 		this.event.setSecondParameter(1);
 	}
 	
-	public ACTMCPotatoExponential(ACTMCPotato other) {
+	public ACTMCPotatoExponential_poly(ACTMCPotato other) {
 		super(other);
 		this.event.setSecondParameter(1);
 	}

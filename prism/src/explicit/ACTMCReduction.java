@@ -591,16 +591,16 @@ public class ACTMCReduction extends PrismComponent
 			
 			switch (event.getDistributionType().getEnum()) {
 			case DIRAC:
-				potatoData = new ACTMCPotatoDirac(actmc, event, rew, target);
+				potatoData = new ACTMCPotatoDirac_direct(actmc, event, rew, target);
 				break;
 			case ERLANG:
-				potatoData = new ACTMCPotatoErlang(actmc, event, rew, target);
+				potatoData = new ACTMCPotatoErlang_poly(actmc, event, rew, target);
 				break;
 			case EXPONENTIAL:
-				potatoData = new ACTMCPotatoExponential(actmc, event, rew, target);
+				potatoData = new ACTMCPotatoExponential_poly(actmc, event, rew, target);
 				break;
 			case UNIFORM:
-				potatoData = new ACTMCPotatoUniform(actmc, event, rew, target);
+				potatoData = new ACTMCPotatoUniform_poly(actmc, event, rew, target);
 				break;
 			case WEIBULL:
 				throw new UnsupportedOperationException("ACTMCReduction does not yet support the Weibull distribution!");

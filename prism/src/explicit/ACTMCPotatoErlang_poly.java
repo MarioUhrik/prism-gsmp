@@ -41,65 +41,41 @@ import prism.PrismException;
  * See parent class documentation for more basic info. {@link ACTMCPotato}
  * <br>
  * This extension implements high-precision precomputation
- * of uniformly-distributed potatoes using class BigDecimal.
+ * of Erlang-distributed potatoes using class BigDecimal.
  * <br>
  * HOW IT'S DONE:
- * Uniform distribution has two parameters - lower bound a, and upper bound b.
- * First, Dirac behavior of the time before a is evaluated using
- * {@link ACTMCPotatoDirac} with timeout a.
- * After that, the uniform behavior is evaluated without specific distribution parameters.
+ * Erlang distribution has two parameters, erlangRate and k.
+ * First, the data is evaluated without specific distribution parameters.
  * This yields a general polynomial P(t), where t is the firing time.
- * Then, let expolynomial F(t) = P(t) * e^(-uniformizationRate * t).
- * Now, computing Riemann integral from 0 to (b-a) of (F(t) * dt)
+ * Then, let F(t, erlangRate, k) = P(t) * t^(k-1) * e^(-t *(uniformizationRate + erlangRate)).
+ * However, erlangRate and k are already given as the event parameters,
+ * so F becomes expolynomial F(t).
+ * Now, computing Riemann integral from 0 to sufficiently-high n of (F(t) * dt)
  * yields the desired results.
  */
-public class ACTMCPotatoUniform extends ACTMCPotato
+public class ACTMCPotatoErlang_poly extends ACTMCPotato
 {
 	
-	/**
-	 * Internal Dirac distributed potato (with timeout = a).
-	 * It is used to precompute the deterministic behavior when a>0.
-	 */
-	private ACTMCPotatoDirac dirac;
-	/**
-	 * If this variable is true, firstParameter > 0 and Dirac precomputation will be done
-	 */
-	private boolean diracPrecompute = false;
-	
 	/** {@link ACTMCPotato#ACTMCPotato(ACTMCSimple, GSMPEvent, ACTMCRewardsSimple, BitSet)} */
-	public ACTMCPotatoUniform(ACTMCSimple actmc, GSMPEvent event, ACTMCRewardsSimple rewards, BitSet target) throws PrismException {
+	public ACTMCPotatoErlang_poly(ACTMCSimple actmc, GSMPEvent event, ACTMCRewardsSimple rewards, BitSet target) throws PrismException {
 		super(actmc, event, rewards, target);
-		if (event.getFirstParameter() > 0) {
-			diracPrecompute = true;
-			computePotatoDTMC();
-			this.dirac = new ACTMCPotatoDirac(this);
-		}
 	}
 	
-	public ACTMCPotatoUniform(ACTMCPotato other) {
+	public ACTMCPotatoErlang_poly(ACTMCPotato other) {
 		super(other);
-		if (event.getFirstParameter() > 0) {
-			diracPrecompute = true;
-			computePotatoDTMC();
-			this.dirac = new ACTMCPotatoDirac(this);
-		}
 	}
 	
 	@Override
 	public void setKappa(BigDecimal kappa) {
-		if (diracPrecompute && this.dirac != null) {
-			this.dirac.setKappa(kappa);
-		}
-		// ACTMCPotatoUniform usually requires better precision, dependent on the distribution parameters.
-		// This is because precise computation of expressions such as (e^(-lambda * b)
-		// and (b^(foxGlynn.right)) is performed.
-		int basePrecision = BigDecimalUtils.decimalDigits(kappa); // TODO MAJO - I think b*(kappa + lambda) is needed, but thats extremely high!
-		int uniformPrecision = basePrecision + (int)actmc.getMaxExitRate() +
-				(int)(Math.ceil(Math.log(basePrecision * actmc.getMaxExitRate() * (event.getSecondParameter() - event.getFirstParameter())))
-						*  (event.getSecondParameter() - event.getFirstParameter()));
-
-		BigDecimal uniformKappa = BigDecimalUtils.allowedError(uniformPrecision);
-		super.setKappa(uniformKappa);
+		// ACTMCPotatoErlang usually requires better precision, dependent on the distribution parameters.
+		// This is because precise computation of expressions such as (e^(-(erlangRate + CTMCRate) * [upper_bound])
+		// and ([upper_bound]^(foxGlynn.right + k)) is performed.
+		int basePrecision = BigDecimalUtils.decimalDigits(kappa); // TODO MAJO - I think [upper_bound]*(kappa + lambda) is needed, but thats extremely high!
+		int erlangPrecision = basePrecision + (int)actmc.getMaxExitRate() + (int)event.getSecondParameter() +
+				((int)Math.ceil(Math.log(((event.getFirstParameter() + uniformizationRate) * basePrecision * event.getSecondParameter()))));
+		
+		BigDecimal erlangKappa = BigDecimalUtils.allowedError(erlangPrecision);
+		super.setKappa(erlangKappa);
 	}
 
 	@Override
@@ -158,23 +134,14 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 			Polynomial[] antiderivatives = new Polynomial[numStates];
 			double[] tmpsoln = new double[numStates];
 
-			if (diracPrecompute) {
-				// Initialize the solution array by the solution array of the Dirac precomputation
-				// Also, initialize the polynomials.
-				for (int i = 0; i < numStates; i++) {
-					dirac.getMeanTimes();
-					soln[i] = dirac.meanTimesSoln.get(entrance).get(DTMCtoACTMC.get(i));
-					polynomials[i] = new Polynomial(new ArrayList<BigDecimal>());
-				}
-			} else {
-				// Initialize the solution array by assigning reward 1 to the entrance and 0 to all others.
-				// Also, initialize the polynomials.
-				for (int i = 0; i < numStates; i++) {
-					soln[i] = 0;
-					polynomials[i] = new Polynomial(new ArrayList<BigDecimal>());
-				}
-				soln[ACTMCtoDTMC.get(entrance)] = 1;
+			// Initialize the solution array by assigning reward 1 to the entrance and 0 to all others.
+			// Also, initialize the polynomials.
+			for (int i = 0; i < numStates; i++) {
+				soln[i] = 0;
+				polynomials[i] = new Polynomial(new ArrayList<BigDecimal>());
+				antiderivatives[i] = new Polynomial(new ArrayList<BigDecimal>());
 			}
+			soln[ACTMCtoDTMC.get(entrance)] = 1;
 
 			// do 0th element of summation (doesn't require any matrix powers), and initialize the coefficients
 			result = new double[numStates];
@@ -224,18 +191,21 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 				iters++;
 			}
 			
-			//Compute antiderivative of (e^(-lambda*time) * polynomial) using integration by parts
+			//Multiply the polynomial by t^(k-1)
+			for (int n = 0; n < numStates  ; ++n) {
+				for (int k = 0; k < (int)(event.getSecondParameter() - 1); ++k) {
+					polynomials[n].coeffs.add(0, BigDecimal.ZERO);
+				}
+			}
+			
+			//Compute antiderivative of (e^(-(lambda + erlangRate) * time) * polynomial) using integration by parts
 			for (int n = 0; n < numStates ; ++n) {
 				antiderivatives[n] = computeAntiderivative(polynomials[n]);
 			}
 			
 			//Compute the definite integral using the obtained antiderivative
 			for (int n = 0; n < numStates ; ++n) {
-				double diracAddition = 0;
-				if (diracPrecompute) { //Get the dirac-behavior increment (if there is one)
-					diracAddition = dirac.getMeanRewards().get(DTMCtoACTMC.get(n));
-				}
-				result[n] = evaluateAntiderivative(antiderivatives[n]).doubleValue() + diracAddition;
+				result[n] = evaluateAntiderivative(antiderivatives[n]).doubleValue();
 			}
 			
 			// We are done. 
@@ -288,23 +258,17 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 			double[] tmpsoln = new double[numStates];
 			
 			// Build the initial distribution for this potato entrance
-			if (diracPrecompute) {
-				for (int s = 0; s < numStates  ; ++s) {
-					dirac.getMeanDistributions();
-					initDist[s] = dirac.meanDistributionsBeforeEvent.get(entrance).get(DTMCtoACTMC.get(s));
-				}
-			} else {
-				for (int s = 0; s < numStates  ; ++s) {
-					initDist[s] = 0;
-				}
-				initDist[ACTMCtoDTMC.get(entrance)] = 1;
+			for (int s = 0; s < numStates  ; ++s) {
+				initDist[s] = 0;
 			}
+			initDist[ACTMCtoDTMC.get(entrance)] = 1;
 			soln = initDist;
 
 			// Initialize the arrays
 			for (int i = 0; i < numStates; i++) {
 				result[i] = 0.0;
 				polynomials[i] = new Polynomial(new ArrayList<BigDecimal>());
+				antiderivatives[i] = new Polynomial(new ArrayList<BigDecimal>());
 			}
 
 			// If necessary, compute the 0th element of summation
@@ -343,18 +307,21 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 				iters++;
 			}
 			
-			//Compute antiderivative of (e^(-lambda*time) * polynomial) using integration by parts
+			//Multiply the polynomial by t^(k-1)
+			for (int n = 0; n < numStates  ; ++n) {
+				for (int k = 0; k < (int)(event.getSecondParameter() - 1); ++k) {
+					polynomials[n].coeffs.add(0, BigDecimal.ZERO);
+				}
+			}
+			
+			//Compute antiderivative of (e^(-(lambda + erlangRate) * time) * polynomial) using integration by parts
 			for (int n = 0; n < numStates ; ++n) {
 				antiderivatives[n] = computeAntiderivative(polynomials[n]);
 			}
 			
 			//Compute the definite integral using the obtained antiderivative
 			for (int n = 0; n < numStates ; ++n) {
-				double diracAddition = 0;
-				if (diracPrecompute) { //Get the dirac-behavior increment (if there is one)
-					diracAddition = dirac.getMeanRewards().get(DTMCtoACTMC.get(n));
-				}
-				result[n] = evaluateAntiderivative(antiderivatives[n]).doubleValue() + diracAddition;
+				result[n] = evaluateAntiderivative(antiderivatives[n]).doubleValue();
 			}
 			
 			
@@ -438,28 +405,19 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 		Polynomial[] polynomials = new Polynomial[numStates];
 		Polynomial[] antiderivatives = new Polynomial[numStates];
 		double[] tmpsoln = new double[numStates];
-		
-		if (diracPrecompute) {
-			// Initialize the solution array by the solution array of the Dirac precomputation
-			// Also, initialize the polynomials.
-			for (int i = 0; i < numStates; i++) {
-				dirac.getMeanRewards();
-				soln[i] = dirac.meanRewardsSoln.get(DTMCtoACTMC.get(i));
-				polynomials[i] = new Polynomial(new ArrayList<BigDecimal>());
+
+		// Initialize the solution array by assigning rewards to the potato states
+		// Also initialize the polynomials
+		for (int s = 0; s < numStates; s++) {
+			int index = DTMCtoACTMC.get(s);
+			if (potato.contains(index)) {
+				// NOTE: transition rewards have already been merged into state rewards
+				soln[s] = rewards.getStateReward(index);
+			} else {
+				soln[s] = 0;
 			}
-		} else {
-			// Initialize the solution array by assigning rewards to the potato states
-			// Also initialize the polynomials
-			for (int i = 0; i < numStates; i++) {
-				int index = DTMCtoACTMC.get(i);
-				if (potato.contains(index)) {
-					// NOTE: transition rewards have already been merged into state rewards
-					soln[i] = rewards.getStateReward(index);
-				} else {
-					soln[i] = 0;
-				}
-				polynomials[i] = new Polynomial(new ArrayList<BigDecimal>());
-			}
+			polynomials[s] = new Polynomial(new ArrayList<BigDecimal>());
+			antiderivatives[s] = new Polynomial(new ArrayList<BigDecimal>());
 		}
 
 		// do 0th element of summation (doesn't require any matrix powers), and initialize the coefficients
@@ -510,18 +468,21 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 			iters++;
 		}
 		
-		//Compute antiderivative of (e^(-lambda*time) * polynomial) using integration by parts
+		//Multiply the polynomial by t^(k-1)
+		for (int n = 0; n < numStates  ; ++n) {
+			for (int k = 0; k < (int)(event.getSecondParameter() - 1); ++k) {
+				polynomials[n].coeffs.add(0, BigDecimal.ZERO);
+			}
+		}
+		
+		//Compute antiderivative of (e^(-(lambda + erlangRate) * time) * polynomial) using integration by parts
 		for (int n = 0; n < numStates ; ++n) {
 			antiderivatives[n] = computeAntiderivative(polynomials[n]);
 		}
 		
 		//Compute the definite integral using the obtained antiderivative
 		for (int n = 0; n < numStates ; ++n) {
-			double diracAddition = 0;
-			if (diracPrecompute) { //Get the dirac-behavior increment (if there is one)
-				diracAddition = dirac.getMeanRewards().get(DTMCtoACTMC.get(n));
-			}
-			result[n] = evaluateAntiderivative(antiderivatives[n]).doubleValue() + diracAddition;
+			result[n] = evaluateAntiderivative(antiderivatives[n]).doubleValue();
 		}
 		
 		// Store the rewards just before the event behavior using the original indexing.
@@ -533,7 +494,7 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 		//event behavior is applied.
 		applyEventRewards(result, false);
 		
-		// Store the solution vector using the original indexing.
+		// Store the solution vector  using the original indexing.
 		for (int ps : potato) {
 			double sol = soln[ACTMCtoDTMC.get(ps)];
 			if (sol != 0.0) {
@@ -550,9 +511,9 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 	}
 	
 	/**
-	 * Computes antiderivative of (e^(-lambda*time) * polynomial) using integration by parts
+	 * Computes antiderivative of (e^(-(lambda + erlangRate) * time) * polynomial) using integration by parts
 	 * @param polynomial
-	 * @return antiderivative polynomial of (e^(-lambda*time) * polynomial)
+	 * @return antiderivative polynomial of (e^(-(lambda + erlangRate) * time) * polynomial)
 	 */
 	private Polynomial computeAntiderivative(Polynomial polynomial) {
 		//Unoptimized version
@@ -560,7 +521,7 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 			Polynomial poly = new Polynomial(new ArrayList<BigDecimal>(polynomials[n].coeffs));
 			Polynomial antiderivative = antiderivatives[n];
 			
-			BigDecimal factor = new BigDecimal(-1/uniformizationRate, mc);
+			BigDecimal factor = new BigDecimal((-1/(uniformizationRate + event.getFirstParameter())), mc);
 			int polyDegree = poly.degree();
 			for (int i = 0; i <= polyDegree ; i++) {
 				poly.multiplyWithScalar(factor, mc);
@@ -573,7 +534,8 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 		
 		Polynomial poly = new Polynomial(new ArrayList<BigDecimal>(polynomial.coeffs));
 		Polynomial antiderivative = new Polynomial(new ArrayList<BigDecimal>());
-		BigDecimal factor = BigDecimal.ONE.negate().divide(new BigDecimal(String.valueOf(uniformizationRate), mc), mc);
+		BigDecimal factor = BigDecimal.ONE.negate().divide
+				(new BigDecimal(String.valueOf(uniformizationRate), mc).add(new BigDecimal(String.valueOf(event.getFirstParameter()),mc), mc), mc);
 		
 		int polyDegree = poly.degree();
 		for (int e = 0 ; e <= polyDegree ; ++e) {
@@ -602,14 +564,17 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 	 */
 	private BigDecimal evaluateAntiderivative(Polynomial antiderivative) {
 		BigDecimal a = BigDecimal.ZERO;
-		BigDecimal b = new BigDecimal(String.valueOf(event.getSecondParameter()), mc).subtract(new BigDecimal(String.valueOf(event.getFirstParameter())), mc);
-		BigDecimal aFactor = BigDecimalMath.exp(new BigDecimal(uniformizationRate, mc).negate().multiply(a, mc), mc);
-		BigDecimal bFactor = BigDecimalMath.exp(new BigDecimal(uniformizationRate, mc).negate().multiply(b, mc), mc);
+		BigDecimal b = new BigDecimal(BigDecimalUtils.decimalDigits(kappa) * 2.5, mc); // sufficiently high upper bound (supposed to be infinity
+		BigDecimal lambdas = new BigDecimal(String.valueOf(uniformizationRate), mc).add(new BigDecimal(String.valueOf(event.getFirstParameter()), mc), mc);
+		BigDecimal aFactor = BigDecimalMath.exp(lambdas.negate().multiply(a, mc), mc);
+		BigDecimal bFactor = BigDecimalMath.exp(lambdas.negate().multiply(b, mc), mc);
 		BigDecimal aVal = antiderivative.value(a, mc).multiply(aFactor, mc);
 		BigDecimal bVal = antiderivative.value(b, mc).multiply(bFactor, mc);
-		BigDecimal prob = BigDecimal.ONE.divide(b.subtract(a, mc), mc);
+		BigDecimal firstFactor = BigDecimal.ONE.divide(BigDecimalMath.factorial((int)(event.getSecondParameter() - 1)), mc);
+		BigDecimal secondFactor = BigDecimalMath.pow(new BigDecimal(String.valueOf(event.getFirstParameter()), mc), new BigDecimal(String.valueOf(event.getSecondParameter()), mc), mc);
+		BigDecimal totalFactor = firstFactor.multiply(secondFactor, mc);
 		
-		BigDecimal res = prob.multiply(bVal.subtract(aVal, mc), mc);
+		BigDecimal res = bVal.subtract(aVal, mc).multiply(totalFactor, mc);
 		return res;
 	}
 

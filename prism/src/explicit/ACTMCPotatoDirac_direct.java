@@ -47,14 +47,14 @@ import prism.PrismException;
  * {@link CTMCModelChecker#computeTransientProbs(CTMC, double, double[])} and
  * {@link CTMCModelChecker#computeCumulativeRewards(CTMC, explicit.rewards.MCRewards, double)}.
  */
-public class ACTMCPotatoDirac extends ACTMCPotato
+public class ACTMCPotatoDirac_direct extends ACTMCPotato
 {
 	/** {@link ACTMCPotato#ACTMCPotato(ACTMCSimple, GSMPEvent, ACTMCRewardsSimple, BitSet)} */
-	public ACTMCPotatoDirac(ACTMCSimple actmc, GSMPEvent event, ACTMCRewardsSimple rewards, BitSet target) throws PrismException {
+	public ACTMCPotatoDirac_direct(ACTMCSimple actmc, GSMPEvent event, ACTMCRewardsSimple rewards, BitSet target) throws PrismException {
 		super(actmc, event, rewards, target);
 	}
 	
-	public ACTMCPotatoDirac(ACTMCPotato other) {
+	public ACTMCPotatoDirac_direct(ACTMCPotato other) {
 		super(other);
 	}
 
