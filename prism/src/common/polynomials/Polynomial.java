@@ -154,8 +154,16 @@ public class Polynomial {
 	 * @return antiderivative of this
 	 */
 	public Polynomial antiderivative(MathContext mc){
-		//TODO MAJO - implement
-		return new Polynomial(this.coeffs);
+		List<BigDecimal> antiderivCoeffs = new ArrayList<BigDecimal>();
+		
+		antiderivCoeffs.add(BigDecimal.ZERO);
+		for (int i = 0; i < coeffs.size() ; ++i) {
+			antiderivCoeffs.add(coeffs.get(i).divide(new BigDecimal(i+1, mc), mc));
+		}
+		
+		Polynomial antiderivative = new Polynomial(antiderivCoeffs);
+		antiderivative.derivative = this;
+		return antiderivative;
 	}
 	
 	/**

@@ -47,16 +47,17 @@ import prism.PrismException;
  * Weibull distribution has two parameters, weibullRate and k.
  * First, the data is evaluated without specific distribution parameters.
  * This yields a general polynomial P(t), where t is the firing time.
- * Then, let F(t, weibullRate, k) = P(t) * t^(k-1) * e^(-((t/weibullRate)^k) - uniformizationRate * t).
+ * Then, let F(t, weibullRate, k) = P(t) * t^(k-1) * e^(-((t/weibullRate)^k)) * e^(- uniformizationRate * t).
  * However, weibullRate and k are already given as the event parameters,
  * so F becomes expolynomial F(t).
  * Computing Riemann integral from 0 to sufficiently-high n of (F(t) * dt) would yield the desired results,
  * but finding the antiderivative of F(t) is exceedingly difficult, so another approach is needed.
- * Instead, we approximate e^(-((t/weibullRate)^k) - uniformizationRate * t) with Taylor series
- * to obtain polynomial T(t).
- * Instead of using F(t), we use polynomial F'(t) = P(t) * t^(k-1) * T(t).
+ * Instead, we approximate e^(-((t/weibullRate)^k)) and e^(- uniformizationRate * t) with Taylor series
+ * to obtain polynomials T1(t), and T2(t).
+ * Instead of using F(t), we use polynomial F'(t) = P(t) * t^(k-1) * T1(t) * T2(t).
  * Lastly, compute Riemann integral from 0 to sufficiently-high n of (F'(t) * dt).
  */
+@Deprecated // DOES NOT WORK YET!!! // TODO MAJO - fix
 public class ACTMCPotatoWeibull_polyTailor extends ACTMCPotato
 {
 	
@@ -126,10 +127,10 @@ public class ACTMCPotatoWeibull_polyTailor extends ACTMCPotato
 			weights_BD[i - left] = weights_BD[i - left].divide(totalWeight_BD.multiply(new BigDecimal(String.valueOf(uniformizationRate), mc), mc), mc);
 		}
 		
-		// Prepare the Taylor series representation of e^(-((t/weibullRate)^k) - uniformizationRate * t)
-		Polynomial taylor = computeTaylorSeries(
-				new BigDecimal(String.valueOf(event.getFirstParameter()), mc),
-				new BigDecimal(String.valueOf(event.getSecondParameter()), mc));
+		// Prepare the Taylor series representation of e^(-((t/weibullRate)^k))
+		Polynomial taylorWeibull = computeTaylorSeriesWeibull(event.getFirstParameter(), event.getSecondParameter(), right);
+		// Prepare the Taylor series representation of e^(- uniformizationRate * t)
+		Polynomial taylorPoisson = computeTaylorSeriesPoisson(right);
 		
 		for (int entrance : entrances) {
 			
@@ -200,7 +201,8 @@ public class ACTMCPotatoWeibull_polyTailor extends ACTMCPotato
 			
 			//Factor the Taylor series representation into the polynomial
 			for (int n = 0; n < numStates ; ++n) {
-				polynomials[n].multiply(taylor, mc);
+				polynomials[n].multiply(taylorWeibull, mc);				
+				polynomials[n].multiply(taylorPoisson, mc);
 			}
 			
 			//Multiply the polynomial by t^(k-1)
@@ -268,10 +270,10 @@ public class ACTMCPotatoWeibull_polyTailor extends ACTMCPotato
 			weights_BD[i - left] = weights_BD[i - left].divide(totalWeight_BD, mc);
 		}
 		
-		// Prepare the Taylor series representation of e^(-((t/weibullRate)^k) - uniformizationRate * t)
-		Polynomial taylor = computeTaylorSeries(
-				new BigDecimal(String.valueOf(event.getFirstParameter()), mc),
-				new BigDecimal(String.valueOf(event.getSecondParameter()), mc));
+		// Prepare the Taylor series representation of e^(-((t/weibullRate)^k))
+		Polynomial taylorWeibull = computeTaylorSeriesWeibull(event.getFirstParameter(), event.getSecondParameter(), right);
+		// Prepare the Taylor series representation of e^(- uniformizationRate * t)
+		Polynomial taylorPoisson = computeTaylorSeriesPoisson(right);
 		
 		for (int entrance : entrances) {
 			
@@ -336,7 +338,8 @@ public class ACTMCPotatoWeibull_polyTailor extends ACTMCPotato
 			
 			//Factor the Taylor series representation into the polynomial
 			for (int n = 0; n < numStates ; ++n) {
-				polynomials[n].multiply(taylor, mc);
+				polynomials[n].multiply(taylorWeibull, mc);
+				polynomials[n].multiply(taylorPoisson, mc);
 			}
 			
 			//Multiply the polynomial by t^(k-1)
@@ -440,10 +443,10 @@ public class ACTMCPotatoWeibull_polyTailor extends ACTMCPotato
 			weights_BD[i - left] = weights_BD[i - left].divide(totalWeight_BD.multiply(new BigDecimal(String.valueOf(uniformizationRate), mc), mc), mc);
 		}
 		
-		// Prepare the Taylor series representation of e^(-((t/weibullRate)^k) - uniformizationRate * t)
-		Polynomial taylor = computeTaylorSeries(
-				new BigDecimal(String.valueOf(event.getFirstParameter()), mc),
-				new BigDecimal(String.valueOf(event.getSecondParameter()), mc));
+		// Prepare the Taylor series representation of e^(-((t/weibullRate)^k))
+		Polynomial taylorWeibull = computeTaylorSeriesWeibull(event.getFirstParameter(), event.getSecondParameter(), right);
+		// Prepare the Taylor series representation of e^(- uniformizationRate * t)
+		Polynomial taylorPoisson = computeTaylorSeriesPoisson(right);
 		
 		// Prepare solution arrays
 		double[] soln = new double[numStates];
@@ -517,7 +520,8 @@ public class ACTMCPotatoWeibull_polyTailor extends ACTMCPotato
 		
 		//Factor the Taylor series representation into the polynomial
 		for (int n = 0; n < numStates ; ++n) {
-			polynomials[n].multiply(taylor, mc);
+			polynomials[n].multiply(taylorWeibull, mc);
+			polynomials[n].multiply(taylorPoisson, mc);
 		}
 		
 		//Multiply the polynomial by t^(k-1)
@@ -573,14 +577,61 @@ public class ACTMCPotatoWeibull_polyTailor extends ACTMCPotato
 	}
 	
 	/**
-	 * Computes the Taylor series representation of e^(-((t/weibullRate)^k) - uniformizationRate * t)
+	 * Computes the Taylor series representation of e^(-((t/weibullRate)^k)) where t is unknown
 	 * @param wRate Weibull Rate/scale (first) parameter
 	 * @param wK Weibull shape (second) parameter
-	 * @return polynomial that is the Taylor series representation of e^(-((t/weibullRate)^k) - uniformizationRate * t)
+	 * @param i integer >1 of how many elements of the series to include
+	 * @return polynomial that is the Taylor series representation of e^(-((t/weibullRate)^k))
 	 */
-	private Polynomial computeTaylorSeries(BigDecimal wRate, BigDecimal wK) {
-		//TODO MAJO - implement
-		return new Polynomial(new ArrayList<BigDecimal>());
+	private Polynomial computeTaylorSeriesWeibull(double wRate, double wK, int i) {
+		BigDecimal rateBD = new BigDecimal(String.valueOf(wRate), mc);
+		BigDecimal kBD = new BigDecimal(String.valueOf(wK), mc);
+		int k = (int)wK;
+		
+		BigDecimal powerElem = BigDecimalMath.pow(BigDecimal.ONE.divide(rateBD, mc), kBD, mc).negate();
+		Polynomial taylor = new Polynomial(new ArrayList<BigDecimal>());
+		for (int n = 0; n <= i*k; ++n) {
+			taylor.coeffs.add(BigDecimal.ZERO);
+		}
+		
+		BigDecimal revFact = BigDecimal.ONE; 
+		BigDecimal power = BigDecimal.ONE;
+		BigDecimal augment = BigDecimal.ONE;
+		for (int n = 0; n <= i; ++n) {
+			BigDecimal tmp = taylor.coeffs.get(n*k).add(augment, mc);
+			taylor.coeffs.set(n*k, tmp);
+			
+			revFact = revFact.divide(new BigDecimal(n+1, mc), mc);
+			power = power.multiply(powerElem, mc);
+			augment = revFact.multiply(power, mc);
+		}
+		
+		return taylor;
+	}
+	
+	/**
+	 * Computes the Taylor series representation of e^(- uniformizationRate * t) where t is unknown
+	 * @param wRate Weibull Rate/scale (first) parameter
+	 * @param wK Weibull shape (second) parameter
+	 * @param i integer >1 of how many elements of the series to include
+	 * @return polynomial that is the Taylor series representation of e^(- uniformizationRate * t)
+	 */
+	private Polynomial computeTaylorSeriesPoisson(int i) {
+		BigDecimal powerElem = new BigDecimal(String.valueOf(uniformizationRate), mc).negate();
+		Polynomial taylor = new Polynomial(new ArrayList<BigDecimal>());
+		
+		BigDecimal revFact = BigDecimal.ONE; 
+		BigDecimal power = BigDecimal.ONE;
+		BigDecimal augment = BigDecimal.ONE;
+		for (int n = 0; n <= i; ++n) {
+			taylor.coeffs.add(augment);
+			
+			revFact = revFact.divide(new BigDecimal(n+1, mc), mc);
+			power = power.multiply(powerElem, mc);
+			augment = revFact.multiply(power, mc);
+		}
+		
+		return taylor;
 	}
 
 }
