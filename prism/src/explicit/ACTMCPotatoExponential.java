@@ -26,11 +26,7 @@
 
 package explicit;
 
-import java.math.BigDecimal;
 import java.util.BitSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.Vector;
 
 import explicit.rewards.ACTMCRewardsSimple;
 import prism.PrismException;
@@ -45,106 +41,18 @@ import prism.PrismException;
  * This class is implemented as Erlang distribution with k=1.
  * See {@link ACTMCPotatoErlang} for details.
  */
-public class ACTMCPotatoExponential extends ACTMCPotato
+public class ACTMCPotatoExponential extends ACTMCPotatoErlang
 {
-	
-	/**
-	 * Internal Erlang distributed potato (with rate lambda and k=1).
-	 * It is actually used to do all the computations.
-	 * I.e. ACTMCPotatoExponential is just disguised ACTMCPotatoErlang with k=1.
-	 */
-	private ACTMCPotatoErlang erlang;
 	
 	/** {@link ACTMCPotato#ACTMCPotato(ACTMCSimple, GSMPEvent, ACTMCRewardsSimple, BitSet)} */
 	public ACTMCPotatoExponential(ACTMCSimple actmc, GSMPEvent event, ACTMCRewardsSimple rewards, BitSet target) throws PrismException {
 		super(actmc, event, rewards, target);
-		this.erlang = new ACTMCPotatoErlang(this);
-		erlang.event.setSecondParameter(1);
+		this.event.setSecondParameter(1);
 	}
 	
 	public ACTMCPotatoExponential(ACTMCPotato other) {
 		super(other);
-		this.erlang = new ACTMCPotatoErlang(this);
-		erlang.event.setSecondParameter(1);
+		this.event.setSecondParameter(1);
 	}
 	
-	@Override
-	public void setKappa(BigDecimal kappa) {
-		erlang.setKappa(kappa);
-	}
-	
-	@Override
-	public Set<Integer> getPotato() {
-		return erlang.getPotato();
-	}
-	
-	@Override
-	public Set<Integer> getEntrances() {
-		return erlang.getEntrances();
-	}
-	
-	@Override
-	public Set<Integer> getSuccessors() {
-		return erlang.getSuccessors();
-	}
-	
-	@Override
-	public DTMCSimple getPotatoDTMC() {
-		return erlang.getPotatoDTMC();
-	}
-	
-	@Override
-	public BigDecimal getKappa() {
-		return erlang.getKappa();
-	}
-	
-	@Override
-	public Map<Integer, Integer> getMapACTMCtoDTMC() {
-		return erlang.getMapACTMCtoDTMC();
-	}
-	
-	@Override
-	public Vector<Integer> getMapDTMCtoACTMC() {
-		return erlang.getMapDTMCtoACTMC();
-	}
-	
-	@Override
-	public Map<Integer, Distribution> getMeanTimes() throws PrismException {
-		return erlang.getMeanTimes();
-	}
-	
-	@Override
-	public Map<Integer, Distribution> getMeanDistributions() throws PrismException {
-		return erlang.getMeanDistributions();
-	}
-	
-	@Override
-	public Distribution getMeanRewards() throws PrismException {
-		return erlang.getMeanRewards();
-	}
-	
-	@Override
-	protected void computeFoxGlynn() throws PrismException {
-		erlang.computeFoxGlynn();
-	}
-
-	@Override
-	protected void computeMeanTimes() throws PrismException {
-		erlang.computeMeanTimes();
-	}
-	
-	@Override
-	protected void computeMeanDistributions() throws PrismException {
-		erlang.computeMeanDistributions();
-	}
-	
-	@Override
-	protected void computeMeanRewards() throws PrismException {
-		erlang.computeMeanRewards();
-	}
-	
-	@Override
-	public double[] applyEventRewards(double[] rewardsArray, boolean originalIndexing) throws PrismException {
-		return erlang.applyEventRewards(rewardsArray, originalIndexing);
-	}
 }
