@@ -219,17 +219,7 @@ public class ACTMCPotatoWeibull_polyTailor extends ACTMCPotato
 			
 			//Compute the definite integral using the obtained antiderivative
 			for (int n = 0; n < numStates ; ++n) {
-				Polynomial antiderivative = antiderivatives[n];
-				BigDecimal a = BigDecimal.ZERO;
-				BigDecimal b = new BigDecimal(BigDecimalUtils.decimalDigits(kappa) * 2.5, mc); // sufficiently high upper bound (supposed to be infinity
-				BigDecimal aVal = antiderivative.value(a, mc);
-				BigDecimal bVal = antiderivative.value(b, mc);
-				BigDecimal firstFactor = new BigDecimal(String.valueOf(event.getSecondParameter()), mc).divide(new BigDecimal(String.valueOf(event.getFirstParameter()), mc), mc);
-				BigDecimal secondFactor = BigDecimal.ONE.divide(BigDecimalMath.pow(new BigDecimal(String.valueOf(event.getFirstParameter()), mc), new BigDecimal(String.valueOf(event.getSecondParameter()), mc).subtract(BigDecimal.ONE, mc), mc), mc);
-				BigDecimal totalFactor = firstFactor.multiply(secondFactor, mc);
-				
-				BigDecimal res = bVal.subtract(aVal, mc).multiply(totalFactor, mc);
-				result[n] = res.doubleValue();
+				result[n] = evaluateAntiderivative(antiderivatives[n]).doubleValue();
 			}
 			
 			// We are done. 
@@ -356,17 +346,7 @@ public class ACTMCPotatoWeibull_polyTailor extends ACTMCPotato
 			
 			//Compute the definite integral using the obtained antiderivative
 			for (int n = 0; n < numStates ; ++n) {
-				Polynomial antiderivative = antiderivatives[n];
-				BigDecimal a = BigDecimal.ZERO;
-				BigDecimal b = new BigDecimal(BigDecimalUtils.decimalDigits(kappa) * 2.5, mc); // sufficiently high upper bound (supposed to be infinity
-				BigDecimal aVal = antiderivative.value(a, mc);
-				BigDecimal bVal = antiderivative.value(b, mc);
-				BigDecimal firstFactor = new BigDecimal(String.valueOf(event.getSecondParameter()), mc).divide(new BigDecimal(String.valueOf(event.getFirstParameter()), mc), mc);
-				BigDecimal secondFactor = BigDecimal.ONE.divide(BigDecimalMath.pow(new BigDecimal(String.valueOf(event.getFirstParameter()), mc), new BigDecimal(String.valueOf(event.getSecondParameter()), mc).subtract(BigDecimal.ONE, mc), mc), mc);
-				BigDecimal totalFactor = firstFactor.multiply(secondFactor, mc);
-				
-				BigDecimal res = bVal.subtract(aVal, mc).multiply(totalFactor, mc);
-				result[n] = res.doubleValue();
+				result[n] = evaluateAntiderivative(antiderivatives[n]).doubleValue();
 			}
 			
 			
@@ -538,17 +518,7 @@ public class ACTMCPotatoWeibull_polyTailor extends ACTMCPotato
 		
 		//Compute the definite integral using the obtained antiderivative
 		for (int n = 0; n < numStates ; ++n) {
-			Polynomial antiderivative = antiderivatives[n];
-			BigDecimal a = BigDecimal.ZERO;
-			BigDecimal b = new BigDecimal(BigDecimalUtils.decimalDigits(kappa) * 2.5, mc); // sufficiently high upper bound (supposed to be infinity
-			BigDecimal aVal = antiderivative.value(a, mc);
-			BigDecimal bVal = antiderivative.value(b, mc);
-			BigDecimal firstFactor = new BigDecimal(String.valueOf(event.getSecondParameter()), mc).divide(new BigDecimal(String.valueOf(event.getFirstParameter()), mc), mc);
-			BigDecimal secondFactor = BigDecimal.ONE.divide(BigDecimalMath.pow(new BigDecimal(String.valueOf(event.getFirstParameter()), mc), new BigDecimal(String.valueOf(event.getSecondParameter()), mc).subtract(BigDecimal.ONE, mc), mc), mc);
-			BigDecimal totalFactor = firstFactor.multiply(secondFactor, mc);
-			
-			BigDecimal res = bVal.subtract(aVal, mc).multiply(totalFactor, mc);
-			result[n] = res.doubleValue();
+			result[n] = evaluateAntiderivative(antiderivatives[n]).doubleValue();
 		}
 		
 		// Store the rewards just before the event behavior using the original indexing.
@@ -632,6 +602,26 @@ public class ACTMCPotatoWeibull_polyTailor extends ACTMCPotato
 		}
 		
 		return taylor;
+	}
+	
+	/**
+	 * Evaluates the given antiderivative to compute the definite (Riemann) integral.
+	 * <br>
+	 * In other words, this actually does the F(b)-F(a) part of Riemann integral required for this specific distribution.
+	 * @param antiderivative Polynomial obtained from {@code computeAntiderivative()}
+	 * @return result BigDecimal number, actually the mean time,distribution or reward for given entrance and state
+	 */
+	private BigDecimal evaluateAntiderivative(Polynomial antiderivative) {
+		BigDecimal a = BigDecimal.ZERO;
+		BigDecimal b = new BigDecimal(BigDecimalUtils.decimalDigits(kappa) * 2.5, mc); // sufficiently high upper bound (supposed to be infinity
+		BigDecimal aVal = antiderivative.value(a, mc);
+		BigDecimal bVal = antiderivative.value(b, mc);
+		BigDecimal firstFactor = new BigDecimal(String.valueOf(event.getSecondParameter()), mc).divide(new BigDecimal(String.valueOf(event.getFirstParameter()), mc), mc);
+		BigDecimal secondFactor = BigDecimal.ONE.divide(BigDecimalMath.pow(new BigDecimal(String.valueOf(event.getFirstParameter()), mc), new BigDecimal(String.valueOf(event.getSecondParameter()), mc).subtract(BigDecimal.ONE, mc), mc), mc);
+		BigDecimal totalFactor = firstFactor.multiply(secondFactor, mc);
+		
+		BigDecimal res = bVal.subtract(aVal, mc).multiply(totalFactor, mc);
+		return res;
 	}
 
 }

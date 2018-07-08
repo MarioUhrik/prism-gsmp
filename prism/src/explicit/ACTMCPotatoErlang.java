@@ -205,20 +205,7 @@ public class ACTMCPotatoErlang extends ACTMCPotato
 			
 			//Compute the definite integral using the obtained antiderivative
 			for (int n = 0; n < numStates ; ++n) {
-				Polynomial antiderivative = antiderivatives[n];
-				BigDecimal a = BigDecimal.ZERO;
-				BigDecimal b = new BigDecimal(BigDecimalUtils.decimalDigits(kappa) * 2.5, mc); // sufficiently high upper bound (supposed to be infinity
-				BigDecimal lambdas = new BigDecimal(String.valueOf(uniformizationRate), mc).add(new BigDecimal(String.valueOf(event.getFirstParameter()), mc), mc);
-				BigDecimal aFactor = BigDecimalMath.exp(lambdas.negate().multiply(a, mc), mc);
-				BigDecimal bFactor = BigDecimalMath.exp(lambdas.negate().multiply(b, mc), mc);
-				BigDecimal aVal = antiderivative.value(a, mc).multiply(aFactor, mc);
-				BigDecimal bVal = antiderivative.value(b, mc).multiply(bFactor, mc);
-				BigDecimal firstFactor = BigDecimal.ONE.divide(BigDecimalMath.factorial((int)(event.getSecondParameter() - 1)), mc);
-				BigDecimal secondFactor = BigDecimalMath.pow(new BigDecimal(String.valueOf(event.getFirstParameter()), mc), new BigDecimal(String.valueOf(event.getSecondParameter()), mc), mc);
-				BigDecimal totalFactor = firstFactor.multiply(secondFactor, mc);
-				
-				BigDecimal res = bVal.subtract(aVal, mc).multiply(totalFactor, mc);
-				result[n] = res.doubleValue();
+				result[n] = evaluateAntiderivative(antiderivatives[n]).doubleValue();
 			}
 			
 			// We are done. 
@@ -334,20 +321,7 @@ public class ACTMCPotatoErlang extends ACTMCPotato
 			
 			//Compute the definite integral using the obtained antiderivative
 			for (int n = 0; n < numStates ; ++n) {
-				Polynomial antiderivative = antiderivatives[n];
-				BigDecimal a = BigDecimal.ZERO;
-				BigDecimal b = new BigDecimal(BigDecimalUtils.decimalDigits(kappa) * 2.5, mc); // sufficiently high upper bound (supposed to be infinity
-				BigDecimal lambdas = new BigDecimal(String.valueOf(uniformizationRate), mc).add(new BigDecimal(String.valueOf(event.getFirstParameter()), mc), mc);
-				BigDecimal aFactor = BigDecimalMath.exp(lambdas.negate().multiply(a, mc), mc);
-				BigDecimal bFactor = BigDecimalMath.exp(lambdas.negate().multiply(b, mc), mc);
-				BigDecimal aVal = antiderivative.value(a, mc).multiply(aFactor, mc);
-				BigDecimal bVal = antiderivative.value(b, mc).multiply(bFactor, mc);
-				BigDecimal firstFactor = BigDecimal.ONE.divide(BigDecimalMath.factorial((int)(event.getSecondParameter() - 1)), mc);
-				BigDecimal secondFactor = BigDecimalMath.pow(new BigDecimal(String.valueOf(event.getFirstParameter()), mc), new BigDecimal(String.valueOf(event.getSecondParameter()), mc), mc);
-				BigDecimal totalFactor = firstFactor.multiply(secondFactor, mc);
-				
-				BigDecimal res = bVal.subtract(aVal, mc).multiply(totalFactor, mc);
-				result[n] = res.doubleValue();
+				result[n] = evaluateAntiderivative(antiderivatives[n]).doubleValue();
 			}
 			
 			
@@ -508,20 +482,7 @@ public class ACTMCPotatoErlang extends ACTMCPotato
 		
 		//Compute the definite integral using the obtained antiderivative
 		for (int n = 0; n < numStates ; ++n) {
-			Polynomial antiderivative = antiderivatives[n];
-			BigDecimal a = BigDecimal.ZERO;
-			BigDecimal b = new BigDecimal(BigDecimalUtils.decimalDigits(kappa) * 2.5, mc); // sufficiently high upper bound (supposed to be infinity
-			BigDecimal lambdas = new BigDecimal(String.valueOf(uniformizationRate), mc).add(new BigDecimal(String.valueOf(event.getFirstParameter()), mc), mc);
-			BigDecimal aFactor = BigDecimalMath.exp(lambdas.negate().multiply(a, mc), mc);
-			BigDecimal bFactor = BigDecimalMath.exp(lambdas.negate().multiply(b, mc), mc);
-			BigDecimal aVal = antiderivative.value(a, mc).multiply(aFactor, mc);
-			BigDecimal bVal = antiderivative.value(b, mc).multiply(bFactor, mc);
-			BigDecimal firstFactor = BigDecimal.ONE.divide(BigDecimalMath.factorial((int)(event.getSecondParameter() - 1)), mc);
-			BigDecimal secondFactor = BigDecimalMath.pow(new BigDecimal(String.valueOf(event.getFirstParameter()), mc), new BigDecimal(String.valueOf(event.getSecondParameter()), mc), mc);
-			BigDecimal totalFactor = firstFactor.multiply(secondFactor, mc);
-			
-			BigDecimal res = bVal.subtract(aVal, mc).multiply(totalFactor, mc);
-			result[n] = res.doubleValue();
+			result[n] = evaluateAntiderivative(antiderivatives[n]).doubleValue();
 		}
 		
 		// Store the rewards just before the event behavior using the original indexing.
@@ -592,6 +553,29 @@ public class ACTMCPotatoErlang extends ACTMCPotato
 		}
 		
 		return antiderivative;
+	}
+	
+	/**
+	 * Evaluates the given antiderivative to compute the definite (Riemann) integral.
+	 * <br>
+	 * In other words, this actually does the F(b)-F(a) part of Riemann integral required for this specific distribution.
+	 * @param antiderivative Polynomial obtained from {@code computeAntiderivative()}
+	 * @return result BigDecimal number, actually the mean time,distribution or reward for given entrance and state
+	 */
+	private BigDecimal evaluateAntiderivative(Polynomial antiderivative) {
+		BigDecimal a = BigDecimal.ZERO;
+		BigDecimal b = new BigDecimal(BigDecimalUtils.decimalDigits(kappa) * 2.5, mc); // sufficiently high upper bound (supposed to be infinity
+		BigDecimal lambdas = new BigDecimal(String.valueOf(uniformizationRate), mc).add(new BigDecimal(String.valueOf(event.getFirstParameter()), mc), mc);
+		BigDecimal aFactor = BigDecimalMath.exp(lambdas.negate().multiply(a, mc), mc);
+		BigDecimal bFactor = BigDecimalMath.exp(lambdas.negate().multiply(b, mc), mc);
+		BigDecimal aVal = antiderivative.value(a, mc).multiply(aFactor, mc);
+		BigDecimal bVal = antiderivative.value(b, mc).multiply(bFactor, mc);
+		BigDecimal firstFactor = BigDecimal.ONE.divide(BigDecimalMath.factorial((int)(event.getSecondParameter() - 1)), mc);
+		BigDecimal secondFactor = BigDecimalMath.pow(new BigDecimal(String.valueOf(event.getFirstParameter()), mc), new BigDecimal(String.valueOf(event.getSecondParameter()), mc), mc);
+		BigDecimal totalFactor = firstFactor.multiply(secondFactor, mc);
+		
+		BigDecimal res = bVal.subtract(aVal, mc).multiply(totalFactor, mc);
+		return res;
 	}
 
 }

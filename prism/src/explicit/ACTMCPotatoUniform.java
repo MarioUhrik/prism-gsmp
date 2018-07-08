@@ -231,21 +231,11 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 			
 			//Compute the definite integral using the obtained antiderivative
 			for (int n = 0; n < numStates ; ++n) {
-				Polynomial antiderivative = antiderivatives[n];
-				BigDecimal a = BigDecimal.ZERO;
-				BigDecimal b = new BigDecimal(String.valueOf(event.getSecondParameter()), mc).subtract(new BigDecimal(String.valueOf(event.getFirstParameter())), mc);
-				BigDecimal aFactor = BigDecimalMath.exp(new BigDecimal(String.valueOf(uniformizationRate), mc).negate().multiply(a, mc), mc);
-				BigDecimal bFactor = BigDecimalMath.exp(new BigDecimal(String.valueOf(uniformizationRate), mc).negate().multiply(b, mc), mc);
-				BigDecimal aVal = antiderivative.value(a, mc).multiply(aFactor, mc);
-				BigDecimal bVal = antiderivative.value(b, mc).multiply(bFactor, mc);
-				BigDecimal prob = BigDecimal.ONE.divide(b.subtract(a, mc), mc);
-				
-				BigDecimal res = prob.multiply(bVal.subtract(aVal, mc), mc);
 				double diracAddition = 0;
-				if (diracPrecompute) {
-					diracAddition = dirac.getMeanTimes().get(entrance).get(DTMCtoACTMC.get(n));
+				if (diracPrecompute) { //Get the dirac-behavior increment (if there is one)
+					diracAddition = dirac.getMeanRewards().get(DTMCtoACTMC.get(n));
 				}
-				result[n] = res.doubleValue() + diracAddition;
+				result[n] = evaluateAntiderivative(antiderivatives[n]).doubleValue() + diracAddition;
 			}
 			
 			// We are done. 
@@ -360,17 +350,11 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 			
 			//Compute the definite integral using the obtained antiderivative
 			for (int n = 0; n < numStates ; ++n) {
-				Polynomial antiderivative = antiderivatives[n];
-				BigDecimal a = BigDecimal.ZERO;
-				BigDecimal b = new BigDecimal(String.valueOf(event.getSecondParameter()), mc).subtract(new BigDecimal(String.valueOf(event.getFirstParameter())), mc);
-				BigDecimal aFactor = BigDecimalMath.exp(new BigDecimal(String.valueOf(uniformizationRate), mc).negate().multiply(a, mc), mc);
-				BigDecimal bFactor = BigDecimalMath.exp(new BigDecimal(String.valueOf(uniformizationRate), mc).negate().multiply(b, mc), mc);
-				BigDecimal aVal = antiderivative.value(a, mc).multiply(aFactor, mc);
-				BigDecimal bVal = antiderivative.value(b, mc).multiply(bFactor, mc);
-				BigDecimal prob = BigDecimal.ONE.divide(b.subtract(a, mc), mc);
-				
-				BigDecimal res = prob.multiply(bVal.subtract(aVal, mc), mc);
-				result[n] = res.doubleValue();
+				double diracAddition = 0;
+				if (diracPrecompute) { //Get the dirac-behavior increment (if there is one)
+					diracAddition = dirac.getMeanRewards().get(DTMCtoACTMC.get(n));
+				}
+				result[n] = evaluateAntiderivative(antiderivatives[n]).doubleValue() + diracAddition;
 			}
 			
 			
@@ -533,21 +517,11 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 		
 		//Compute the definite integral using the obtained antiderivative
 		for (int n = 0; n < numStates ; ++n) {
-			Polynomial antiderivative = antiderivatives[n];
-			BigDecimal a = BigDecimal.ZERO;
-			BigDecimal b = new BigDecimal(String.valueOf(event.getSecondParameter()), mc).subtract(new BigDecimal(String.valueOf(event.getFirstParameter())), mc);
-			BigDecimal aFactor = BigDecimalMath.exp(new BigDecimal(uniformizationRate, mc).negate().multiply(a, mc), mc);
-			BigDecimal bFactor = BigDecimalMath.exp(new BigDecimal(uniformizationRate, mc).negate().multiply(b, mc), mc);
-			BigDecimal aVal = antiderivative.value(a, mc).multiply(aFactor, mc);
-			BigDecimal bVal = antiderivative.value(b, mc).multiply(bFactor, mc);
-			BigDecimal prob = BigDecimal.ONE.divide(b.subtract(a, mc), mc);
-			
-			BigDecimal res = prob.multiply(bVal.subtract(aVal, mc), mc);
 			double diracAddition = 0;
-			if (diracPrecompute) {
+			if (diracPrecompute) { //Get the dirac-behavior increment (if there is one)
 				diracAddition = dirac.getMeanRewards().get(DTMCtoACTMC.get(n));
 			}
-			result[n] = res.doubleValue() + diracAddition;
+			result[n] = evaluateAntiderivative(antiderivatives[n]).doubleValue() + diracAddition;
 		}
 		
 		// Store the rewards just before the event behavior using the original indexing.
@@ -617,6 +591,26 @@ public class ACTMCPotatoUniform extends ACTMCPotato
 		}
 		
 		return antiderivative;
+	}
+	
+	/**
+	 * Evaluates the given antiderivative to compute the definite (Riemann) integral.
+	 * <br>
+	 * In other words, this actually does the F(b)-F(a) part of Riemann integral required for this specific distribution.
+	 * @param antiderivative Polynomial obtained from {@code computeAntiderivative()}
+	 * @return result BigDecimal number, actually the mean time,distribution or reward for given entrance and state
+	 */
+	private BigDecimal evaluateAntiderivative(Polynomial antiderivative) {
+		BigDecimal a = BigDecimal.ZERO;
+		BigDecimal b = new BigDecimal(String.valueOf(event.getSecondParameter()), mc).subtract(new BigDecimal(String.valueOf(event.getFirstParameter())), mc);
+		BigDecimal aFactor = BigDecimalMath.exp(new BigDecimal(uniformizationRate, mc).negate().multiply(a, mc), mc);
+		BigDecimal bFactor = BigDecimalMath.exp(new BigDecimal(uniformizationRate, mc).negate().multiply(b, mc), mc);
+		BigDecimal aVal = antiderivative.value(a, mc).multiply(aFactor, mc);
+		BigDecimal bVal = antiderivative.value(b, mc).multiply(bFactor, mc);
+		BigDecimal prob = BigDecimal.ONE.divide(b.subtract(a, mc), mc);
+		
+		BigDecimal res = prob.multiply(bVal.subtract(aVal, mc), mc);
+		return res;
 	}
 
 }
