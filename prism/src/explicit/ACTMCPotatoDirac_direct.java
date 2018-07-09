@@ -154,23 +154,25 @@ public class ACTMCPotatoDirac_direct extends ACTMCPotato
 				iters++;
 			}
 			
-			// We are done. 
-			// Convert the result to a distribution with original indexing and store it.
-			// Also, store the solution vector using the original indexing.
-			Distribution resultDistr = new Distribution();
+			// Store the sol vector using the original indexing for later use.
 			Distribution solnDistr = new Distribution();
 			for (int ps : potato) {
-				double time = result[ACTMCtoDTMC.get(ps)];
-				if (time != 0.0) {
-					resultDistr.add(ps, time);
-				}
 				double sol = soln[ACTMCtoDTMC.get(ps)];
 				if (sol != 0.0) {
 					solnDistr.add(ps, sol);
 				}
 			}
-			meanTimes.put(entrance, resultDistr);
 			meanTimesSoln.put(entrance, solnDistr);
+			
+			// Convert the result to a distribution with original indexing and store it.
+			Distribution resultDistr = new Distribution();
+			for (int ps : potato) {
+				double time = result[ACTMCtoDTMC.get(ps)];
+				if (time != 0.0) {
+					resultDistr.add(ps, time);
+				}
+			}
+			meanTimes.put(entrance, resultDistr);
 		}
 		meanTimesComputed = true;
 	}
@@ -242,7 +244,18 @@ public class ACTMCPotatoDirac_direct extends ACTMCPotato
 				}
 				iters++;
 			}
-			// Store the DTMC solution vector for later use by other methods
+			
+			// Store the sol vector using the original indexing for later use.
+			Distribution solnDistr = new Distribution();
+			for (int ps : potato) {
+				double sol = soln[ACTMCtoDTMC.get(ps)];
+				if (sol != 0.0) {
+					solnDistr.add(ps, sol);
+				}
+			}
+			meanDistributionsSoln.put(entrance, solnDistr);
+			
+			// Store the result vector for later use.
 			Distribution resultBeforeEvent = new Distribution();
 			for(int i = 0; i < numStates ; ++i ) {
 				resultBeforeEvent.add(DTMCtoACTMC.get(i), result[i]);
@@ -268,18 +281,6 @@ public class ACTMCPotatoDirac_direct extends ACTMCPotato
 					}
 				}
 			}
-			
-			// We are done.
-			// Store the solution vector using the original indexing.
-			Distribution solnDistr = new Distribution();
-			for (int ps : potato) {
-				double sol = soln[ACTMCtoDTMC.get(ps)];
-				if (sol != 0.0) {
-					solnDistr.add(ps, sol);
-				}
-			}
-			meanDistributionsSoln.put(entrance, solnDistr);
-			
 			
 			// Normalize the result array (it may not sum to 1 due to inaccuracy).
 			double probSum = 0;
@@ -377,7 +378,15 @@ public class ACTMCPotatoDirac_direct extends ACTMCPotato
 			iters++;
 		}
 		
-		// Store the rewards just before the event behavior using the original indexing.
+		// Store the sol vector using the original indexing for later use.
+		for (int ps : potato) {
+			double sol = soln[ACTMCtoDTMC.get(ps)];
+			if (sol != 0.0) {
+				meanRewardsSoln.add(ps, sol);
+			}
+		}
+		
+		// Store the rewards just before the event behavior using the original indexing for later use.
 		for (int entrance : entrances) {
 			meanRewardsBeforeEvent.add(entrance, result[ACTMCtoDTMC.get(entrance)]);
 		}
@@ -385,14 +394,6 @@ public class ACTMCPotatoDirac_direct extends ACTMCPotato
 		//Now that we have the expected rewards for the underlying CTMC behavior,
 		//event behavior is applied.
 		applyEventRewards(result, false);
-		
-		// Store the solution vector using the original indexing.
-		for (int ps : potato) {
-			double sol = soln[ACTMCtoDTMC.get(ps)];
-			if (sol != 0.0) {
-				meanRewardsSoln.add(ps, sol);
-			}
-		}
 		
 		// Store the finalized expected rewards using the original indexing.
 		for (int entrance : entrances) {

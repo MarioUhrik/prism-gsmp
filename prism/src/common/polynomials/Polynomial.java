@@ -116,6 +116,15 @@ public class Polynomial {
 	}
 	
 	/**
+	 * Copy constructor
+	 * @param other Polynomial
+	 */
+	public Polynomial(Polynomial other) {
+		this.coeffs = new ArrayList<BigDecimal>(other.coeffs);
+		//this.derivative = other.derivative;
+	}
+	
+	/**
 	 * Compute the derivative of this 
 	 * @return derivative of this
 	 */

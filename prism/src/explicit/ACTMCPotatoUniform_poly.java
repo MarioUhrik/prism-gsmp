@@ -164,14 +164,14 @@ public class ACTMCPotatoUniform_poly extends ACTMCPotato
 				for (int i = 0; i < numStates; i++) {
 					dirac.getMeanTimes();
 					soln[i] = dirac.meanTimesSoln.get(entrance).get(DTMCtoACTMC.get(i));
-					polynomials[i] = new Polynomial(new ArrayList<BigDecimal>());
+					polynomials[i] = new Polynomial(BigDecimal.ZERO);
 				}
 			} else {
 				// Initialize the solution array by assigning reward 1 to the entrance and 0 to all others.
 				// Also, initialize the polynomials.
 				for (int i = 0; i < numStates; i++) {
 					soln[i] = 0;
-					polynomials[i] = new Polynomial(new ArrayList<BigDecimal>());
+					polynomials[i] = new Polynomial(BigDecimal.ZERO);
 				}
 				soln[ACTMCtoDTMC.get(entrance)] = 1;
 			}
@@ -224,6 +224,16 @@ public class ACTMCPotatoUniform_poly extends ACTMCPotato
 				iters++;
 			}
 			
+			// Store the sol vector using the original indexing for later use.
+			Distribution solnDistr = new Distribution();
+			for (int ps : potato) {
+				double sol = soln[ACTMCtoDTMC.get(ps)];
+				if (sol != 0.0) {
+					solnDistr.add(ps, sol);
+				}
+			}
+			meanTimesSoln.put(entrance, solnDistr);
+			
 			//Compute antiderivative of (e^(-lambda*time) * polynomial) using integration by parts
 			for (int n = 0; n < numStates ; ++n) {
 				antiderivatives[n] = computeAntiderivative(polynomials[n]);
@@ -238,23 +248,15 @@ public class ACTMCPotatoUniform_poly extends ACTMCPotato
 				result[n] = evaluateAntiderivative(antiderivatives[n]).doubleValue() + diracAddition;
 			}
 			
-			// We are done. 
 			// Convert the result to a distribution with original indexing and store it.
-			// Also, store the solution vector using the original indexing.
 			Distribution resultDistr = new Distribution();
-			Distribution solnDistr = new Distribution();
 			for (int ps : potato) {
 				double time = result[ACTMCtoDTMC.get(ps)];
 				if (time != 0.0) {
 					resultDistr.add(ps, time);
 				}
-				double sol = soln[ACTMCtoDTMC.get(ps)];
-				if (sol != 0.0) {
-					solnDistr.add(ps, sol);
-				}
 			}
 			meanTimes.put(entrance, resultDistr);
-			meanTimesSoln.put(entrance, solnDistr);
 		}
 		meanTimesComputed = true;
 	}
@@ -283,7 +285,8 @@ public class ACTMCPotatoUniform_poly extends ACTMCPotato
 			double[] soln;
 			double[] soln2 = new double[numStates];
 			double[] result = new double[numStates];
-			Polynomial[] polynomials = new Polynomial[numStates];
+			Polynomial[] polynomialsBeforeEvent = new Polynomial[numStates];
+			Polynomial[] polynomialsAfterEvent = new Polynomial[numStates];
 			Polynomial[] antiderivatives = new Polynomial[numStates];
 			double[] tmpsoln = new double[numStates];
 			
@@ -304,19 +307,20 @@ public class ACTMCPotatoUniform_poly extends ACTMCPotato
 			// Initialize the arrays
 			for (int i = 0; i < numStates; i++) {
 				result[i] = 0.0;
-				polynomials[i] = new Polynomial(new ArrayList<BigDecimal>());
+				polynomialsBeforeEvent[i] = new Polynomial(BigDecimal.ZERO);
+				polynomialsAfterEvent[i] = new Polynomial(BigDecimal.ZERO);
 			}
 
 			// If necessary, compute the 0th element of summation
 			// (doesn't require any matrix powers)
 			if (left == 0) {
 				for (int i = 0; i < numStates; i++) {
-					polynomials[i].coeffs.add(0, new BigDecimal(soln[i], mc).multiply(weights_BD[0], mc));
+					polynomialsBeforeEvent[i].coeffs.add(0, new BigDecimal(soln[i], mc).multiply(weights_BD[0], mc));
 				}
 			} else {
 				// Initialise new polynomial coefficient
 				for (int i = 0; i < numStates; i++) {
-					polynomials[i].coeffs.add(0, BigDecimal.ZERO);
+					polynomialsBeforeEvent[i].coeffs.add(0, BigDecimal.ZERO);
 				}
 			}
 
@@ -332,57 +336,18 @@ public class ACTMCPotatoUniform_poly extends ACTMCPotato
 				// Add to sum
 				if (iters >= left) {
 					for (int i = 0; i < numStates; i++) {
-						polynomials[i].coeffs.add(iters, new BigDecimal(soln[i], mc).multiply(weights_BD[iters - left], mc));
+						polynomialsBeforeEvent[i].coeffs.add(iters, new BigDecimal(soln[i], mc).multiply(weights_BD[iters - left], mc));
 					}
 				} else {
 					// Initialize new polynomial coefficient
 					for (int i = 0; i < numStates; i++) {
-						polynomials[i].coeffs.add(iters, BigDecimal.ZERO);
+						polynomialsBeforeEvent[i].coeffs.add(iters, BigDecimal.ZERO);
 					}
 				}
 				iters++;
 			}
 			
-			//Compute antiderivative of (e^(-lambda*time) * polynomial) using integration by parts
-			for (int n = 0; n < numStates ; ++n) {
-				antiderivatives[n] = computeAntiderivative(polynomials[n]);
-			}
-			
-			//Compute the definite integral using the obtained antiderivative
-			for (int n = 0; n < numStates ; ++n) {
-				result[n] = evaluateAntiderivative(antiderivatives[n]).doubleValue();
-			}
-			
-			
-			// Store the DTMC solution vector for later use by other methods
-			Distribution resultBeforeEvent = new Distribution();
-			for(int i = 0; i < numStates ; ++i ) {
-				resultBeforeEvent.add(DTMCtoACTMC.get(i), result[i]);
-			}
-			meanDistributionsBeforeEvent.put(entrance, resultBeforeEvent);
-			
-			// Lastly, if there is some probability that the potatoDTMC would 
-			// still be within the potato at the time of the event occurrence,
-			// these probabilities must be redistributed into the successor states
-			// using the event-defined distribution on states.
-			// (I.e. the actual event behavior is applied)
-			tmpsoln = result.clone();
-			for ( int ps : potato) {
-				result[ACTMCtoDTMC.get(ps)] = 0;
-			}
-			for ( int ps : potato) {
-				int psIndex = ACTMCtoDTMC.get(ps);
-				if (tmpsoln[psIndex] > 0) {
-					Distribution distr = event.getTransitions(ps);
-					Set<Integer> distrSupport = distr.getSupport();
-					for ( int successor : distrSupport) {
-						result[ACTMCtoDTMC.get(successor)] += tmpsoln[psIndex] * distr.get(successor);
-					}
-				}
-			}
-			
-			// We are done.
-			// Store the solution vector using the original indexing.
+			// Store the sol vector using the original indexing for later use.
 			Distribution solnDistr = new Distribution();
 			for (int ps : potato) {
 				double sol = soln[ACTMCtoDTMC.get(ps)];
@@ -391,6 +356,49 @@ public class ACTMCPotatoUniform_poly extends ACTMCPotato
 				}
 			}
 			meanDistributionsSoln.put(entrance, solnDistr);
+			
+			//Compute antiderivative of (e^(-lambda*time) * polynomial) using integration by parts
+			for (int n = 0; n < numStates ; ++n) {
+				antiderivatives[n] = computeAntiderivative(polynomialsBeforeEvent[n]);
+			}
+			
+			//Compute the definite integral using the obtained antiderivative
+			for (int n = 0; n < numStates ; ++n) {
+				result[n] = evaluateAntiderivative(antiderivatives[n]).doubleValue();
+			}
+			
+			// Store the just-before-event result vector for later use by other methods
+			Distribution resultBeforeEvent = new Distribution();
+			for(int i = 0; i < numStates ; ++i ) {
+				resultBeforeEvent.add(DTMCtoACTMC.get(i), result[i]);
+			}
+			meanDistributionsBeforeEvent.put(entrance, resultBeforeEvent);
+			
+			//Lastly, the actual event behavior is applied.
+			//I.e. if there is some probability that the potatoDTMC would 
+			//still be within the potato at the time of the event occurrence,
+			//these probabilities must be redistributed into the successor states.
+			//using the event-defined distribution on states.
+			for (int ps : potato) {
+				int psIndex = ACTMCtoDTMC.get(ps);
+				Distribution distr = event.getTransitions(ps);
+				Set<Integer> distrSupport = distr.getSupport();
+				for ( int successor : distrSupport) {
+					polynomialsBeforeEvent[psIndex].multiplyWithScalar(new BigDecimal(distr.get(successor), mc),  mc);
+					polynomialsAfterEvent[ACTMCtoDTMC.get(successor)].add(polynomialsBeforeEvent[psIndex], mc);
+					polynomialsBeforeEvent[psIndex].multiplyWithScalar(BigDecimal.ONE.divide(new BigDecimal(distr.get(successor), mc), mc),  mc);
+				}
+			}
+			
+			//Compute antiderivative of (e^(-lambda*time) * polynomial) using integration by parts
+			for (int n = 0; n < numStates ; ++n) {
+				antiderivatives[n] = computeAntiderivative(polynomialsAfterEvent[n]);
+			}
+			
+			//Compute the definite integral using the obtained antiderivative
+			for (int n = 0; n < numStates ; ++n) {
+				result[n] = evaluateAntiderivative(antiderivatives[n]).doubleValue();
+			}
 			
 			// Normalize the result array (it may not sum to 1 due to inaccuracy).
 			double probSum = 0;
@@ -441,7 +449,7 @@ public class ACTMCPotatoUniform_poly extends ACTMCPotato
 			for (int i = 0; i < numStates; i++) {
 				dirac.getMeanRewards();
 				soln[i] = dirac.meanRewardsSoln.get(DTMCtoACTMC.get(i));
-				polynomials[i] = new Polynomial(new ArrayList<BigDecimal>());
+				polynomials[i] = new Polynomial(BigDecimal.ZERO);
 			}
 		} else {
 			// Initialize the solution array by assigning rewards to the potato states
@@ -454,7 +462,7 @@ public class ACTMCPotatoUniform_poly extends ACTMCPotato
 				} else {
 					soln[i] = 0;
 				}
-				polynomials[i] = new Polynomial(new ArrayList<BigDecimal>());
+				polynomials[i] = new Polynomial(BigDecimal.ZERO);
 			}
 		}
 
@@ -506,6 +514,14 @@ public class ACTMCPotatoUniform_poly extends ACTMCPotato
 			iters++;
 		}
 		
+		// Store the sol vector  using the original indexing for later use.
+		for (int ps : potato) {
+			double sol = soln[ACTMCtoDTMC.get(ps)];
+			if (sol != 0.0) {
+				meanRewardsSoln.add(ps, sol);
+			}
+		}
+		
 		//Compute antiderivative of (e^(-lambda*time) * polynomial) using integration by parts
 		for (int n = 0; n < numStates ; ++n) {
 			antiderivatives[n] = computeAntiderivative(polynomials[n]);
@@ -528,14 +544,6 @@ public class ACTMCPotatoUniform_poly extends ACTMCPotato
 		//Now that we have the expected rewards for the underlying CTMC behavior,
 		//event behavior is applied.
 		applyEventRewards(result, false);
-		
-		// Store the solution vector using the original indexing.
-		for (int ps : potato) {
-			double sol = soln[ACTMCtoDTMC.get(ps)];
-			if (sol != 0.0) {
-				meanRewardsSoln.add(ps, sol);
-			}
-		}
 		
 		// Store the finalized expected rewards using the original indexing.
 		for (int entrance : entrances) {
@@ -568,7 +576,7 @@ public class ACTMCPotatoUniform_poly extends ACTMCPotato
 		}*/
 		
 		Polynomial poly = new Polynomial(new ArrayList<BigDecimal>(polynomial.coeffs));
-		Polynomial antiderivative = new Polynomial(new ArrayList<BigDecimal>());
+		Polynomial antiderivative = new Polynomial(BigDecimal.ZERO);
 		BigDecimal factor = BigDecimal.ONE.negate().divide(new BigDecimal(String.valueOf(uniformizationRate), mc), mc);
 		
 		int polyDegree = poly.degree();
