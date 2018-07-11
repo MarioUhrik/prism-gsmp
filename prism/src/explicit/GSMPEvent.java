@@ -44,10 +44,10 @@ public class GSMPEvent extends DTMCSimple
 	private double secondParameter;
 	/** BitSet of states where this event is active. Redundant, but convenient. */
 	private BitSet active;
-	/**
-	 * Unique event identifier String passed over when generated from parser/AST/Event class
-	 */
+	/** Unique event identifier String passed over during model construction */
 	private String identifier;
+	/** Original event identifier String from the parser */
+	private String originalIdentifier;
 	/**
 	 * Map of action labels, similar to the one in GSMPRewardsSimple.
 	 * First map maps Second Maps onto source state indices.
@@ -62,12 +62,13 @@ public class GSMPEvent extends DTMCSimple
 	/**
 	 * Constructor: new Event with an unspecified number of states.
 	 */
-	public GSMPEvent(TypeDistribution distributionType, double firstParameter, double secondParameter, String identifier) {
+	public GSMPEvent(TypeDistribution distributionType, double firstParameter, double secondParameter, String identifier, String originalIdentifier) {
 		super();
 		this.distributionType = distributionType;
 		this.firstParameter = firstParameter;
 		this.secondParameter = secondParameter;
 		this.identifier = identifier;
+		this.originalIdentifier = originalIdentifier;
 		this.actionLabels = new TreeMap<Integer, Map<Integer, Set<String>>>();
 		clearActive();
 	}
@@ -75,12 +76,13 @@ public class GSMPEvent extends DTMCSimple
 	/**
 	 * Constructor: new Event with {@code numstates} number of pre-allocated states.
 	 */
-	public GSMPEvent(int numStates, TypeDistribution distributionType, double firstParameter, double secondParameter, String identifier) {
+	public GSMPEvent(int numStates, TypeDistribution distributionType, double firstParameter, double secondParameter, String identifier, String originalIdentifier) {
 		super(numStates);
 		this.distributionType = distributionType;
 		this.firstParameter = firstParameter;
 		this.secondParameter = secondParameter;
 		this.identifier = identifier;
+		this.originalIdentifier = originalIdentifier;
 		this.actionLabels = new TreeMap<Integer, Map<Integer, Set<String>>>();
 		clearActive();
 	}
@@ -95,6 +97,7 @@ public class GSMPEvent extends DTMCSimple
 		this.firstParameter = event.firstParameter;
 		this.secondParameter = event.secondParameter;
 		this.identifier = event.getIdentifier();
+		this.originalIdentifier = event.originalIdentifier;
 		this.actionLabels = event.actionLabels;
 		clearActive();
 		this.active.or(event.active);
@@ -180,6 +183,10 @@ public class GSMPEvent extends DTMCSimple
 
 	public String getIdentifier() {
 		return identifier;
+	}
+	
+	public String getOriginalIdentifier() {
+		return originalIdentifier;
 	}
 
 	public double getFirstParameter() {

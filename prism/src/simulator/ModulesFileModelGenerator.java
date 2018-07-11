@@ -529,7 +529,7 @@ public class ModulesFileModelGenerator implements ModelGenerator
 	
 	/**
 	 * Creates a new GSMP event from an astEvent of a modulesFile.
-	 * @param astEvent
+	 * @param eventName name of the event
 	 * @return GSMPEvent
 	 * @throws PrismLangException The distribution parameters are invalid.
 	 */
@@ -561,7 +561,7 @@ public class ModulesFileModelGenerator implements ModelGenerator
 			throw new PrismLangException(e.getMessage(), distributions.getDistributionNameIdent(distrIndex));
 		}
 		
-		return (new GSMPEvent(distributionType, firstParameter, secondParameter, eventNameWithSuffix));
+		return (new GSMPEvent(distributionType, firstParameter, secondParameter, eventNameWithSuffix, eventName));
 	}
 	
 }

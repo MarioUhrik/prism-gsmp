@@ -167,7 +167,8 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 				event.getDistributionType(),
 				event.getFirstParameter(),
 				event.getSecondParameter(),
-				event.getIdentifier());
+				event.getIdentifier(),
+				event.getOriginalIdentifier());
 		events.put(event.getIdentifier(), tmp);
 		return true;
 	}
@@ -261,7 +262,8 @@ public class GSMPSimple extends ModelExplicit implements GSMP
 					,TypeDistributionExponential.getInstance(),
 					uniformizationRate,
 					0.0,
-					selfLoopEventIdent);
+					selfLoopEventIdent,
+					"");
 			this.addEvent(selfLoop);
 			for (Integer deadlockState : getDeadlockStates()) {
 				addToProbability(deadlockState, deadlockState, 1.0, selfLoopEventIdent, null);
