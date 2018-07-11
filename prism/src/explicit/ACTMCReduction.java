@@ -50,7 +50,8 @@ import prism.PrismException;
 import prism.PrismSettings;
 
 /**
- * Class for reduction of ACTMC to equivalent DTMC. (and also their reward structures)
+ * Class for reduction of ACTMC to equivalent DTMC (and also their reward structures).
+ * This is useful for ACTMC analysis.
  * <br>
  * This class fulfills similar purpose to class {@code ACTMCPotatoData},
  * but on the scope of the entire ACTMC, whereas the scope of {@code ACTMCPotatoData}
@@ -172,7 +173,7 @@ public class ACTMCReduction extends PrismComponent
 		return pdMap;
 	}
 	
-	private void computeEquivalentDTMC() throws PrismException {
+	protected void computeEquivalentDTMC() throws PrismException {
 		if (computeKappa && !pdMap.isEmpty()) {
 			setKappa(BigDecimalUtils.min(computeKappa(), constantKappa));
 		} else {
@@ -181,7 +182,7 @@ public class ACTMCReduction extends PrismComponent
 		dtmc = constructUniformizedDTMC();
 	}
 	
-	private void computeEquivalentDTMCRew() throws PrismException {
+	protected void computeEquivalentDTMCRew() throws PrismException {
 		if (dtmc == null) {
 			computeEquivalentDTMC();
 		}
@@ -189,10 +190,10 @@ public class ACTMCReduction extends PrismComponent
 	}
 	
 	/**
-	 * Computes and sets the bitset of relevant states {@code relevantStates}.
+	 * Computes and sets the bitset of {@code relevantStates}.
 	 * The {@code pdMap} must already be correctly initialised!
 	 */
-	private void setRelevantStates() {
+	protected void setRelevantStates() {
 		Set<Integer> potatoStates = new HashSet<Integer>();
 		Set<Integer> entranceStates = new HashSet<Integer>();
 		for (Map.Entry<String, ACTMCPotato> pdEntry : pdMap.entrySet()) {
@@ -215,7 +216,7 @@ public class ACTMCReduction extends PrismComponent
 	 * I.e. next ACTMCPotatoData computations will be with precision kappa.
 	 * @param kappa BigDecimal allowed error bound
 	 */
-	private void setKappa(BigDecimal kappa) {
+	protected void setKappa(BigDecimal kappa) {
 		for (Map.Entry<String, ACTMCPotato> pdEntry : pdMap.entrySet()) {
 			pdEntry.getValue().setKappa(kappa);
 		}
@@ -226,7 +227,7 @@ public class ACTMCReduction extends PrismComponent
 	 * done on a thusly created {@code dtmc} is guaranteed to be accurate
 	 * within allowed error {@code epsilon}.
 	 */
-	private BigDecimal computeKappa() throws PrismException {
+	protected BigDecimal computeKappa() throws PrismException {
 		MathContext mc;
 		BigDecimal n = new BigDecimal(actmc.getNumStates() - target.cardinality()); // amount of non-target states
 		
@@ -359,7 +360,7 @@ public class ACTMCReduction extends PrismComponent
 	 * within an equivalent reward structure for {@code dtmc}.
 	 * @return a pair where the key is the minimum probability, and the value is the maximum reward
 	 */
-	private Pair<Double, Double> compute_minProb_maxRew() throws PrismException {
+	protected Pair<Double, Double> compute_minProb_maxRew() throws PrismException {
 		final double kappa = 1.0e-20;
 		final BigDecimal kappaBD = new BigDecimal(kappa);
 		setKappa(kappaBD);
@@ -394,7 +395,7 @@ public class ACTMCReduction extends PrismComponent
 	 * 		   If the greatest positive element of the relevant results is 0, then NaN. <br>
 	 * 		   If no relevant results are given, then NaN. <br>
 	 */
-	private Pair<Double, Double> findMinMax(double[] array) {
+	protected Pair<Double, Double> findMinMax(double[] array) {
 		
 		// find min/max of the relevant states
 		double max = Double.MIN_VALUE;
@@ -441,7 +442,7 @@ public class ACTMCReduction extends PrismComponent
 	 * time is spent within each potato having entered from a particular entrance.
 	 * @return Uniformized fully {@code dtmc} equivalent to {@code actmc} according to the current {@code pdMap}
 	 */
-	private DTMCSimple constructUniformizedDTMC() throws PrismException {
+	protected DTMCSimple constructUniformizedDTMC() throws PrismException {
 		CTMCSimple ctmc = new CTMCSimple(actmc);
 		double uniformizationRate = ctmc.getMaxExitRate();
 		
@@ -486,7 +487,7 @@ public class ACTMCReduction extends PrismComponent
 	 *  						   and false for reachability rewards.
 	 * @return {@code MCRewards} equivalent to actmcRew.
 	 */
-	private MCRewards constructDTMCRew(DTMCSimple dtmc, boolean computingSteadyState) throws PrismException {
+	protected MCRewards constructDTMCRew(DTMCSimple dtmc, boolean computingSteadyState) throws PrismException {
 		if (computingSteadyState) {
 			return constructUnaffectedDTMCRew(dtmc);
 		} else {
@@ -502,7 +503,7 @@ public class ACTMCReduction extends PrismComponent
 	 * @param dtmc 
 	 * @return Non-uniformized {@code MCRewards} equivalent to actmcRew.
 	 */
-	private StateRewardsSimple constructUnaffectedDTMCRew(DTMCSimple dtmc) throws PrismException {
+	protected StateRewardsSimple constructUnaffectedDTMCRew(DTMCSimple dtmc) throws PrismException {
 		StateRewardsSimple newRew = new StateRewardsSimple();
 		if (actmcRew == null) {
 			return newRew;
@@ -543,7 +544,7 @@ public class ACTMCReduction extends PrismComponent
 	 * @param dtmc 
 	 * @return Uniformized {@code MCRewards} equivalent to actmcRew.
 	 */
-	private StateRewardsSimple constructUniformizedDTMCRew(DTMCSimple dtmc) throws PrismException {
+	protected StateRewardsSimple constructUniformizedDTMCRew(DTMCSimple dtmc) throws PrismException {
 		StateRewardsSimple newRew = new StateRewardsSimple();
 		if (actmcRew == null) {
 			return newRew;
@@ -576,12 +577,12 @@ public class ACTMCReduction extends PrismComponent
 	/**
 	 * Creates a map where the keys are string identifiers of the GSMPEvents,
 	 * and the values are corresponding ACTMCPotato structures.
-	 * This is useful as to enable reusage of the ACTMCPotato structures efficiently.
+	 * The ACTMCPotato structures will then be used for analysis of individual events.
 	 * @param actmc ACTMC model for which to create the ACTMCPotato structures
 	 * @param rew Optional rewards associated with {@code actmc}. May be null, but calls
 	 *            to {@code ACTMCPotato.getMeanReward()} will throw an exception!
 	 */
-	private Map<String, ACTMCPotato> createPotatoDataMap(ACTMCSimple actmc,
+	protected Map<String, ACTMCPotato> createPotatoDataMap(ACTMCSimple actmc,
 			ACTMCRewardsSimple rew, BitSet target) throws PrismException {
 		Map<String, ACTMCPotato> pdMap = new HashMap<String, ACTMCPotato>();
 		List<GSMPEvent> events = actmc.getEventList();
@@ -591,8 +592,7 @@ public class ACTMCReduction extends PrismComponent
 			
 			switch (event.getDistributionType().getEnum()) {
 			case DIRAC:
-				potatoData = new ACTMCPotatoDirac_direct(actmc, event, rew, target); //much faster
-				//potatoData = new ACTMCPotatoDirac_poly(actmc, event, rew, target); //much slower, but parameter synthesis works
+				potatoData = new ACTMCPotatoDirac_direct(actmc, event, rew, target); 
 				break;
 			case ERLANG:
 				potatoData = new ACTMCPotatoErlang_poly(actmc, event, rew, target);
