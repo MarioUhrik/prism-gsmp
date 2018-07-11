@@ -591,7 +591,8 @@ public class ACTMCReduction extends PrismComponent
 			
 			switch (event.getDistributionType().getEnum()) {
 			case DIRAC:
-				potatoData = new ACTMCPotatoDirac_direct(actmc, event, rew, target);
+				potatoData = new ACTMCPotatoDirac_direct(actmc, event, rew, target); //much faster
+				//potatoData = new ACTMCPotatoDirac_poly(actmc, event, rew, target); //much slower, but parameter synthesis works
 				break;
 			case ERLANG:
 				potatoData = new ACTMCPotatoErlang_poly(actmc, event, rew, target);

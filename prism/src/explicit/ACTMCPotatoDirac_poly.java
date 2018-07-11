@@ -27,7 +27,6 @@
 package explicit;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Set;
 
@@ -41,42 +40,35 @@ import prism.PrismException;
  * See parent class documentation for more basic info. {@link ACTMCPotato}
  * <br>
  * This extension implements high-precision precomputation
- * of Erlang-distributed potatoes using class BigDecimal.
+ * of Dirac-distributed potatoes using class BigDecimal.
+ * This implementation is suitable for parameter synthesis.
  * <br>
  * HOW IT'S DONE:
- * Erlang distribution has two parameters, erlangRate and k.
- * First, the data is evaluated without specific distribution parameters.
- * This yields a general polynomial P(t), where t is the firing time.
- * Then, let F(t, erlangRate, k) = P(t) * t^(k-1) * e^(-t *(uniformizationRate + erlangRate)).
- * However, erlangRate and k are already given as the event parameters,
- * so F becomes expolynomial F(t).
- * Now, computing Riemann integral from 0 to sufficiently-high n of (F(t) * dt)
- * yields the desired results.
+ * Dirac distribution has one parameter - timeout t.
+ * However, the data is evaluated without any specific parameter.
+ * This yields a general expolynomial F(t) = P(t) * e^(-uniformizationRate * t).
+ * Now, evaluationg F(t) yields the desired results.
  */
-public class ACTMCPotatoErlang_poly extends ACTMCPotato
+public class ACTMCPotatoDirac_poly extends ACTMCPotato
 {
 	
 	/** {@link ACTMCPotato#ACTMCPotato(ACTMCSimple, GSMPEvent, ACTMCRewardsSimple, BitSet)} */
-	public ACTMCPotatoErlang_poly(ACTMCSimple actmc, GSMPEvent event, ACTMCRewardsSimple rewards, BitSet target) throws PrismException {
+	public ACTMCPotatoDirac_poly(ACTMCSimple actmc, GSMPEvent event, ACTMCRewardsSimple rewards, BitSet target) throws PrismException {
 		super(actmc, event, rewards, target);
 	}
 	
-	public ACTMCPotatoErlang_poly(ACTMCPotato other) {
+	public ACTMCPotatoDirac_poly(ACTMCPotato other) {
 		super(other);
 	}
 	
 	@Override
 	public void setKappa(BigDecimal kappa) {
-		// ACTMCPotatoErlang usually requires better precision, dependent on the distribution parameters.
-		// This is because precise computation of expressions such as (e^(-(erlangRate + CTMCRate) * [upper_bound])
-		// and ([upper_bound]^(foxGlynn.right + k)) is performed.
-		// So, adjust kappa by the possible distribution parameter values.
-		int basePrecision = BigDecimalUtils.decimalDigits(kappa); // TODO MAJO - I think [upper_bound]*(kappa + lambda) is needed, but thats extremely high!
-		int erlangPrecision = basePrecision + (int)actmc.getMaxExitRate() + (int)event.getSecondParameter() +
-				((int)Math.ceil(Math.log(((event.getFirstParameter() + uniformizationRate) * basePrecision * event.getSecondParameter()))));
-		
-		BigDecimal erlangKappa = BigDecimalUtils.allowedError(erlangPrecision);
-		super.setKappa(erlangKappa);
+		// Adjust kappa by the possible distribution parameter values.
+		int basePrecision = BigDecimalUtils.decimalDigits(kappa);
+		int diracPrecision = basePrecision + 7*(int)event.getFirstParameter();
+
+		BigDecimal diracKappa = BigDecimalUtils.allowedError(diracPrecision);
+		super.setKappa(diracKappa);
 	}
 
 	@Override
@@ -125,6 +117,10 @@ public class ACTMCPotatoErlang_poly extends ACTMCPotato
 			weights_BD[i - left] = weights_BD[i - left].divide(totalWeight_BD.multiply(new BigDecimal(String.valueOf(uniformizationRate), mc), mc), mc);
 		}
 		
+		//Prepare the e^(- uniformizationRate * timeout) part
+		BigDecimal timeout = new BigDecimal(String.valueOf(event.getFirstParameter()), mc);
+		BigDecimal timeoutFactor = BigDecimalMath.exp(new BigDecimal(uniformizationRate, mc).negate().multiply(timeout, mc), mc);
+		
 		for (int entrance : entrances) {
 			
 			// Prepare solution arrays
@@ -132,7 +128,6 @@ public class ACTMCPotatoErlang_poly extends ACTMCPotato
 			double[] soln2 = new double[numStates];
 			double[] result = new double[numStates];
 			Polynomial[] polynomials = new Polynomial[numStates];
-			Polynomial[] antiderivatives = new Polynomial[numStates];
 			double[] tmpsoln = new double[numStates];
 
 			// Initialize the solution array by assigning reward 1 to the entrance and 0 to all others.
@@ -143,6 +138,7 @@ public class ACTMCPotatoErlang_poly extends ACTMCPotato
 			}
 			soln[ACTMCtoDTMC.get(entrance)] = 1;
 
+			
 			// do 0th element of summation (doesn't require any matrix powers), and initialize the coefficients
 			result = new double[numStates];
 			if (left == 0) {
@@ -201,21 +197,11 @@ public class ACTMCPotatoErlang_poly extends ACTMCPotato
 			}
 			meanTimesSoln.put(entrance, solnDistr);
 			
-			//Multiply the polynomial by t^(k-1)
-			for (int n = 0; n < numStates  ; ++n) {
-				for (int k = 0; k < (int)(event.getSecondParameter() - 1); ++k) {
-					polynomials[n].coeffs.add(0, BigDecimal.ZERO);
-				}
-			}
-			
-			//Compute antiderivative of (e^(-(lambda + erlangRate) * time) * polynomial) using integration by parts
+			//Evaluate the polynomial at requested timeout t
 			for (int n = 0; n < numStates ; ++n) {
-				antiderivatives[n] = computeAntiderivative(polynomials[n]);
-			}
-			
-			//Compute the definite integral using the obtained antiderivative
-			for (int n = 0; n < numStates ; ++n) {
-				result[n] = evaluateAntiderivative(antiderivatives[n]).doubleValue();
+				BigDecimal res = polynomials[n].value(timeout, mc);
+				res = res.multiply(timeoutFactor, mc);
+				result[n] = res.doubleValue();
 			}
 			
 			// Convert the result to a distribution with original indexing and store it.
@@ -248,6 +234,10 @@ public class ACTMCPotatoErlang_poly extends ACTMCPotato
 			weights_BD[i - left] = weights_BD[i - left].divide(totalWeight_BD, mc);
 		}
 		
+		//Prepare the e^(- uniformizationRate * timeout) part
+		BigDecimal timeout = new BigDecimal(String.valueOf(event.getFirstParameter()), mc);
+		BigDecimal timeoutFactor = BigDecimalMath.exp(new BigDecimal(uniformizationRate, mc).negate().multiply(timeout, mc), mc);
+		
 		for (int entrance : entrances) {
 			
 			// Prepare solution arrays
@@ -257,7 +247,6 @@ public class ACTMCPotatoErlang_poly extends ACTMCPotato
 			double[] result = new double[numStates];
 			Polynomial[] polynomialsBeforeEvent = new Polynomial[numStates];
 			Polynomial[] polynomialsAfterEvent = new Polynomial[numStates];
-			Polynomial[] antiderivatives = new Polynomial[numStates];
 			double[] tmpsoln = new double[numStates];
 			
 			// Build the initial distribution for this potato entrance
@@ -320,21 +309,11 @@ public class ACTMCPotatoErlang_poly extends ACTMCPotato
 			}
 			meanDistributionsSoln.put(entrance, solnDistr);
 			
-			//Multiply the polynomial by t^(k-1)
-			for (int n = 0; n < numStates  ; ++n) {
-				for (int k = 0; k < (int)(event.getSecondParameter() - 1); ++k) {
-					polynomialsBeforeEvent[n].coeffs.add(0, BigDecimal.ZERO);
-				}
-			}
-			
-			//Compute antiderivative of (e^(-(lambda + erlangRate) * time) * polynomial) using integration by parts
+			//Evaluate the polynomial at requested timeout t
 			for (int n = 0; n < numStates ; ++n) {
-				antiderivatives[n] = computeAntiderivative(polynomialsBeforeEvent[n]);
-			}
-			
-			//Compute the definite integral using the obtained antiderivative
-			for (int n = 0; n < numStates ; ++n) {
-				result[n] = evaluateAntiderivative(antiderivatives[n]).doubleValue();
+				BigDecimal res = polynomialsBeforeEvent[n].value(timeout, mc);
+				res = res.multiply(timeoutFactor, mc);
+				result[n] = res.doubleValue();
 			}
 			
 			// Store the just-before-event result vector for later use by other methods
@@ -360,22 +339,19 @@ public class ACTMCPotatoErlang_poly extends ACTMCPotato
 				}
 			}
 			
-			//Compute antiderivative of (e^(-(lambda + erlangRate) * time) * polynomial) using integration by parts
+			//Evaluate the polynomial at requested timeout t
 			for (int n = 0; n < numStates ; ++n) {
-				antiderivatives[n] = computeAntiderivative(polynomialsAfterEvent[n]);
+				BigDecimal res = polynomialsAfterEvent[n].value(timeout, mc);
+				res = res.multiply(timeoutFactor, mc);
+				result[n] = res.doubleValue();
 			}
 			
-			//Compute the definite integral using the obtained antiderivative
-			for (int n = 0; n < numStates ; ++n) {
-				result[n] = evaluateAntiderivative(antiderivatives[n]).doubleValue();
-			}
-
 			// Normalize the result array (it may not sum to 1 due to inaccuracy).
 			double probSum = 0;
 			for (int succState : successors) {
 				probSum += result[ACTMCtoDTMC.get(succState)];
 			}
-			// Convert the just-after-event result to a distribution with original indexing and store it.
+			// Convert the result to a distribution with original indexing and store it.
 			Distribution resultDistr = new Distribution();
 			for (int succState : successors) {
 				double prob = result[ACTMCtoDTMC.get(succState)];
@@ -405,25 +381,28 @@ public class ACTMCPotatoErlang_poly extends ACTMCPotato
 			weights_BD[i - left] = weights_BD[i - left].divide(totalWeight_BD.multiply(new BigDecimal(String.valueOf(uniformizationRate), mc), mc), mc);
 		}
 		
+		//Prepare the e^(- uniformizationRate * timeout) part
+		BigDecimal timeout = new BigDecimal(String.valueOf(event.getFirstParameter()), mc);
+		BigDecimal timeoutFactor = BigDecimalMath.exp(new BigDecimal(uniformizationRate, mc).negate().multiply(timeout, mc), mc);
+		
 		// Prepare solution arrays
 		double[] soln = new double[numStates];
 		double[] soln2 = new double[numStates];
 		double[] result = new double[numStates];
 		Polynomial[] polynomials = new Polynomial[numStates];
-		Polynomial[] antiderivatives = new Polynomial[numStates];
 		double[] tmpsoln = new double[numStates];
-
+		
 		// Initialize the solution array by assigning rewards to the potato states
 		// Also initialize the polynomials
-		for (int s = 0; s < numStates; s++) {
-			int index = DTMCtoACTMC.get(s);
+		for (int i = 0; i < numStates; i++) {
+			int index = DTMCtoACTMC.get(i);
 			if (potato.contains(index)) {
 				// NOTE: transition rewards have already been merged into state rewards
-				soln[s] = rewards.getStateReward(index);
+				soln[i] = rewards.getStateReward(index);
 			} else {
-				soln[s] = 0;
+				soln[i] = 0;
 			}
-			polynomials[s] = new Polynomial(BigDecimal.ZERO);
+			polynomials[i] = new Polynomial(BigDecimal.ZERO);
 		}
 
 		// do 0th element of summation (doesn't require any matrix powers), and initialize the coefficients
@@ -482,21 +461,11 @@ public class ACTMCPotatoErlang_poly extends ACTMCPotato
 			}
 		}
 		
-		//Multiply the polynomial by t^(k-1)
-		for (int n = 0; n < numStates  ; ++n) {
-			for (int k = 0; k < (int)(event.getSecondParameter() - 1); ++k) {
-				polynomials[n].coeffs.add(0, BigDecimal.ZERO);
-			}
-		}
-		
-		//Compute antiderivative of (e^(-(lambda + erlangRate) * time) * polynomial) using integration by parts
+		//Evaluate the polynomial at requested timeout t
 		for (int n = 0; n < numStates ; ++n) {
-			antiderivatives[n] = computeAntiderivative(polynomials[n]);
-		}
-		
-		//Compute the definite integral using the obtained antiderivative
-		for (int n = 0; n < numStates ; ++n) {
-			result[n] = evaluateAntiderivative(antiderivatives[n]).doubleValue();
+			BigDecimal res = polynomials[n].value(timeout, mc);
+			res = res.multiply(timeoutFactor, mc);
+			result[n] = res.doubleValue();
 		}
 		
 		// Store the rewards just before the event behavior using the original indexing.
@@ -514,74 +483,6 @@ public class ACTMCPotatoErlang_poly extends ACTMCPotato
 		}
 		
 		meanRewardsComputed = true;
-	}
-	
-	/**
-	 * Computes antiderivative of (e^(-(lambda + erlangRate) * time) * polynomial) using integration by parts
-	 * @param polynomial
-	 * @return antiderivative polynomial of (e^(-(lambda + erlangRate) * time) * polynomial)
-	 */
-	private Polynomial computeAntiderivative(Polynomial polynomial) {
-		//Unoptimized version
-		/*for (int n = 0; n < numStates ; ++n) {
-			Polynomial poly = new Polynomial(new ArrayList<BigDecimal>(polynomials[n].coeffs));
-			Polynomial antiderivative = antiderivatives[n];
-			
-			BigDecimal factor = new BigDecimal((-1/(uniformizationRate + event.getFirstParameter())), mc);
-			int polyDegree = poly.degree();
-			for (int i = 0; i <= polyDegree ; i++) {
-				poly.multiplyWithScalar(factor, mc);
-				antiderivative.add(poly, mc);	
-				
-				poly.multiplyWithScalar(BigDecimal.ONE.negate(), mc);
-				poly = poly.derivative(mc);
-			}
-		}*/
-		
-		Polynomial poly = new Polynomial(new ArrayList<BigDecimal>(polynomial.coeffs));
-		Polynomial antiderivative = new Polynomial(BigDecimal.ZERO);
-		BigDecimal factor = BigDecimal.ONE.negate().divide
-				(new BigDecimal(String.valueOf(uniformizationRate), mc).add(new BigDecimal(String.valueOf(event.getFirstParameter()),mc), mc), mc);
-		
-		int polyDegree = poly.degree();
-		for (int e = 0 ; e <= polyDegree ; ++e) {
-			BigDecimal coeff = poly.coeffs.get(e);
-			antiderivative.coeffs.add(e, BigDecimal.ZERO);
-			for ( int i = e ; i >= 0 ; --i) {
-				coeff = coeff.multiply(factor, mc);
-				if (coeff.compareTo(BigDecimal.ZERO) >= 0) {
-					coeff = coeff.multiply(BigDecimal.ONE.negate(), mc);
-				}
-				antiderivative.coeffs.set(i, antiderivative.coeffs.get(i).add(coeff, mc));
-				
-				coeff = coeff.multiply(new BigDecimal(i, mc), mc);
-			}
-		}
-		
-		return antiderivative;
-	}
-	
-	/**
-	 * Evaluates the given antiderivative to compute the definite (Riemann) integral.
-	 * <br>
-	 * In other words, this actually does the F(b)-F(a) part of Riemann integral required for this specific distribution.
-	 * @param antiderivative Polynomial obtained from {@code computeAntiderivative()}
-	 * @return result BigDecimal number, actually the mean time,distribution or reward for given entrance and state
-	 */
-	private BigDecimal evaluateAntiderivative(Polynomial antiderivative) {
-		BigDecimal a = BigDecimal.ZERO;
-		BigDecimal b = new BigDecimal(BigDecimalUtils.decimalDigits(kappa) * 2.5, mc); // sufficiently high upper bound (supposed to be infinity
-		BigDecimal lambdas = new BigDecimal(String.valueOf(uniformizationRate), mc).add(new BigDecimal(String.valueOf(event.getFirstParameter()), mc), mc);
-		BigDecimal aFactor = BigDecimalMath.exp(lambdas.negate().multiply(a, mc), mc);
-		BigDecimal bFactor = BigDecimalMath.exp(lambdas.negate().multiply(b, mc), mc);
-		BigDecimal aVal = antiderivative.value(a, mc).multiply(aFactor, mc);
-		BigDecimal bVal = antiderivative.value(b, mc).multiply(bFactor, mc);
-		BigDecimal firstFactor = BigDecimal.ONE.divide(BigDecimalMath.factorial((int)(event.getSecondParameter() - 1)), mc);
-		BigDecimal secondFactor = BigDecimalMath.pow(new BigDecimal(String.valueOf(event.getFirstParameter()), mc), new BigDecimal(String.valueOf(event.getSecondParameter()), mc), mc);
-		BigDecimal totalFactor = firstFactor.multiply(secondFactor, mc);
-		
-		BigDecimal res = bVal.subtract(aVal, mc).multiply(totalFactor, mc);
-		return res;
 	}
 
 }

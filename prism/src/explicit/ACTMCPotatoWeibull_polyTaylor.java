@@ -27,7 +27,6 @@
 package explicit;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Set;
 
@@ -73,6 +72,7 @@ public class ACTMCPotatoWeibull_polyTaylor extends ACTMCPotato
 	@Override
 	public void setKappa(BigDecimal kappa) {
 		// ACTMCPotatoWeibull usually requires better precision, dependent on the distribution parameters.
+		// So, adjust kappa by the possible distribution parameter values.
 		int basePrecision = BigDecimalUtils.decimalDigits(kappa); // TODO MAJO - I think [upper_bound]*(kappa + lambda) is needed, but thats extremely high!
 		int weibullPrecision = basePrecision + (int)actmc.getMaxExitRate() + (int)event.getSecondParameter() +
 				((int)Math.ceil(Math.log(((event.getFirstParameter() + uniformizationRate) * basePrecision * event.getSecondParameter()))));

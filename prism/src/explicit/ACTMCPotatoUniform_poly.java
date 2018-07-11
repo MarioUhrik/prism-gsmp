@@ -93,6 +93,7 @@ public class ACTMCPotatoUniform_poly extends ACTMCPotato
 		// ACTMCPotatoUniform usually requires better precision, dependent on the distribution parameters.
 		// This is because precise computation of expressions such as (e^(-lambda * b)
 		// and (b^(foxGlynn.right)) is performed.
+		// So, adjust kappa by the possible distribution parameter values.
 		int basePrecision = BigDecimalUtils.decimalDigits(kappa); // TODO MAJO - I think b*(kappa + lambda) is needed, but thats extremely high!
 		int uniformPrecision = basePrecision + (int)actmc.getMaxExitRate() +
 				(int)(Math.ceil(Math.log(basePrecision * actmc.getMaxExitRate() * (event.getSecondParameter() - event.getFirstParameter())))
