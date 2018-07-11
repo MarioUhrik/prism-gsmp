@@ -26,11 +26,16 @@
 
 package explicit;
 
+import java.math.BigDecimal;
+import java.math.MathContext;
+import java.math.RoundingMode;
+import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import common.BigDecimalUtils;
 import explicit.rewards.ACTMCRewardsSimple;
 import parser.ast.SynthParam;
 import prism.PrismComponent;
@@ -42,15 +47,110 @@ import prism.PrismException;
  */
 public class ACTMCSymbolicParameterSynthesis extends ACTMCReduction
 {
-	
-	/** List of event parameters to synthesize. */
+	/** True if we are minimizing the rewards. Otherwise, if maximizing, this variable is false. */
+	boolean min;
+	/** Verified list of event parameters to synthesize. */
 	List<SynthParam> synthParams;
+	/** Mapping of synthesis parameters onto states where they are active for convenience. */
+	Map<Integer, SynthParam> paramMap = new HashMap<Integer, SynthParam>();
+	/** Default ACTMC event map (eventMap from ACTMC) */
+	protected Map<Integer, GSMPEvent> defaultEventMap;
 	
-	/** {@link ACTMCReduction#ACTMCReduction(ACTMCSimple, ACTMCRewardsSimple, BitSet, boolean, PrismComponent)} */
-	public ACTMCSymbolicParameterSynthesis(ACTMCSimple actmc, ACTMCRewardsSimple actmcRew, BitSet target, boolean computingSteadyState, PrismComponent parent) throws PrismException {
+	MathContext mc;
+	
+	
+	/** {@link ACTMCReduction#ACTMCReduction(ACTMCSimple, ACTMCRewardsSimple, BitSet, boolean, PrismComponent)}
+	 *  @param synthParams List of synthesis event parameters. Assumed to be verified and fully correct. */
+	public ACTMCSymbolicParameterSynthesis(ACTMCSimple actmc, ACTMCRewardsSimple actmcRew, BitSet target,
+			boolean computingSteadyState, PrismComponent parent, List<SynthParam> synthParams, boolean min) throws PrismException {
 		super(actmc, actmcRew, target, computingSteadyState, parent);
+		this.defaultEventMap = new HashMap<Integer, GSMPEvent>(actmc.getEventMap());
+		this.synthParams = synthParams;
+		this.min = min;
+		
+		// Construct paramMap
+		int numStates = actmc.getNumStates();
+		for (int s = 0 ; s < numStates ; ++s) {
+			GSMPEvent event = actmc.getActiveEvent(s);
+			if (event == null) {
+				continue;
+			}
+			for (SynthParam param : synthParams) {
+				if (event.getOriginalIdentifier().equals(param.getEventName())) {
+					paramMap.put(s, param);
+					break;
+				}
+			}
+		}
+		
+		// Set kappa precision
+		setKappa(deduceKappa());
 	}
 	
+	/**
+	 * Attempts to find the fitting GSMPEvent out of {@code events} for the given {@code SynthParam}.
+	 * @param synthParam synthesis parameter
+	 * @param events List of candidate events to search from
+	 * @return GSMPEvent with original name equal to the synthParam event name. Null if not found.
+	 */
+	public GSMPEvent lookUpEvent(SynthParam synthParam, List<GSMPEvent> events) {
+		for (GSMPEvent event : events) {
+			if (synthParam.getEventName().equals(event.getOriginalIdentifier())) {
+				return event;
+			}
+		}
+		return null;
+	}
+	
+	/**
+	 * Works out the exact value of kappa precision to use for the ACTMC analysis
+	 * @return BigDecimal kappa
+	 */
+	protected BigDecimal deduceKappa() throws PrismException {
+		BigDecimal kappa;
+		if (computeKappa && !pdMap.isEmpty()) {
+			kappa = BigDecimalUtils.min(computeKappa(), constantKappa);
+		} else {
+			kappa = constantKappa;
+		}
+		mc = new MathContext(BigDecimalUtils.decimalDigits(kappa) + 3, RoundingMode.HALF_UP);
+		return kappa.divide(new BigDecimal("3", mc), mc);
+	}
+	
+	/**
+	 * Performs parameter synthesis for the given member variables.
+	 * @return actmc events where the queried event parameters are kappa-optimal mapped onto states of the actmc.
+	 */
+	public Map<Integer, GSMPEvent> reachabilityRewardParameterSynthesis() throws PrismException {
+		// TODO MAJO - implement
+		Map<Integer, GSMPEvent> arbitraryParams = chooseArbitraryParams();
+		return null;
+	}
+	
+	/**
+	 * Returns a mapping of events onto states, where the events have some arbitrary parameters, 
+	 * within boundaries specified by {@code synthParams}.
+	 * @throws PrismException 
+	 */
+	private Map<Integer, GSMPEvent> chooseArbitraryParams() throws PrismException {
+		Map<Integer, GSMPEvent> arbitraryParamMap = new HashMap<Integer, GSMPEvent>(defaultEventMap);
+		List<GSMPEvent> events = new ArrayList<GSMPEvent>(arbitraryParamMap.values());
+		for (SynthParam synthParam : synthParams) {
+			
+			GSMPEvent event = lookUpEvent(synthParam, events);
+			if (event == null) {
+				throw new PrismException("ACTMC Parameter synthesis error: failed to find matching event " + synthParam.getEventName());
+			}
+
+			if (synthParam.getParamIndex() == 1) {
+				event.setFirstParameter(synthParam.getUpperBound() - synthParam.getLowerBound());
+			}
+			if (synthParam.getParamIndex() == 2) {
+				event.setSecondParameter(synthParam.getUpperBound() - synthParam.getLowerBound());
+			}
+		}
+		return arbitraryParamMap;
+	}
 
 	/**
 	 * Creates a map where the keys are string identifiers of the GSMPEvents,

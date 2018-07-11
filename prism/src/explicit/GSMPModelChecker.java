@@ -225,10 +225,9 @@ public class GSMPModelChecker extends ProbModelChecker
 		List<GSMPEvent> events = gsmp.getEventList();
 		for (SynthParam param : paramList) {
 			for (GSMPEvent event : events) {
-				if (event.getIdentifier().contains(param.getEventName())) {
-					param.setEventName(event.getIdentifier()); // update the event name, as they change during build time
-					
+				if (event.getOriginalIdentifier().equals(param.getEventName())) {
 					// TODO MAJO - fix this! exponential events should be allowed for synthesis!
+					// TODO MAJO - remember to fix ACTMC constructor and ACTMCRew constructor as well.
 					if (isACTMC && event.getDistributionType() instanceof TypeDistributionExponential) {
 						throw new PrismException("ACTMC optimal parameter synthesis - all events in the list of parameters must be non-exponential!");
 					}

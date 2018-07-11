@@ -49,7 +49,7 @@ public class ACTMCSimple extends CTMCSimple
 	/** Mapping of non-exponential events onto states in which they are active. */
 	protected Map<Integer, GSMPEvent> eventMap;
 	/** List of non-exponential events within {@code eventMap} (for efficiency) */
-	protected List<GSMPEvent> eventList;
+	protected List<GSMPEvent> eventList; // TODO MAJO - this is disgusting. Remove it.
 
 	/**
 	 * Constructor from an already created GSMP that has been verified

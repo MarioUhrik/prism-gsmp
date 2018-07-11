@@ -47,9 +47,9 @@ public class SynthParam extends ASTElement
 	 *  E.g. parameter 1 of Dirac-distributed events is the timeout,
 	 *  and parameter 1 and 2 of uniformly distributed events are a and b.*/
 	private Expression paramIndexExpr;
-	/** Lower bound of the result */
+	/** Lower bound of the synthesis result */
 	private Expression lowerBoundExpr;
-	/** Upper bound of the result */
+	/** Upper bound of the synthesis result */
 	private Expression upperBoundExpr;
 	
 	// The expressions are evaluated during parse-time semantics check,
@@ -102,18 +102,24 @@ public class SynthParam extends ASTElement
 		return upperBoundExpr;
 	}
 	
+	/** Get the synthesis event name */
 	public String getEventName() {
 		return eventName;
 	}
 	
+	/** Index of the synthesis event parameter starting from 1.
+	 *  E.g. parameter 1 of Dirac-distributed events is the timeout,
+	 *  and parameter 1 and 2 of uniformly distributed events are a and b.*/
 	public int getParamIndex() {
 		return paramIndex;
 	}
 	
+	/** Get the lower synthesis bound */
 	public double getLowerBound() {
 		return lowerBound;
 	}
 	
+	/** Get the upper synthesis bound */
 	public double getUpperBound() {
 		return upperBound;
 	}
