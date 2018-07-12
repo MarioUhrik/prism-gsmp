@@ -314,7 +314,7 @@ public class ACTMCPotatoUniform_poly extends ACTMCPotato_poly
 			for (int i = 0; i < numStates; i++) {
 				result[i] = 0.0;
 				polynomialsBeforeEvent[i] = new Polynomial();
-				polynomialsAfterEvent[i] = new Polynomial();
+				polynomialsAfterEvent[i] = new Polynomial(BigDecimal.ZERO);
 			}
 
 			// If necessary, compute the 0th element of summation

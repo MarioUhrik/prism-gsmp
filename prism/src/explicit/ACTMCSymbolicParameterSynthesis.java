@@ -49,8 +49,8 @@ public class ACTMCSymbolicParameterSynthesis extends ACTMCReduction
 {
 	
 	/** Map where the keys are string identifiers of the GSMPEvents,
-	 *  and the values are corresponding ACTMCPotatoData_poly structures.
-	 *  This is useful for fast access and efficient reusage of the ACTMCPotatoData structures.*/
+	 *  and the values are corresponding ACTMCPotato_poly structures.
+	 *  This is useful for fast access and efficient reusage of the ACTMCPotato_poly structures.*/
 	protected Map<String, ACTMCPotato_poly> polyPDMap;
 	/** True if we are minimizing the rewards. Otherwise, if maximizing, this variable is false. */
 	protected boolean min;
