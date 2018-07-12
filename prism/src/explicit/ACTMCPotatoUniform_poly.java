@@ -38,7 +38,7 @@ import explicit.rewards.ACTMCRewardsSimple;
 import prism.PrismException;
 
 /**
- * See parent class documentation for more basic info. {@link ACTMCPotato}
+ * See parent class documentation for more basic info. {@link ACTMCPotato}, {@link ACTMCPotato_poly}
  * <br>
  * This extension implements high-precision precomputation
  * of uniformly-distributed potatoes using class BigDecimal.
@@ -53,7 +53,7 @@ import prism.PrismException;
  * Now, computing Riemann integral from 0 to (b-a) of (F(t) * dt)
  * yields the desired results.
  */
-public class ACTMCPotatoUniform_poly extends ACTMCPotato
+public class ACTMCPotatoUniform_poly extends ACTMCPotato_poly
 {
 	
 	/**
@@ -76,7 +76,7 @@ public class ACTMCPotatoUniform_poly extends ACTMCPotato
 		}
 	}
 	
-	public ACTMCPotatoUniform_poly(ACTMCPotato other) {
+	public ACTMCPotatoUniform_poly(ACTMCPotato_poly other) {
 		super(other);
 		if (event.getFirstParameter() > 0) {
 			diracPrecompute = true;
@@ -240,6 +240,11 @@ public class ACTMCPotatoUniform_poly extends ACTMCPotato
 				antiderivatives[n] = computeAntiderivative(polynomials[n]);
 			}
 			
+			// Store the solution polynomials for later use.
+			for (int n = 0; n < numStates ; ++n) {
+				meanTimesPolynomials.get(entrance).put(DTMCtoACTMC.get(n), antiderivatives[n]);
+			}
+			
 			//Compute the definite integral using the obtained antiderivative
 			for (int n = 0; n < numStates ; ++n) {
 				double diracAddition = 0;
@@ -363,6 +368,11 @@ public class ACTMCPotatoUniform_poly extends ACTMCPotato
 				antiderivatives[n] = computeAntiderivative(polynomialsBeforeEvent[n]);
 			}
 			
+			// Store the solution polynomials for later use.
+			for (int n = 0; n < numStates ; ++n) {
+				meanDistributionsBeforeEventPolynomials.get(entrance).put(DTMCtoACTMC.get(n), antiderivatives[n]);
+			}
+			
 			//Compute the definite integral using the obtained antiderivative
 			for (int n = 0; n < numStates ; ++n) {
 				result[n] = evaluateAntiderivative(antiderivatives[n]).doubleValue();
@@ -394,6 +404,11 @@ public class ACTMCPotatoUniform_poly extends ACTMCPotato
 			//Compute antiderivative of (e^(-lambda*time) * polynomial) using integration by parts
 			for (int n = 0; n < numStates ; ++n) {
 				antiderivatives[n] = computeAntiderivative(polynomialsAfterEvent[n]);
+			}
+			
+			// Store the solution polynomials for later use.
+			for (int n = 0; n < numStates ; ++n) {
+				meanDistributionsPolynomials.get(entrance).put(DTMCtoACTMC.get(n), antiderivatives[n]);
 			}
 			
 			//Compute the definite integral using the obtained antiderivative
@@ -528,6 +543,11 @@ public class ACTMCPotatoUniform_poly extends ACTMCPotato
 			antiderivatives[n] = computeAntiderivative(polynomials[n]);
 		}
 		
+		// Store the solution polynomials for later use.
+		for (int n = 0; n < numStates ; ++n) {
+			meanRewardsBeforeEventPolynomials.put(DTMCtoACTMC.get(n), antiderivatives[n]);
+		}
+		
 		//Compute the definite integral using the obtained antiderivative
 		for (int n = 0; n < numStates ; ++n) {
 			double diracAddition = 0;
@@ -545,6 +565,8 @@ public class ACTMCPotatoUniform_poly extends ACTMCPotato
 		//Now that we have the expected rewards for the underlying CTMC behavior,
 		//event behavior is applied.
 		applyEventRewards(result, false);
+		
+		// TODO MAJO - store polynomials after event!
 		
 		// Store the finalized expected rewards using the original indexing.
 		for (int entrance : entrances) {

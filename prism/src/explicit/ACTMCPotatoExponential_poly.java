@@ -32,7 +32,7 @@ import explicit.rewards.ACTMCRewardsSimple;
 import prism.PrismException;
 
 /**
- * See parent class documentation for more basic info. {@link ACTMCPotato}
+ * See parent class documentation for more basic info. {@link ACTMCPotato}, {@link ACTMCPotato_poly}
  * <br>
  * This extension implements high-precision precomputation
  * of exponentially-distributed potatoes using class BigDecimal.
@@ -50,7 +50,7 @@ public class ACTMCPotatoExponential_poly extends ACTMCPotatoErlang_poly
 		this.event.setSecondParameter(1);
 	}
 	
-	public ACTMCPotatoExponential_poly(ACTMCPotato other) {
+	public ACTMCPotatoExponential_poly(ACTMCPotato_poly other) {
 		super(other);
 		this.event.setSecondParameter(1);
 	}

@@ -200,7 +200,7 @@ public abstract class ACTMCPotato
 		this.potatoDTMCComputed = other.potatoDTMCComputed;
 		
 		this.kappa = other.kappa;
-		//If some different subclass is called, some computed values may no longer be valid. So recomputation is required.
+		//Some computed values may no longer be valid. Force recomputation of the following.
 		this.foxGlynn = null;
 		this.foxGlynnComputed = false;
 		
@@ -234,7 +234,7 @@ public abstract class ACTMCPotato
 	public void setKappa(BigDecimal kappa) {
 		this.kappa = kappa;
 		mc = new MathContext(BigDecimalUtils.decimalDigits(kappa), RoundingMode.HALF_UP);
-		// force this class to recompute all data with the new kappa
+		// force this class to recompute everything kappa-dependent with the new kappa
 		foxGlynnComputed = false;
 		meanTimesComputed = false;
 		meanDistributionsComputed = false;

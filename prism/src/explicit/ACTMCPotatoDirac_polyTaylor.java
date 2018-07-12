@@ -37,7 +37,7 @@ import explicit.rewards.ACTMCRewardsSimple;
 import prism.PrismException;
 
 /**
- * See parent class documentation for more basic info. {@link ACTMCPotato}
+ * See parent class documentation for more basic info. {@link ACTMCPotato}, {@link ACTMCPotato_poly}
  * <br>
  * This extension implements high-precision precomputation
  * of Dirac-distributed potatoes using class BigDecimal.
@@ -50,7 +50,7 @@ import prism.PrismException;
  * Approximating e^(-uniformizationRate * t) with Taylor series yields polynomial T(t).
  * Evaluating F'(t) = P(t) * T(t) yields the desired results.
  */
-public class ACTMCPotatoDirac_polyTaylor extends ACTMCPotato
+public class ACTMCPotatoDirac_polyTaylor extends ACTMCPotato_poly
 {
 	
 	/** {@link ACTMCPotato#ACTMCPotato(ACTMCSimple, GSMPEvent, ACTMCRewardsSimple, BitSet)} */
@@ -58,7 +58,7 @@ public class ACTMCPotatoDirac_polyTaylor extends ACTMCPotato
 		super(actmc, event, rewards, target);
 	}
 	
-	public ACTMCPotatoDirac_polyTaylor(ACTMCPotato other) {
+	public ACTMCPotatoDirac_polyTaylor(ACTMCPotato_poly other) {
 		super(other);
 	}
 	
@@ -203,6 +203,11 @@ public class ACTMCPotatoDirac_polyTaylor extends ACTMCPotato
 				polynomials[n].multiply(taylorPoisson, mc);
 			}
 			
+			// Store the solution polynomials for later use.
+			for (int n = 0; n < numStates ; ++n) {
+				meanTimesPolynomials.get(entrance).put(DTMCtoACTMC.get(n), polynomials[n]);
+			}
+			
 			//Evaluate the polynomial at requested timeout t
 			for (int n = 0; n < numStates ; ++n) {
 				BigDecimal res = polynomials[n].value(timeout, mc);
@@ -319,6 +324,11 @@ public class ACTMCPotatoDirac_polyTaylor extends ACTMCPotato
 				polynomialsBeforeEvent[n].multiply(taylorPoisson, mc);
 			}
 			
+			// Store the solution polynomials for later use.
+			for (int n = 0; n < numStates ; ++n) {
+				meanDistributionsBeforeEventPolynomials.get(entrance).put(DTMCtoACTMC.get(n), polynomialsBeforeEvent[n]);
+			}
+			
 			//Evaluate the polynomial at requested timeout t
 			for (int n = 0; n < numStates ; ++n) {
 				BigDecimal res = polynomialsBeforeEvent[n].value(timeout, mc);
@@ -346,6 +356,11 @@ public class ACTMCPotatoDirac_polyTaylor extends ACTMCPotato
 					polynomialsAfterEvent[ACTMCtoDTMC.get(successor)].add(polynomialsBeforeEvent[psIndex], mc);
 					polynomialsBeforeEvent[psIndex].multiplyWithScalar(BigDecimal.ONE.divide(new BigDecimal(distr.get(successor), mc), mc),  mc);
 				}
+			}
+			
+			// Store the solution polynomials for later use.
+			for (int n = 0; n < numStates ; ++n) {
+				meanDistributionsPolynomials.get(entrance).put(DTMCtoACTMC.get(n), polynomialsAfterEvent[n]);
 			}
 			
 			//Evaluate the polynomial at requested timeout t
@@ -474,6 +489,11 @@ public class ACTMCPotatoDirac_polyTaylor extends ACTMCPotato
 			polynomials[n].multiply(taylorPoisson, mc);
 		}
 		
+		// Store the solution polynomials for later use.
+		for (int n = 0; n < numStates ; ++n) {
+			meanRewardsBeforeEventPolynomials.put(DTMCtoACTMC.get(n), polynomials[n]);
+		}
+		
 		//Evaluate the polynomial at requested timeout t
 		for (int n = 0; n < numStates ; ++n) {
 			BigDecimal res = polynomials[n].value(timeout, mc);
@@ -488,6 +508,8 @@ public class ACTMCPotatoDirac_polyTaylor extends ACTMCPotato
 		//Now that we have the expected rewards for the underlying CTMC behavior,
 		//event behavior is applied.
 		applyEventRewards(result, false);
+		
+		// TODO MAJO - store polynomials after event!
 		
 		// Store the finalized expected rewards using the original indexing.
 		for (int entrance : entrances) {

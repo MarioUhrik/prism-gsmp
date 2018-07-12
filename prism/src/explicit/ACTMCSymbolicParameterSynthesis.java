@@ -47,16 +47,21 @@ import prism.PrismException;
  */
 public class ACTMCSymbolicParameterSynthesis extends ACTMCReduction
 {
+	
+	/** Map where the keys are string identifiers of the GSMPEvents,
+	 *  and the values are corresponding ACTMCPotatoData_poly structures.
+	 *  This is useful for fast access and efficient reusage of the ACTMCPotatoData structures.*/
+	protected Map<String, ACTMCPotato_poly> polyPDMap;
 	/** True if we are minimizing the rewards. Otherwise, if maximizing, this variable is false. */
-	boolean min;
+	protected boolean min;
 	/** Verified list of event parameters to synthesize. */
-	List<SynthParam> synthParams;
+	protected List<SynthParam> synthParams;
 	/** Mapping of synthesis parameters onto states where they are active for convenience. */
-	Map<Integer, SynthParam> paramMap = new HashMap<Integer, SynthParam>();
+	protected Map<Integer, SynthParam> paramMap = new HashMap<Integer, SynthParam>();
 	/** Default ACTMC event map (eventMap from ACTMC) */
 	protected Map<Integer, GSMPEvent> defaultEventMap;
 	
-	MathContext mc;
+	protected MathContext mc;
 	
 	
 	/** {@link ACTMCReduction#ACTMCReduction(ACTMCSimple, ACTMCRewardsSimple, BitSet, boolean, PrismComponent)}
@@ -85,21 +90,6 @@ public class ACTMCSymbolicParameterSynthesis extends ACTMCReduction
 		
 		// Set kappa precision
 		setKappa(deduceKappa());
-	}
-	
-	/**
-	 * Attempts to find the fitting GSMPEvent out of {@code events} for the given {@code SynthParam}.
-	 * @param synthParam synthesis parameter
-	 * @param events List of candidate events to search from
-	 * @return GSMPEvent with original name equal to the synthParam event name. Null if not found.
-	 */
-	public GSMPEvent lookUpEvent(SynthParam synthParam, List<GSMPEvent> events) {
-		for (GSMPEvent event : events) {
-			if (synthParam.getEventName().equals(event.getOriginalIdentifier())) {
-				return event;
-			}
-		}
-		return null;
 	}
 	
 	/**
@@ -154,44 +144,62 @@ public class ACTMCSymbolicParameterSynthesis extends ACTMCReduction
 
 	/**
 	 * Creates a map where the keys are string identifiers of the GSMPEvents,
-	 * and the values are corresponding ACTMCPotato structures.
-	 * The ACTMCPotato structures will then be used for parameter synthesis of individual events.
-	 * @param actmc ACTMC model for which to create the ACTMCPotato structures
+	 * and the values are corresponding ACTMCPotato_poly structures.
+	 * The ACTMCPotato_poly structures will then be used for parameter synthesis of individual events.
+	 * @param actmc ACTMC model for which to create the ACTMCPotato_poly structures
 	 * @param rew Optional rewards associated with {@code actmc}. May be null, but calls
 	 *            to {@code ACTMCPotato.getMeanReward()} will throw an exception!
 	 */
-	@Override
-	protected Map<String, ACTMCPotato> createPotatoDataMap(ACTMCSimple actmc,
+	protected Map<String, ACTMCPotato_poly> createPolyPotatoDataMap(ACTMCSimple actmc,
 			ACTMCRewardsSimple rew, BitSet target) throws PrismException {
-		Map<String, ACTMCPotato> pdMap = new HashMap<String, ACTMCPotato>();
+		Map<String, ACTMCPotato_poly> pdMap = new HashMap<String, ACTMCPotato_poly>();
 		List<GSMPEvent> events = actmc.getEventList();
 		
 		for (GSMPEvent event: events) {
-			ACTMCPotato potatoData;
+			ACTMCPotato_poly potatoData;
 			
-			switch (event.getDistributionType().getEnum()) { //Parameter synthesis requires the "poly" implementations!
+			switch (event.getDistributionType().getEnum()) { //Symbolic parameter synthesis requires the "poly" implementations!
 			case DIRAC:
 				potatoData = new ACTMCPotatoDirac_polyTaylor(actmc, event, rew, target);
+				break;
 			case ERLANG:
-				potatoData = new ACTMCPotatoErlang_poly(actmc, event, rew, target);
-				break;
+				throw new UnsupportedOperationException("ACTMCSymbolicParameterSynthesis does not yet support the Erlang distribution!");
+				// TODO MAJO - implement weibull distributed event support
+				//break;
 			case EXPONENTIAL:
-				potatoData = new ACTMCPotatoExponential_poly(actmc, event, rew, target);
-				break;
+				throw new UnsupportedOperationException("ACTMCSymbolicParameterSynthesis not yet support the Exponential distribution!");
+				// TODO MAJO - implement weibull distributed event support
+				//break;
 			case UNIFORM:
-				potatoData = new ACTMCPotatoUniform_poly(actmc, event, rew, target);
-				break;
+				throw new UnsupportedOperationException("ACTMCSymbolicParameterSynthesis does not yet support the Weibull distribution!");
+				// TODO MAJO - implement weibull distributed event support
+				//break;
 			case WEIBULL:
-				throw new UnsupportedOperationException("ACTMCReduction does not yet support the Weibull distribution!");
+				throw new UnsupportedOperationException("ACTMCSymbolicParameterSynthesis does not yet support the Weibull distribution!");
 				// TODO MAJO - implement weibull distributed event support
 				//break;
 			default:
-				throw new PrismException("ACTMCReduction received an event with unrecognized distribution!");
+				throw new PrismException("ACTMCSymbolicParameterSynthesis received an event with unrecognized distribution!");
 			}
 			
 			pdMap.put(event.getIdentifier(), potatoData);
 		}
 		return pdMap;
+	}
+	
+	/**
+	 * Attempts to find the fitting GSMPEvent out of {@code events} for the given {@code SynthParam}.
+	 * @param synthParam synthesis parameter
+	 * @param events List of candidate events to search from
+	 * @return GSMPEvent with original name equal to the synthParam event name. Null if not found.
+	 */
+	public GSMPEvent lookUpEvent(SynthParam synthParam, List<GSMPEvent> events) {
+		for (GSMPEvent event : events) {
+			if (synthParam.getEventName().equals(event.getOriginalIdentifier())) {
+				return event;
+			}
+		}
+		return null;
 	}
 	
 }
