@@ -27,7 +27,6 @@
 package explicit;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Set;
 
@@ -505,7 +504,7 @@ public class ACTMCPotatoDirac_polyTaylor extends ACTMCPotato
 	 */
 	private Polynomial computeTaylorSeriesPoisson(int i) {
 		BigDecimal powerElem = new BigDecimal(String.valueOf(uniformizationRate), mc).negate();
-		Polynomial taylor = new Polynomial(new ArrayList<BigDecimal>());
+		Polynomial taylor = new Polynomial();
 		
 		BigDecimal revFact = BigDecimal.ONE; 
 		BigDecimal power = BigDecimal.ONE;

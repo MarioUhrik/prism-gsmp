@@ -27,7 +27,6 @@
 package explicit;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Set;
 
@@ -565,7 +564,7 @@ public class ACTMCPotatoWeibull_polyTaylor extends ACTMCPotato
 		int k = (int)wK;
 		
 		BigDecimal powerElem = BigDecimalMath.pow(BigDecimal.ONE.divide(rateBD, mc), kBD, mc).negate();
-		Polynomial taylor = new Polynomial(new ArrayList<BigDecimal>());
+		Polynomial taylor = new Polynomial();
 		for (int n = 0; n <= i*k; ++n) {
 			taylor.coeffs.add(BigDecimal.ZERO);
 		}
@@ -592,7 +591,7 @@ public class ACTMCPotatoWeibull_polyTaylor extends ACTMCPotato
 	 */
 	private Polynomial computeTaylorSeriesPoisson(int i) {
 		BigDecimal powerElem = new BigDecimal(String.valueOf(uniformizationRate), mc).negate();
-		Polynomial taylor = new Polynomial(new ArrayList<BigDecimal>());
+		Polynomial taylor = new Polynomial();
 		
 		BigDecimal revFact = BigDecimal.ONE; 
 		BigDecimal power = BigDecimal.ONE;
