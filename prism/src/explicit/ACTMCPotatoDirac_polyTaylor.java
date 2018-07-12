@@ -27,6 +27,7 @@
 package explicit;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Set;
 
@@ -41,22 +42,24 @@ import prism.PrismException;
  * <br>
  * This extension implements high-precision precomputation
  * of Dirac-distributed potatoes using class BigDecimal.
+ * This implementation is suitable for parameter synthesis.
  * <br>
  * HOW IT'S DONE:
  * Dirac distribution has one parameter - timeout t.
  * However, the data is evaluated without any specific parameter.
  * This yields a general expolynomial F(t) = P(t) * e^(-uniformizationRate * t).
- * Now, evaluationg F(t) yields the desired results.
+ * Approximating e^(-uniformizationRate * t) with Taylor series yields polynomial T(t).
+ * Evaluating F'(t) = P(t) * T(t) yields the desired results.
  */
-public class ACTMCPotatoDirac_poly extends ACTMCPotato
+public class ACTMCPotatoDirac_polyTaylor extends ACTMCPotato
 {
 	
 	/** {@link ACTMCPotato#ACTMCPotato(ACTMCSimple, GSMPEvent, ACTMCRewardsSimple, BitSet)} */
-	public ACTMCPotatoDirac_poly(ACTMCSimple actmc, GSMPEvent event, ACTMCRewardsSimple rewards, BitSet target) throws PrismException {
+	public ACTMCPotatoDirac_polyTaylor(ACTMCSimple actmc, GSMPEvent event, ACTMCRewardsSimple rewards, BitSet target) throws PrismException {
 		super(actmc, event, rewards, target);
 	}
 	
-	public ACTMCPotatoDirac_poly(ACTMCPotato other) {
+	public ACTMCPotatoDirac_polyTaylor(ACTMCPotato other) {
 		super(other);
 	}
 	
@@ -116,9 +119,9 @@ public class ACTMCPotatoDirac_poly extends ACTMCPotato
 			weights_BD[i - left] = weights_BD[i - left].divide(totalWeight_BD.multiply(new BigDecimal(String.valueOf(uniformizationRate), mc), mc), mc);
 		}
 		
-		//Prepare the e^(- uniformizationRate * timeout) part
+		//Prepare the e^(- uniformizationRate * timeout) part as Taylor series polynomial P(timeout)
 		BigDecimal timeout = new BigDecimal(String.valueOf(event.getFirstParameter()), mc);
-		BigDecimal timeoutFactor = BigDecimalMath.exp(new BigDecimal(uniformizationRate, mc).negate().multiply(timeout, mc), mc);
+		Polynomial taylorPoisson = computeTaylorSeriesPoisson(right);
 		
 		for (int entrance : entrances) {
 			
@@ -196,10 +199,14 @@ public class ACTMCPotatoDirac_poly extends ACTMCPotato
 			}
 			meanTimesSoln.put(entrance, solnDistr);
 			
+			//Factor the Taylor series representation into the polynomial
+			for (int n = 0; n < numStates ; ++n) {
+				polynomials[n].multiply(taylorPoisson, mc);
+			}
+			
 			//Evaluate the polynomial at requested timeout t
 			for (int n = 0; n < numStates ; ++n) {
 				BigDecimal res = polynomials[n].value(timeout, mc);
-				res = res.multiply(timeoutFactor, mc);
 				result[n] = res.doubleValue();
 			}
 			
@@ -233,9 +240,9 @@ public class ACTMCPotatoDirac_poly extends ACTMCPotato
 			weights_BD[i - left] = weights_BD[i - left].divide(totalWeight_BD, mc);
 		}
 		
-		//Prepare the e^(- uniformizationRate * timeout) part
+		//Prepare the e^(- uniformizationRate * timeout) part as Taylor series polynomial P(timeout)
 		BigDecimal timeout = new BigDecimal(String.valueOf(event.getFirstParameter()), mc);
-		BigDecimal timeoutFactor = BigDecimalMath.exp(new BigDecimal(uniformizationRate, mc).negate().multiply(timeout, mc), mc);
+		Polynomial taylorPoisson = computeTaylorSeriesPoisson(right);
 		
 		for (int entrance : entrances) {
 			
@@ -308,10 +315,14 @@ public class ACTMCPotatoDirac_poly extends ACTMCPotato
 			}
 			meanDistributionsSoln.put(entrance, solnDistr);
 			
+			//Factor the Taylor series representation into the polynomial
+			for (int n = 0; n < numStates ; ++n) {
+				polynomialsBeforeEvent[n].multiply(taylorPoisson, mc);
+			}
+			
 			//Evaluate the polynomial at requested timeout t
 			for (int n = 0; n < numStates ; ++n) {
 				BigDecimal res = polynomialsBeforeEvent[n].value(timeout, mc);
-				res = res.multiply(timeoutFactor, mc);
 				result[n] = res.doubleValue();
 			}
 			
@@ -341,7 +352,6 @@ public class ACTMCPotatoDirac_poly extends ACTMCPotato
 			//Evaluate the polynomial at requested timeout t
 			for (int n = 0; n < numStates ; ++n) {
 				BigDecimal res = polynomialsAfterEvent[n].value(timeout, mc);
-				res = res.multiply(timeoutFactor, mc);
 				result[n] = res.doubleValue();
 			}
 			
@@ -380,9 +390,9 @@ public class ACTMCPotatoDirac_poly extends ACTMCPotato
 			weights_BD[i - left] = weights_BD[i - left].divide(totalWeight_BD.multiply(new BigDecimal(String.valueOf(uniformizationRate), mc), mc), mc);
 		}
 		
-		//Prepare the e^(- uniformizationRate * timeout) part
+		//Prepare the e^(- uniformizationRate * timeout) part as Taylor series polynomial P(timeout)
 		BigDecimal timeout = new BigDecimal(String.valueOf(event.getFirstParameter()), mc);
-		BigDecimal timeoutFactor = BigDecimalMath.exp(new BigDecimal(uniformizationRate, mc).negate().multiply(timeout, mc), mc);
+		Polynomial taylorPoisson = computeTaylorSeriesPoisson(right);
 		
 		// Prepare solution arrays
 		double[] soln = new double[numStates];
@@ -460,10 +470,14 @@ public class ACTMCPotatoDirac_poly extends ACTMCPotato
 			}
 		}
 		
+		//Factor the Taylor series representation into the polynomial
+		for (int n = 0; n < numStates ; ++n) {
+			polynomials[n].multiply(taylorPoisson, mc);
+		}
+		
 		//Evaluate the polynomial at requested timeout t
 		for (int n = 0; n < numStates ; ++n) {
 			BigDecimal res = polynomials[n].value(timeout, mc);
-			res = res.multiply(timeoutFactor, mc);
 			result[n] = res.doubleValue();
 		}
 		
@@ -482,6 +496,29 @@ public class ACTMCPotatoDirac_poly extends ACTMCPotato
 		}
 		
 		meanRewardsComputed = true;
+	}
+	
+	/**
+	 * Computes the Taylor series representation of e^(- uniformizationRate * t) where t is unknown
+	 * @param i integer >1 of how many elements of the series to include
+	 * @return polynomial that is the Taylor series representation of e^(- uniformizationRate * t)
+	 */
+	private Polynomial computeTaylorSeriesPoisson(int i) {
+		BigDecimal powerElem = new BigDecimal(String.valueOf(uniformizationRate), mc).negate();
+		Polynomial taylor = new Polynomial(new ArrayList<BigDecimal>());
+		
+		BigDecimal revFact = BigDecimal.ONE; 
+		BigDecimal power = BigDecimal.ONE;
+		BigDecimal augment = BigDecimal.ONE;
+		for (int n = 0; n <= i; ++n) {
+			taylor.coeffs.add(augment);
+			
+			revFact = revFact.divide(new BigDecimal(n+1, mc), mc);
+			power = power.multiply(powerElem, mc);
+			augment = revFact.multiply(power, mc);
+		}
+		
+		return taylor;
 	}
 
 }

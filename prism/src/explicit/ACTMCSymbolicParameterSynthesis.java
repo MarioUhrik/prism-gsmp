@@ -119,7 +119,7 @@ public class ACTMCSymbolicParameterSynthesis extends ACTMCReduction
 	
 	/**
 	 * Performs parameter synthesis for the given member variables.
-	 * @return actmc events where the queried event parameters are kappa-optimal mapped onto states of the actmc.
+	 * @return actmc events where the queried event parameters are kappa-optimal, mapped onto states of the actmc.
 	 */
 	public Map<Integer, GSMPEvent> reachabilityRewardParameterSynthesis() throws PrismException {
 		// TODO MAJO - implement
