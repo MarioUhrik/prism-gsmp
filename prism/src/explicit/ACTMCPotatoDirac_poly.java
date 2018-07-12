@@ -133,7 +133,7 @@ public class ACTMCPotatoDirac_poly extends ACTMCPotato
 			// Also, initialize the polynomials.
 			for (int i = 0; i < numStates; i++) {
 				soln[i] = 0;
-				polynomials[i] = new Polynomial(BigDecimal.ZERO);
+				polynomials[i] = new Polynomial();
 			}
 			soln[ACTMCtoDTMC.get(entrance)] = 1;
 
@@ -143,13 +143,13 @@ public class ACTMCPotatoDirac_poly extends ACTMCPotato
 			if (left == 0) {
 				for (int i = 0; i < numStates; i++) {
 					polynomials[i].coeffs.add(left, BigDecimal.ZERO);
-					for (int j = left + 1; j <= right; ++j) {
+					for (int j = 1; j <= right; ++j) {
 						polynomials[i].coeffs.add(j, new BigDecimal(soln[i], mc).multiply(weights_BD[j - left], mc));
 					}
 				}
 			} else {
 				for (int i = 0; i < numStates; i++) {
-					for (int j = 0; j <= left; ++j) {
+					for (int j = 0; j < left; ++j) {
 						polynomials[i].coeffs.add(j, BigDecimal.ZERO);
 					}
 					for (int j = left; j <= right; ++j) {
@@ -170,7 +170,7 @@ public class ACTMCPotatoDirac_poly extends ACTMCPotato
 				// Add to sum
 				if (iters >= left) {
 					for (int i = 0; i < numStates; i++) {
-						for (int j = iters + 1; j <= right; ++j) {
+						for (int j = iters + 1; j < right; ++j) {
 							BigDecimal tmp = polynomials[i].coeffs.get(j).add(new BigDecimal(soln[i], mc).multiply(weights_BD[j - left], mc), mc);
 							polynomials[i].coeffs.set(j, tmp);
 						}
@@ -258,8 +258,8 @@ public class ACTMCPotatoDirac_poly extends ACTMCPotato
 			// Initialize the arrays
 			for (int i = 0; i < numStates; i++) {
 				result[i] = 0.0;
-				polynomialsBeforeEvent[i] = new Polynomial(BigDecimal.ZERO);
-				polynomialsAfterEvent[i] = new Polynomial(BigDecimal.ZERO);
+				polynomialsBeforeEvent[i] = new Polynomial();
+				polynomialsAfterEvent[i] = new Polynomial();
 			}
 
 			// If necessary, compute the 0th element of summation
@@ -401,7 +401,7 @@ public class ACTMCPotatoDirac_poly extends ACTMCPotato
 			} else {
 				soln[i] = 0;
 			}
-			polynomials[i] = new Polynomial(BigDecimal.ZERO);
+			polynomials[i] = new Polynomial();
 		}
 
 		// do 0th element of summation (doesn't require any matrix powers), and initialize the coefficients
@@ -409,13 +409,13 @@ public class ACTMCPotatoDirac_poly extends ACTMCPotato
 		if (left == 0) {
 			for (int i = 0; i < numStates; i++) {
 				polynomials[i].coeffs.add(left, BigDecimal.ZERO);
-				for (int j = left + 1; j <= right; ++j) {
+				for (int j = 1; j <= right; ++j) {
 					polynomials[i].coeffs.add(j, new BigDecimal(soln[i], mc).multiply(weights_BD[j - left], mc));
 				}
 			}
 		} else {
 			for (int i = 0; i < numStates; i++) {
-				for (int j = 0; j <= left; ++j) {
+				for (int j = 0; j < left; ++j) {
 					polynomials[i].coeffs.add(j, BigDecimal.ZERO);
 				}
 				for (int j = left; j <= right; ++j) {
@@ -436,7 +436,7 @@ public class ACTMCPotatoDirac_poly extends ACTMCPotato
 			// Add to sum
 			if (iters >= left) {
 				for (int i = 0; i < numStates; i++) {
-					for (int j = iters + 1; j <= right; ++j) {
+					for (int j = iters + 1; j < right; ++j) {
 						BigDecimal tmp = polynomials[i].coeffs.get(j).add(new BigDecimal(soln[i], mc).multiply(weights_BD[j - left], mc), mc);
 						polynomials[i].coeffs.set(j, tmp);
 					}

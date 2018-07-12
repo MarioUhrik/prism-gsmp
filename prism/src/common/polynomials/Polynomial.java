@@ -54,6 +54,14 @@ public class Polynomial {
 	private Polynomial derivative;
 	
 	/**
+	 * Constructor for an empty polynomial
+	 */
+	public Polynomial(){
+		List<BigDecimal> newCoeffs = new ArrayList<>();
+		this.coeffs = newCoeffs;
+	}
+	
+	/**
 	 * Constructor with list of coefficients
 	 * @param	coeffs	coefficients list
 	 */

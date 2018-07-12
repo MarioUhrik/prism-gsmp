@@ -171,7 +171,7 @@ public class ACTMCSymbolicParameterSynthesis extends ACTMCReduction
 			
 			switch (event.getDistributionType().getEnum()) { //Parameter synthesis requires the "poly" implementations!
 			case DIRAC:
-				potatoData = new ACTMCPotatoDirac_poly(actmc, event, rew, target);
+				potatoData = new ACTMCPotatoDirac_polyTaylor(actmc, event, rew, target);
 			case ERLANG:
 				potatoData = new ACTMCPotatoErlang_poly(actmc, event, rew, target);
 				break;
