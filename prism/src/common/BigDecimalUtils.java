@@ -61,8 +61,7 @@ public class BigDecimalUtils {
 	
 	/**
 	 * Compute the number of decimal digits corresponding to floating point {@code allowedError}.
-	 * The returned number is increased by 3 to provide extra accuracy when the requested allowedError
-	 * is very small.
+	 * The returned number is increased by 1 to make up for potential errors.
 	 * @param allowedError supposed to be a number greater than 0 but smaller than 1. For example, 0.0001 or 1.0e-10.
 	 * <br>
 	 * IMPORTANT NOTE: Does not work for precision = 0
@@ -81,7 +80,7 @@ public class BigDecimalUtils {
 	
 	/**
 	 * Compute precision corresponding to a number of decimal floating point digits {@code digits}.
-	 * Input digits are increased by 3 to provide extra accuracy when the requested digits are too few.
+	 * Input digits are increased by 1 to make up for potential errors.
 	 * @param decimalDigits supposed to be a number of decimal floating point digits, e.g. 100 should return 1E-100.
 	 */
 	public static BigDecimal allowedError(int decimalDigits) {

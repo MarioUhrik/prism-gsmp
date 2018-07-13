@@ -111,6 +111,7 @@ public class GSMPEvent extends DTMCSimple
 		this.firstParameter = event.firstParameter;
 		this.secondParameter = event.secondParameter;
 		this.identifier =  event.getIdentifier();
+		this.originalIdentifier = event.originalIdentifier;
 		this.actionLabels = event.actionLabelMapPermut(permut);
 		clearActive();
 		int min = (numStates < permut.length ? numStates : permut.length);
@@ -258,6 +259,17 @@ public class GSMPEvent extends DTMCSimple
 				}
 			}
 		}
+	}
+	
+	public String getParameterString() {
+		String str = "Event \"" + getOriginalIdentifier();
+		if (distributionType.getNumParams() >= 1) {
+			str += "\n" + "   first Parameter:" + firstParameter;
+		}
+		if (distributionType.getNumParams() >= 2) {
+			str += "\n" + "   second Parameter:" + secondParameter;
+		}
+		return str;
 	}
 
 	@Override

@@ -149,7 +149,7 @@ public class GSMPModelChecker extends ProbModelChecker
 		if (isACTMC && gsmp instanceof GSMPSimple && rew instanceof GSMPRewardsSimple) {
 			ACTMCSimple actmc = new ACTMCSimple((GSMPSimple)gsmp);
 			ACTMCRewardsSimple actmcRew = new ACTMCRewardsSimple((GSMPRewardsSimple)rew, gsmp);
-			// TODO MAJO - process transition rewards?
+			actmcRew = actmcRew.mergeCTMCTransitionRewards(actmc);
 			return computeReachParameterSynthesisACTMC(actmc, actmcRew, target, min, paramList);
 		} else {
 			return computeReachParameterSynthesisGSMP(gsmp, rew, target, min, paramList);
@@ -172,7 +172,7 @@ public class GSMPModelChecker extends ProbModelChecker
 		if (isACTMC && gsmp instanceof GSMPSimple && rew instanceof GSMPRewardsSimple) {
 			ACTMCSimple actmc = new ACTMCSimple((GSMPSimple)gsmp);
 			ACTMCRewardsSimple actmcRew = new ACTMCRewardsSimple((GSMPRewardsSimple)rew, gsmp);
-			// TODO MAJO - process transition rewards?
+			actmcRew = actmcRew.mergeCTMCTransitionRewards(actmc);
 			return computeSteadyStateParameterSynthesisACTMC(actmc, actmcRew, min, paramList);
 		} else {
 			return computeSteadyStateParameterSynthesisGSMP(gsmp, rew, min, paramList);
@@ -402,8 +402,22 @@ public class GSMPModelChecker extends ProbModelChecker
 	}
 	
 	protected ModelCheckerResult computeReachParameterSynthesisACTMC(ACTMCSimple actmc, ACTMCRewardsSimple actmcRew, BitSet target, boolean min, List<SynthParam> paramList) throws PrismException {
-		// TODO MAJO - implement
-		throw new PrismNotSupportedException("Parameter synthesis via reachability rewards for ACTMCs is not yet implemented!");
+		long synthesisTime = System.currentTimeMillis();
+		ACTMCSymbolicParameterSynthesis sps = new ACTMCSymbolicParameterSynthesis(actmc, actmcRew, target, false, this, paramList, min);
+		Map<Integer, GSMPEvent> optimalParams = sps.reachabilityRewardParameterSynthesis();
+		synthesisTime = System.currentTimeMillis() - synthesisTime;
+		
+		//Print the requested optimal parameters into the log
+		mainLog.println("Symbolic Reachability Reward Parameter Synthesis finished after " + synthesisTime/1000.0 + " seconds.");
+		mainLog.println("Printing the list of optimal event parameters below!");
+		for(GSMPEvent event : optimalParams.values()) {
+			mainLog.println(event.getParameterString());
+		}
+		
+		ModelCheckerResult res = new ModelCheckerResult();
+		res.timeTaken = synthesisTime/1000.0;
+		res.soln = sps.getLastComputedSoln();
+		return res;
 	}
 	
 	protected ModelCheckerResult computeSteadyStateParameterSynthesisACTMC(ACTMCSimple actmc, ACTMCRewardsSimple actmcRew, boolean min, List<SynthParam> paramList) throws PrismException {

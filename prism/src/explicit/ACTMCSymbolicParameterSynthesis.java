@@ -41,6 +41,7 @@ import common.polynomials.PolynomialRootFinding;
 import explicit.rewards.ACTMCRewardsSimple;
 import parser.ast.SynthParam;
 import prism.PrismComponent;
+import prism.PrismDevNullLog;
 import prism.PrismException;
 
 /**
@@ -60,6 +61,8 @@ public class ACTMCSymbolicParameterSynthesis extends ACTMCReduction
 	protected List<SynthParam> synthParams;
 	/** Default ACTMC event map (eventMap from ACTMC) */
 	protected Map<Integer, GSMPEvent> defaultEventMap;
+	/** Last computed Soln solution vector from e.g. computeReachRewards(). May be null. */
+	protected double[] lastComputedSoln;
 	
 	protected MathContext mc;
 	
@@ -72,6 +75,7 @@ public class ACTMCSymbolicParameterSynthesis extends ACTMCReduction
 		this.defaultEventMap = copyEventMap(actmc.getEventMap());
 		this.synthParams = synthParams;
 		this.min = min;
+		this.polyPDMap = createPolyPotatoDataMap(actmc, actmcRew, target);
 		
 		// Set kappa precision
 		setKappa(deduceKappa());
@@ -141,7 +145,7 @@ public class ACTMCSymbolicParameterSynthesis extends ACTMCReduction
 				// create symbolic polynomial
 				int entrance = (int)actmcPotatoData.getEntrances().toArray()[0]; // event entrance state
 				Polynomial symbolicPolynomial = new Polynomial();
-				symbolicPolynomial.add(actmcPotatoData.meanRewardsBeforeEventPolynomials.get(entrance), mc);
+				symbolicPolynomial.add(actmcPotatoData.getMeanRewardsBeforeEventPolynomials().get(entrance), mc);
 				for (Map.Entry<Integer, Double> entry : reachRewards.entrySet()) {
 					int state = entry.getKey();
 					double reachRew = entry.getValue();
@@ -149,7 +153,7 @@ public class ACTMCSymbolicParameterSynthesis extends ACTMCReduction
 					if (poly == null) {
 						continue;
 					}
-					poly = new Polynomial(actmcPotatoData.meanDistributionsPolynomials.get(entrance).get(state).coeffs);
+					poly = new Polynomial(actmcPotatoData.getMeanDistributionsPolynomials().get(entrance).get(state).coeffs);
 					
 					poly.multiplyWithScalar(new BigDecimal(reachRew, mc), mc);
 					symbolicPolynomial.add(poly, mc);
@@ -158,7 +162,8 @@ public class ACTMCSymbolicParameterSynthesis extends ACTMCReduction
 				//find relevant SynthParams
 				List<SynthParam> eventSPs = lookUpSynthParams(actmcPotatoData.getEvent(), synthParams);
 				if (eventSPs.isEmpty()) {
-					throw new PrismException("ACTMCSymbolicParameterSynthesis:findDerivPolyRoots could not find requested synthParams!");
+					continue; // TODO MAJO - is this OK or not ?
+					//throw new PrismException("ACTMCSymbolicParameterSynthesis:findDerivPolyRoots could not find requested synthParams!");
 				}
 				// TODO MAJO - which parameter index to care about? Taking the first one, for now.
 				// TODO MAJO - duplicates within SynthParams will be harmful here! Taking the first one, for now.
@@ -167,48 +172,63 @@ public class ACTMCSymbolicParameterSynthesis extends ACTMCReduction
 				//find roots of the derivation of the symbolic polynomial
 				List<BigDecimal> roots = findDerivPolyRoots(symbolicPolynomial, eventSPs);
 				
+				//Make a list of candidate optimal parameters
+				List<BigDecimal> candidates = new ArrayList<BigDecimal>(roots);
+				candidates.add(new BigDecimal(String.valueOf(eventSPs.get(0).getLowerBound()), mc));
+				candidates.add(new BigDecimal(String.valueOf(eventSPs.get(0).getUpperBound()), mc));
+				
 				//evaluate the polynomial for the candidates and find min/max
-				BigDecimal minOrMaxParam = new BigDecimal(params.get(entrance).getFirstParameter(), mc);
-				BigDecimal evaluatedPoly = symbolicPolynomial.value(minOrMaxParam, mc);
+				//first, try the current one
+				BigDecimal bestParam = new BigDecimal(params.get(entrance).getFirstParameter(), mc);
+				BigDecimal bestEvaluatedCandidate = symbolicPolynomial.value(bestParam, mc);
 				// TODO MAJO - this only works for the first parameter for now!
-				for (BigDecimal root : roots) {
-					BigDecimal evaluatedRoot = symbolicPolynomial.value(root, mc);
+				for (BigDecimal candidate : candidates) {
+					BigDecimal evaluatedCandidate = symbolicPolynomial.value(candidate, mc);
 					if (this.min) {
-						if (evaluatedRoot.compareTo(evaluatedPoly) < 0) {
-							evaluatedPoly = evaluatedRoot;
-							minOrMaxParam = root;
+						if (evaluatedCandidate.compareTo(bestEvaluatedCandidate) < 0) {
+							bestEvaluatedCandidate = evaluatedCandidate;
+							bestParam = candidate;
 						}
 					} else {
-						if (evaluatedRoot.compareTo(evaluatedPoly) > 0) {
-							evaluatedPoly = evaluatedRoot;
-							minOrMaxParam = root;
+						if (evaluatedCandidate.compareTo(bestEvaluatedCandidate) > 0) {
+							bestEvaluatedCandidate = evaluatedCandidate;
+							bestParam = candidate;
 						}
 					}
 				}
 				
 				//Lastly, just set the newly found best parameter
 				//TODO MAJO - this only works for the first parameter for now!
-				newParams.get(entrance).setFirstParameter(minOrMaxParam.doubleValue());
+				newParams.get(entrance).setFirstParameter(bestParam.doubleValue());
 			}
 			
 		} while(!params.equals(newParams));
-		return null;
+		
+		//Put the actmc events back in order
+		actmc.setEventParameters(defaultEventMap);
+		
+		return newParams;
 	}
 	
 	/**
-	 * Works out the exact value of kappa precision to use for the ACTMC analysis
-	 * @return BigDecimal kappa
+	 * Return the contents of {@link ACTMCSymbolicParameterSynthesis#lastComputedSoln},
+	 * i.e. an array holding the results of the related computation.
+	 */
+	public double[] getLastComputedSoln() {
+		return lastComputedSoln;
+	}
+
+	
+	/**
+	 * Extended version of {@link ACTMCPotato#setKappa(BigDecimal)}
+	 * that also does the same to the polyPDMap member variable.
 	 */
 	@Override
-	protected BigDecimal deduceKappa() throws PrismException {
-		BigDecimal kappa;
-		if (computeKappa && !pdMap.isEmpty()) {
-			kappa = BigDecimalUtils.min(computeKappa(), constantKappa);
-		} else {
-			kappa = constantKappa;
+	protected void setKappa(BigDecimal kappa) {
+		super.setKappa(kappa);
+		for (Map.Entry<String, ACTMCPotato_poly> pdEntry : polyPDMap.entrySet()) {
+			pdEntry.getValue().setKappa(kappa);
 		}
-		mc = new MathContext(BigDecimalUtils.decimalDigits(kappa) + 3, RoundingMode.HALF_UP);
-		return kappa.divide(new BigDecimal("10", mc), mc);
 	}
 	
 	/**
@@ -285,7 +305,7 @@ public class ACTMCSymbolicParameterSynthesis extends ACTMCReduction
 	 */
 	private Map<Integer, GSMPEvent> copyEventMap(Map<Integer, GSMPEvent> eventMap) {
 		Map<Integer, GSMPEvent> newEventMap = new HashMap<Integer, GSMPEvent>(eventMap.size());
-		for (Map.Entry<Integer, GSMPEvent> entry : defaultEventMap.entrySet()) {
+		for (Map.Entry<Integer, GSMPEvent> entry : eventMap.entrySet()) {
 			int state = entry.getKey();
 			GSMPEvent event = new GSMPEvent(entry.getValue());
 			newEventMap.put(state, event);
@@ -297,10 +317,13 @@ public class ACTMCSymbolicParameterSynthesis extends ACTMCReduction
 	 * Computes and returns reachability rewards for the current actmc.
 	 * The reachability results are organized into a map where the
 	 * keys are states and the values are reachability rewards.
+	 * Last computed rewards are also stored as a member variable!
 	 */
 	private Map<Integer, Double> computeReachRewards() throws PrismException {
 		GSMPModelChecker modelChecker = new GSMPModelChecker(this);
+		modelChecker.setLog(new PrismDevNullLog());
 		ModelCheckerResult res = modelChecker.computeReachRewardsACTMC(actmc, actmcRew, target);
+		lastComputedSoln = res.soln;
 		
 		Map<Integer, Double> resMap = new HashMap<Integer, Double>();
 		for (int i = 0; i < res.soln.length ; ++i) {
@@ -339,13 +362,19 @@ public class ACTMCSymbolicParameterSynthesis extends ACTMCReduction
 	 * @return List of roots of the derivative of {@code poly}
 	 */
 	private List<BigDecimal> findDerivPolyRoots(Polynomial poly, List<SynthParam> eventSPs) throws PrismException {
-		Polynomial derivative = poly.derivative(mc);
-		List<BigDecimal> roots = PolynomialRootFinding.findRootsVAS(derivative, BigDecimalUtils.allowedError(mc.getPrecision()));
-		
 		double lb = eventSPs.iterator().next().getLowerBound();
 		double ub = eventSPs.iterator().next().getUpperBound();
 		BigDecimal lowerBound = new BigDecimal(String.valueOf(lb), mc);
 		BigDecimal upperBound = new BigDecimal(String.valueOf(ub), mc);
+		
+		Polynomial derivative = poly.derivative(mc);
+		//TODO MAJO - this one didn't work for me!
+		//List<BigDecimal> roots = PolynomialRootFinding.findRootsVAS(derivative, BigDecimalUtils.allowedError(mc.getPrecision()));
+		List<BigDecimal> roots = PolynomialRootFinding.findRootsInIntervalVCAHalley(
+				derivative,
+				lowerBound,
+				upperBound,
+				BigDecimalUtils.allowedError(mc.getPrecision()));
 		
 		List<BigDecimal> boundedRoots = new ArrayList<BigDecimal>(roots);
 		boundedRoots.removeIf(root-> root.compareTo(lowerBound) < 0 || root.compareTo(upperBound) > 0);
