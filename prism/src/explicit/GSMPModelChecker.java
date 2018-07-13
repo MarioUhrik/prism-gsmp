@@ -215,7 +215,7 @@ public class GSMPModelChecker extends ProbModelChecker
 	 * @param isACTMC True iff the gsmp model fits the definition of ACTMCs
 	 * @throws PrismException If the parameter list has unfixable problems.
 	 */
-	private void validateParamList(List<SynthParam> paramList, GSMP gsmp, boolean isACTMC) throws PrismException {
+	protected void validateParamList(List<SynthParam> paramList, GSMP gsmp, boolean isACTMC) throws PrismException {
 		// TODO MAJO - think of more things to check. Maybe merge duplicates?
 		
 		if (paramList.isEmpty()) {
@@ -241,7 +241,7 @@ public class GSMPModelChecker extends ProbModelChecker
 
 	// ACTMC model checking functions (fast alternative for GSMPs that are ACTMCs)
 	
-	private StateValues computeSteadyStateACTMC(ACTMCSimple actmc, StateValues initDistr) throws PrismException {
+	protected StateValues computeSteadyStateACTMC(ACTMCSimple actmc, StateValues initDistr) throws PrismException {
 		long reduceTime = System.currentTimeMillis();
 		// Initialize necessary data structures
 		ACTMCReduction reduction = new ACTMCReduction(actmc, null, null, true, this);
@@ -292,12 +292,12 @@ public class GSMPModelChecker extends ProbModelChecker
 		return result;
 	}
 	
-	private StateValues computeTransientACTMC(ACTMCSimple actmc, double time, StateValues initDistr) throws PrismException {
+	protected StateValues computeTransientACTMC(ACTMCSimple actmc, double time, StateValues initDistr) throws PrismException {
 		// TODO MAJO - implement
 		throw new PrismNotSupportedException("Computing transient analysis for ACTMCs is not yet implemented!");
 	}
 	
-	private ModelCheckerResult computeReachRewardsACTMC(ACTMCSimple actmc, ACTMCRewardsSimple actmcRew, BitSet target) throws PrismException {
+	protected ModelCheckerResult computeReachRewardsACTMC(ACTMCSimple actmc, ACTMCRewardsSimple actmcRew, BitSet target) throws PrismException {
 		long reduceTime = System.currentTimeMillis();
 		// Initialize necessary data structures
 		ACTMCReduction reduction = new ACTMCReduction(actmc, actmcRew, target, false, this);
@@ -324,7 +324,7 @@ public class GSMPModelChecker extends ProbModelChecker
 		return result;
 	}
 	
-	private ModelCheckerResult computeSteadyStateRewardsACTMC(ACTMCSimple actmc, ACTMCRewardsSimple actmcRew) throws PrismException {
+	protected ModelCheckerResult computeSteadyStateRewardsACTMC(ACTMCSimple actmc, ACTMCRewardsSimple actmcRew) throws PrismException {
 		// TODO MAJO - reuse the code from Steady State probabilities
 		long reduceTime = System.currentTimeMillis();
 		// Initialize necessary data structures
@@ -401,44 +401,44 @@ public class GSMPModelChecker extends ProbModelChecker
 		return res;
 	}
 	
-	private ModelCheckerResult computeReachParameterSynthesisACTMC(ACTMCSimple actmc, ACTMCRewardsSimple actmcRew, BitSet target, boolean min, List<SynthParam> paramList) throws PrismException {
+	protected ModelCheckerResult computeReachParameterSynthesisACTMC(ACTMCSimple actmc, ACTMCRewardsSimple actmcRew, BitSet target, boolean min, List<SynthParam> paramList) throws PrismException {
 		// TODO MAJO - implement
 		throw new PrismNotSupportedException("Parameter synthesis via reachability rewards for ACTMCs is not yet implemented!");
 	}
 	
-	private ModelCheckerResult computeSteadyStateParameterSynthesisACTMC(ACTMCSimple actmc, ACTMCRewardsSimple actmcRew, boolean min, List<SynthParam> paramList) throws PrismException {
+	protected ModelCheckerResult computeSteadyStateParameterSynthesisACTMC(ACTMCSimple actmc, ACTMCRewardsSimple actmcRew, boolean min, List<SynthParam> paramList) throws PrismException {
 		// TODO MAJO - implement
 		throw new PrismNotSupportedException("Parameter synthesis via steady-state rewards for ACTMCs is not yet implemented!");
 	}
 	
 	// general GSMP model checking functions (works for any GSMP, but slow)
 	
-	private StateValues computeSteadyStateGSMP(GSMP gsmp, StateValues initDistr) throws PrismException {
+	protected StateValues computeSteadyStateGSMP(GSMP gsmp, StateValues initDistr) throws PrismException {
 		// TODO MAJO - implement
 		throw new PrismNotSupportedException("Computing steady-state analysis for GSMPs is not yet implemented!");
 	}
 	
-	private StateValues computeTransientGSMP(GSMP gsmp, double time, StateValues initDistr) throws PrismException {
+	protected StateValues computeTransientGSMP(GSMP gsmp, double time, StateValues initDistr) throws PrismException {
 		// TODO MAJO - implement
 		throw new PrismNotSupportedException("Computing transient analysis for GSMPs is not yet implemented!");
 	}
 	
-	private ModelCheckerResult computeReachRewardsGSMP(GSMP gsmp, GSMPRewards rew, BitSet target) throws PrismException {
+	protected ModelCheckerResult computeReachRewardsGSMP(GSMP gsmp, GSMPRewards rew, BitSet target) throws PrismException {
 		// TODO MAJO - implement
 		throw new PrismNotSupportedException("Computing reachability rewards for GSMPs is not yet implemented!");
 	}
 	
-	private ModelCheckerResult computeSteadyStateRewardsGSMP(GSMP gsmp, GSMPRewards rew) throws PrismException {
+	protected ModelCheckerResult computeSteadyStateRewardsGSMP(GSMP gsmp, GSMPRewards rew) throws PrismException {
 		// TODO MAJO - implement
 		throw new PrismNotSupportedException("Computing steady-state rewards for GSMPs is not yet implemented!");
 	}
 	
-	private ModelCheckerResult computeReachParameterSynthesisGSMP(GSMP gsmp, GSMPRewards rew, BitSet target, boolean min, List<SynthParam> paramList) throws PrismException {
+	protected ModelCheckerResult computeReachParameterSynthesisGSMP(GSMP gsmp, GSMPRewards rew, BitSet target, boolean min, List<SynthParam> paramList) throws PrismException {
 		// TODO MAJO - implement
 		throw new PrismNotSupportedException("Parameter synthesis via reachability rewards for GSMPs is not yet implemented!");
 	}
 	
-	private ModelCheckerResult computeSteadyStateParameterSynthesisGSMP(GSMP gsmp, GSMPRewards rew, boolean min, List<SynthParam> paramList) throws PrismException {
+	protected ModelCheckerResult computeSteadyStateParameterSynthesisGSMP(GSMP gsmp, GSMPRewards rew, boolean min, List<SynthParam> paramList) throws PrismException {
 		// TODO MAJO - implement
 		throw new PrismNotSupportedException("Parameter synthesis via steady-state rewards for GSMPs is not yet implemented!");
 	}

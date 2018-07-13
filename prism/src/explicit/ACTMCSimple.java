@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 
 import prism.ModelType;
+import prism.PrismException;
 
 /**
  * Read-only explicit-state representation of an ACTMC suitable for CTMC-based model checking methods.
@@ -98,6 +99,28 @@ public class ACTMCSimple extends CTMCSimple
 	 */
 	public int getNumEvents() {
 		return eventList.size();
+	}
+	
+	/**
+	 * Sets the {@code firstParameter} and {@code secondParameter} values
+	 * of GSMPEvents within this actmc to those of the given {@code paramMap}.
+	 * @param paramMap Map of the given GSMPEvent parameters. 
+	 *                 Keys are the states where the value GSMPEvent is active.
+	 *                 Multiple keys for the same GSMPEvent may exist.
+	 * @throws PrismException if the paramMap has key entries that actmc does not
+	 */
+	public void setEventParameters(Map<Integer, GSMPEvent> paramMap) throws PrismException {
+		for (Map.Entry<Integer, GSMPEvent> entry : paramMap.entrySet()) {
+			int paramMapState = entry.getKey();
+			GSMPEvent paramMapEvent = entry.getValue();
+			
+			GSMPEvent thisEvent = getActiveEvent(paramMapState);
+			if (thisEvent == null) {
+				throw new PrismException("ACTMCSimple.setEventParameters error: paramMap has events missing in the actmc!");
+			}
+			thisEvent.setFirstParameter(paramMapEvent.getFirstParameter());
+			thisEvent.setSecondParameter(paramMapEvent.getSecondParameter());
+		}
 	}
 	
 	/**

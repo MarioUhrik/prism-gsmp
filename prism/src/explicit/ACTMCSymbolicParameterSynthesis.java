@@ -36,6 +36,8 @@ import java.util.List;
 import java.util.Map;
 
 import common.BigDecimalUtils;
+import common.polynomials.Polynomial;
+import common.polynomials.PolynomialRootFinding;
 import explicit.rewards.ACTMCRewardsSimple;
 import parser.ast.SynthParam;
 import prism.PrismComponent;
@@ -56,8 +58,6 @@ public class ACTMCSymbolicParameterSynthesis extends ACTMCReduction
 	protected boolean min;
 	/** Verified list of event parameters to synthesize. */
 	protected List<SynthParam> synthParams;
-	/** Mapping of synthesis parameters onto states where they are active for convenience. */
-	protected Map<Integer, SynthParam> paramMap = new HashMap<Integer, SynthParam>();
 	/** Default ACTMC event map (eventMap from ACTMC) */
 	protected Map<Integer, GSMPEvent> defaultEventMap;
 	
@@ -69,33 +69,137 @@ public class ACTMCSymbolicParameterSynthesis extends ACTMCReduction
 	public ACTMCSymbolicParameterSynthesis(ACTMCSimple actmc, ACTMCRewardsSimple actmcRew, BitSet target,
 			boolean computingSteadyState, PrismComponent parent, List<SynthParam> synthParams, boolean min) throws PrismException {
 		super(actmc, actmcRew, target, computingSteadyState, parent);
-		this.defaultEventMap = new HashMap<Integer, GSMPEvent>(actmc.getEventMap());
+		this.defaultEventMap = copyEventMap(actmc.getEventMap());
 		this.synthParams = synthParams;
 		this.min = min;
-		
-		// Construct paramMap
-		int numStates = actmc.getNumStates();
-		for (int s = 0 ; s < numStates ; ++s) {
-			GSMPEvent event = actmc.getActiveEvent(s);
-			if (event == null) {
-				continue;
-			}
-			for (SynthParam param : synthParams) {
-				if (event.getOriginalIdentifier().equals(param.getEventName())) {
-					paramMap.put(s, param);
-					break;
-				}
-			}
-		}
 		
 		// Set kappa precision
 		setKappa(deduceKappa());
 	}
 	
 	/**
+	 * Attempts to find the fitting GSMPEvent out of {@code events} for the given {@code SynthParam}.
+	 * @param synthParam synthesis parameter
+	 * @param events List of candidate events to search from
+	 * @return GSMPEvent with original name equal to the synthParam event name. Null if not found.
+	 */
+	public GSMPEvent lookUpEvent(SynthParam synthParam, List<GSMPEvent> events) {
+		for (GSMPEvent event : events) {
+			if (synthParam.getEventName().equals(event.getOriginalIdentifier())) {
+				return event;
+			}
+		}
+		return null;
+	}
+	
+	/**
+	 * Attempts to find all fitting SynthParams out of {@code synthParams} for the given {@code event}.
+	 * @param events event
+	 * @param synthParam List of synthesis parameters to search from
+	 * @return List of SynthParams with event names equal to the event original name. May be empty.
+	 */
+	public List<SynthParam> lookUpSynthParams(GSMPEvent event, List<SynthParam> synthParams) {
+		List<SynthParam> result = new ArrayList<SynthParam>();
+		for (SynthParam synthParam : synthParams) {
+			if (synthParam.getEventName().equals(event.getOriginalIdentifier())) {
+				result.add(synthParam);
+			}
+		}
+		return result;
+	}
+	
+	/**
+	 * Performs parameter synthesis for the given member variables.
+	 * <BR>
+	 * NOTE: The ACTMC is expected to be strongly connected, with only localized alarms, and without unreachable states.
+	 * @return actmc events where the queried event parameters are kappa-optimal, mapped onto states of the actmc.
+	 */
+	public Map<Integer, GSMPEvent> reachabilityRewardParameterSynthesis() throws PrismException {
+		// set ACTMC event parameters to the their upper synthesis bounds to ensure enough precision
+		Map<Integer, GSMPEvent> params = chooseUpperBoundParams();
+		Map<Integer, GSMPEvent> newParams = chooseUpperBoundParams();
+		Map<Integer, GSMPEvent> tmp;
+		actmc.setEventParameters(newParams);
+		
+		// adjust local MathContext
+		setKappa(deduceKappa());
+		getMinimumKappaAndSetMC();
+		
+		do {
+			actmc.setEventParameters(newParams);
+			tmp = params;
+			params = newParams;
+			newParams = tmp;
+			// POLICY EVALUATION
+			Map<Integer, Double> reachRewards = computeReachRewards();
+			if (reachRewards.containsValue(new Double(Double.POSITIVE_INFINITY))) {
+				return actmc.getEventMap();
+			}
+			
+			// POLICY IMPROVEMENT
+			for (ACTMCPotato_poly actmcPotatoData : polyPDMap.values()) {
+				// create symbolic polynomial
+				int entrance = (int)actmcPotatoData.getEntrances().toArray()[0]; // event entrance state
+				Polynomial symbolicPolynomial = new Polynomial();
+				symbolicPolynomial.add(actmcPotatoData.meanRewardsBeforeEventPolynomials.get(entrance), mc);
+				for (Map.Entry<Integer, Double> entry : reachRewards.entrySet()) {
+					int state = entry.getKey();
+					double reachRew = entry.getValue();
+					Polynomial poly = actmcPotatoData.meanDistributionsPolynomials.get(entrance).get(state);
+					if (poly == null) {
+						continue;
+					}
+					poly = new Polynomial(actmcPotatoData.meanDistributionsPolynomials.get(entrance).get(state).coeffs);
+					
+					poly.multiplyWithScalar(new BigDecimal(reachRew, mc), mc);
+					symbolicPolynomial.add(poly, mc);
+				}
+				
+				//find relevant SynthParams
+				List<SynthParam> eventSPs = lookUpSynthParams(actmcPotatoData.getEvent(), synthParams);
+				if (eventSPs.isEmpty()) {
+					throw new PrismException("ACTMCSymbolicParameterSynthesis:findDerivPolyRoots could not find requested synthParams!");
+				}
+				// TODO MAJO - which parameter index to care about? Taking the first one, for now.
+				// TODO MAJO - duplicates within SynthParams will be harmful here! Taking the first one, for now.
+				eventSPs.removeIf(sp-> sp.getParamIndex() != 1);
+				
+				//find roots of the derivation of the symbolic polynomial
+				List<BigDecimal> roots = findDerivPolyRoots(symbolicPolynomial, eventSPs);
+				
+				//evaluate the polynomial for the candidates and find min/max
+				BigDecimal minOrMaxParam = new BigDecimal(params.get(entrance).getFirstParameter(), mc);
+				BigDecimal evaluatedPoly = symbolicPolynomial.value(minOrMaxParam, mc);
+				// TODO MAJO - this only works for the first parameter for now!
+				for (BigDecimal root : roots) {
+					BigDecimal evaluatedRoot = symbolicPolynomial.value(root, mc);
+					if (this.min) {
+						if (evaluatedRoot.compareTo(evaluatedPoly) < 0) {
+							evaluatedPoly = evaluatedRoot;
+							minOrMaxParam = root;
+						}
+					} else {
+						if (evaluatedRoot.compareTo(evaluatedPoly) > 0) {
+							evaluatedPoly = evaluatedRoot;
+							minOrMaxParam = root;
+						}
+					}
+				}
+				
+				//Lastly, just set the newly found best parameter
+				//TODO MAJO - this only works for the first parameter for now!
+				newParams.get(entrance).setFirstParameter(minOrMaxParam.doubleValue());
+			}
+			
+		} while(!params.equals(newParams));
+		return null;
+	}
+	
+	/**
 	 * Works out the exact value of kappa precision to use for the ACTMC analysis
 	 * @return BigDecimal kappa
 	 */
+	@Override
 	protected BigDecimal deduceKappa() throws PrismException {
 		BigDecimal kappa;
 		if (computeKappa && !pdMap.isEmpty()) {
@@ -104,44 +208,9 @@ public class ACTMCSymbolicParameterSynthesis extends ACTMCReduction
 			kappa = constantKappa;
 		}
 		mc = new MathContext(BigDecimalUtils.decimalDigits(kappa) + 3, RoundingMode.HALF_UP);
-		return kappa.divide(new BigDecimal("3", mc), mc);
+		return kappa.divide(new BigDecimal("10", mc), mc);
 	}
 	
-	/**
-	 * Performs parameter synthesis for the given member variables.
-	 * @return actmc events where the queried event parameters are kappa-optimal, mapped onto states of the actmc.
-	 */
-	public Map<Integer, GSMPEvent> reachabilityRewardParameterSynthesis() throws PrismException {
-		// TODO MAJO - implement
-		Map<Integer, GSMPEvent> arbitraryParams = chooseArbitraryParams();
-		return null;
-	}
-	
-	/**
-	 * Returns a mapping of events onto states, where the events have some arbitrary parameters, 
-	 * within boundaries specified by {@code synthParams}.
-	 * @throws PrismException 
-	 */
-	private Map<Integer, GSMPEvent> chooseArbitraryParams() throws PrismException {
-		Map<Integer, GSMPEvent> arbitraryParamMap = new HashMap<Integer, GSMPEvent>(defaultEventMap);
-		List<GSMPEvent> events = new ArrayList<GSMPEvent>(arbitraryParamMap.values());
-		for (SynthParam synthParam : synthParams) {
-			
-			GSMPEvent event = lookUpEvent(synthParam, events);
-			if (event == null) {
-				throw new PrismException("ACTMC Parameter synthesis error: failed to find matching event " + synthParam.getEventName());
-			}
-
-			if (synthParam.getParamIndex() == 1) {
-				event.setFirstParameter(synthParam.getUpperBound() - synthParam.getLowerBound());
-			}
-			if (synthParam.getParamIndex() == 2) {
-				event.setSecondParameter(synthParam.getUpperBound() - synthParam.getLowerBound());
-			}
-		}
-		return arbitraryParamMap;
-	}
-
 	/**
 	 * Creates a map where the keys are string identifiers of the GSMPEvents,
 	 * and the values are corresponding ACTMCPotato_poly structures.
@@ -188,18 +257,100 @@ public class ACTMCSymbolicParameterSynthesis extends ACTMCReduction
 	}
 	
 	/**
-	 * Attempts to find the fitting GSMPEvent out of {@code events} for the given {@code SynthParam}.
-	 * @param synthParam synthesis parameter
-	 * @param events List of candidate events to search from
-	 * @return GSMPEvent with original name equal to the synthParam event name. Null if not found.
+	 * Returns a hard-copy mapping of events onto states where they are active,
+	 * where the events parameters are equal to their upper synthesis bounds specified by {@code synthParams}.
 	 */
-	public GSMPEvent lookUpEvent(SynthParam synthParam, List<GSMPEvent> events) {
-		for (GSMPEvent event : events) {
-			if (synthParam.getEventName().equals(event.getOriginalIdentifier())) {
-				return event;
+	private Map<Integer, GSMPEvent> chooseUpperBoundParams() throws PrismException {
+		Map<Integer, GSMPEvent> upperBoundEventMap = copyEventMap(defaultEventMap);		
+		List<GSMPEvent> events = new ArrayList<GSMPEvent>(upperBoundEventMap.values());
+		for (SynthParam synthParam : synthParams) {
+			
+			GSMPEvent event = lookUpEvent(synthParam, events);
+			if (event == null) {
+				throw new PrismException("ACTMC Parameter synthesis error: failed to find matching event " + synthParam.getEventName());
+			}
+
+			if (synthParam.getParamIndex() == 1) {
+				event.setFirstParameter(synthParam.getUpperBound());
+			}
+			if (synthParam.getParamIndex() == 2) {
+				event.setSecondParameter(synthParam.getUpperBound());
 			}
 		}
-		return null;
+		return upperBoundEventMap;
+	}
+	
+	/**
+	 * Makes a hard copy of the {@code eventMap} (events mapped onto states).
+	 */
+	private Map<Integer, GSMPEvent> copyEventMap(Map<Integer, GSMPEvent> eventMap) {
+		Map<Integer, GSMPEvent> newEventMap = new HashMap<Integer, GSMPEvent>(eventMap.size());
+		for (Map.Entry<Integer, GSMPEvent> entry : defaultEventMap.entrySet()) {
+			int state = entry.getKey();
+			GSMPEvent event = new GSMPEvent(entry.getValue());
+			newEventMap.put(state, event);
+		}
+		return newEventMap;
+	}
+	
+	/**
+	 * Computes and returns reachability rewards for the current actmc.
+	 * The reachability results are organized into a map where the
+	 * keys are states and the values are reachability rewards.
+	 */
+	private Map<Integer, Double> computeReachRewards() throws PrismException {
+		GSMPModelChecker modelChecker = new GSMPModelChecker(this);
+		ModelCheckerResult res = modelChecker.computeReachRewardsACTMC(actmc, actmcRew, target);
+		
+		Map<Integer, Double> resMap = new HashMap<Integer, Double>();
+		for (int i = 0; i < res.soln.length ; ++i) {
+			resMap.put(i, res.soln[i]);
+		}
+		return resMap;
+	}
+	
+	/**
+	 * Explores polyPDMap to find the lowest kappa (highest precision).
+	 * Then, MathContext this.mc is adjusted to it and the lowest kappa is returned.
+	 * <br>
+	 * NOTE: This method is important to set the MathContext properly!
+	 * @throws PrismException 
+	 */
+	private BigDecimal getMinimumKappaAndSetMC() throws PrismException {
+		BigDecimal lowestKappa = deduceKappa();
+		for (ACTMCPotato_poly actmcPotatoData : polyPDMap.values()) {
+			BigDecimal kappa = actmcPotatoData.getKappa();
+			if (kappa == null) {
+				throw new PrismException("ACTMCSymbolicParameterSynthesis.getMinimumKappa: kappa not yet set for the potato!");
+			}
+			if (kappa.compareTo(lowestKappa) < 0) {
+				lowestKappa = kappa;
+			}
+		}
+		mc = new MathContext(BigDecimalUtils.decimalDigits(lowestKappa) + 3, RoundingMode.HALF_UP);
+		return lowestKappa;
+	}
+	
+	/**
+	 * Finds roots of the derivative of the given polynomial belonging to a given event and entrance state.
+	 * The event and entrance are only used to find the upper/lower bounds of the roots.
+	 * @param poly polynomial
+	 * @param eventSPs synthesis parameter structures relevant to the given polynomial
+	 * @return List of roots of the derivative of {@code poly}
+	 */
+	private List<BigDecimal> findDerivPolyRoots(Polynomial poly, List<SynthParam> eventSPs) throws PrismException {
+		Polynomial derivative = poly.derivative(mc);
+		List<BigDecimal> roots = PolynomialRootFinding.findRootsVAS(derivative, BigDecimalUtils.allowedError(mc.getPrecision()));
+		
+		double lb = eventSPs.iterator().next().getLowerBound();
+		double ub = eventSPs.iterator().next().getUpperBound();
+		BigDecimal lowerBound = new BigDecimal(String.valueOf(lb), mc);
+		BigDecimal upperBound = new BigDecimal(String.valueOf(ub), mc);
+		
+		List<BigDecimal> boundedRoots = new ArrayList<BigDecimal>(roots);
+		boundedRoots.removeIf(root-> root.compareTo(lowerBound) < 0 || root.compareTo(upperBound) > 0);
+		
+		return boundedRoots;
 	}
 	
 }

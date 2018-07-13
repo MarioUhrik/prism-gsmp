@@ -57,8 +57,6 @@ public class GSMPEvent extends DTMCSimple
 	 */
 	Map<Integer, Map<Integer, Set<String>>> actionLabels;
 
-	// Constructors
-
 	/**
 	 * Constructor: new Event with an unspecified number of states.
 	 */
@@ -279,4 +277,21 @@ public class GSMPEvent extends DTMCSimple
 		}
 		return str;
 	}
+	
+	@Override
+	public boolean equals(Object o) {
+		if (o == null || !(o instanceof GSMPEvent))
+			return false;
+		GSMPEvent other = (GSMPEvent)o;
+		
+		return (super.equals(other) &&
+				this.distributionType == other.distributionType &&
+				this.firstParameter == other.firstParameter &&
+				this.secondParameter == other.secondParameter &&
+				this.active.equals(other.active) &&
+				this.identifier.equals(other.identifier));
+	}
+	
+	
+	
 }
