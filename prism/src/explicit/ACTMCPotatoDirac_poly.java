@@ -337,14 +337,18 @@ public class ACTMCPotatoDirac_poly extends ACTMCPotato_poly
 			//still be within the potato at the time of the event occurrence,
 			//these probabilities must be redistributed into the successor states.
 			//using the event-defined distribution on states.
-			for (int ps : potato) {
-				int psIndex = ACTMCtoDTMC.get(ps);
-				Distribution distr = event.getTransitions(ps);
-				Set<Integer> distrSupport = distr.getSupport();
-				for ( int successor : distrSupport) {
-					polynomialsBeforeEvent[psIndex].multiplyWithScalar(new BigDecimal(distr.get(successor), mc),  mc);
-					polynomialsAfterEvent[ACTMCtoDTMC.get(successor)].add(polynomialsBeforeEvent[psIndex], mc);
-					polynomialsBeforeEvent[psIndex].multiplyWithScalar(BigDecimal.ONE.divide(new BigDecimal(distr.get(successor), mc), mc),  mc);
+			for (int n = 0; n < numStates  ; ++n) {
+				int nIndex = DTMCtoACTMC.get(n);
+				if (potato.contains(nIndex)) {
+					Distribution distr = event.getTransitions(nIndex);
+					Set<Integer> distrSupport = distr.getSupport();
+					for ( int successor : distrSupport) {
+						polynomialsBeforeEvent[n].multiplyWithScalar(new BigDecimal(distr.get(successor), mc),  mc);
+						polynomialsAfterEvent[ACTMCtoDTMC.get(successor)].add(polynomialsBeforeEvent[n], mc);
+						polynomialsBeforeEvent[n].multiplyWithScalar(BigDecimal.ONE.divide(new BigDecimal(distr.get(successor), mc), mc),  mc);
+					}
+				} else {
+					polynomialsAfterEvent[n].add(polynomialsBeforeEvent[n], mc);
 				}
 			}
 			
