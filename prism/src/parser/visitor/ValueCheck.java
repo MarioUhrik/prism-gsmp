@@ -57,8 +57,10 @@ public class ValueCheck extends ASTTraverse
 		String distributionName = mf.getEvent(e.getEventName()).getDistributionName();
 		int distributionIndex = mf.getDistributionList().getDistributionIndex(distributionName);
 		TypeDistribution distributionType = mf.getDistributionList().getDistributionType(distributionIndex);
+		Expression firstDefParam = mf.getDistributionList().getFirstParameter(distributionIndex);
+		Expression secondDefParam = mf.getDistributionList().getSecondParameter(distributionIndex);
 		if (distributionType.getNumParams() < e.getParamIndex()) {
-			throw new PrismLangException("Parameter index is " + e.getParamIndex() + 
+			throw new PrismLangException("Synthesis parameter index is " + e.getParamIndex() + 
 					", but " + distributionType.getTypeString() + 
 					" only has " + distributionType.getNumParams() + 
 					" parameters!",
@@ -67,13 +69,34 @@ public class ValueCheck extends ASTTraverse
 		if (e.getParamIndex() <= 0) {
 			throw new PrismLangException("Parameter index must be greater than zero!", e.getParamIndexExpr());
 		}
-		
-		if (e.getLowerBound() < 0.0) {
-			throw new PrismLangException("Lower bound must be non-negative!", e.getLowerBoundExpr());
+		if (e.getParamIndex() == 1) {
+			try {
+				distributionType.parameterValueCheck(e.getLowerBoundExpr(), secondDefParam, evaluatedConstants);
+			} catch (Exception exception) {
+			     throw new PrismLangException("Invalid synthesis parameter lower bound for event" + e.getEventName(), e.getLowerBoundExpr());
+			}
+			try {
+				distributionType.parameterValueCheck(e.getUpperBoundExpr(), secondDefParam, evaluatedConstants);
+			} catch (Exception exception) {
+			     throw new PrismLangException("Invalid synthesis parameter upper bound for event" + e.getEventName(), e.getUpperBoundExpr());
+			}
 		}
+		if (e.getParamIndex() == 2) {
+			try {
+				distributionType.parameterValueCheck(firstDefParam, e.getLowerBoundExpr(), evaluatedConstants);
+			} catch (Exception exception) {
+			     throw new PrismLangException("Invalid synthesis parameter lower bound for event"  + e.getEventName(), e.getLowerBoundExpr());
+			}
+			try {
+				distributionType.parameterValueCheck(firstDefParam, e.getUpperBoundExpr(), evaluatedConstants);
+			} catch (Exception exception) {
+			     throw new PrismLangException("Invalid synthesis parameter upper bound for event"  + e.getEventName(), e.getUpperBoundExpr());
+			}
+		}
+		
 		if (e.getLowerBound() >= e.getUpperBound()) {
 			throw new PrismLangException("Upper bound must be greater than the lower bound!", e.getUpperBoundExpr());
-		}
+}
 	}
 	
 	public void visitPost(DistributionList e) throws PrismLangException // TODO MAJO - currently unused, and rather done later at build time.

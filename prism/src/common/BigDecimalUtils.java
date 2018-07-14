@@ -71,7 +71,7 @@ public class BigDecimalUtils {
 		// TODO MAJO - maybe the increase by 3 is not so nice in general
 		// TODO MAJO - rewrite to decimal logarithm
 		BigInteger inverseInt = inverse.toBigInteger();
-		int decimalDigits = 3;
+		int decimalDigits = 1;
 		for (  ; inverseInt.compareTo(BigInteger.ONE) >= 0 ; ++decimalDigits) {
 			inverseInt = inverseInt.divide(BigInteger.TEN);
 		}
@@ -86,7 +86,7 @@ public class BigDecimalUtils {
 	public static BigDecimal allowedError(int decimalDigits) {
 		// TODO MAJO - maybe the increase by 3 is not so nice in general
 		MathContext mc = new MathContext(decimalDigits, RoundingMode.HALF_UP);
-		return BigDecimalMath.pow(BigDecimal.TEN, new BigDecimal(decimalDigits + 3, mc).negate(), mc);
+		return BigDecimalMath.pow(BigDecimal.TEN, new BigDecimal(decimalDigits + 1, mc).negate(), mc);
 	}
 	
 	/**
