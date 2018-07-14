@@ -130,14 +130,17 @@ public class ACTMCSymbolicParameterSynthesis extends ACTMCReduction
 		getMinimumKappaAndSetMC();
 		
 		do {
-			actmc.setEventParameters(newParams);
 			tmp = params;
 			params = newParams;
 			newParams = tmp;
+			actmc.setEventParameters(params);
 			// POLICY EVALUATION
 			Map<Integer, Double> reachRewards = computeReachRewards();
 			if (reachRewards.containsValue(new Double(Double.POSITIVE_INFINITY))) {
-				return actmc.getEventMap();
+				//Put the actmc events back in order
+				actmc.setEventParameters(defaultEventMap);
+				//return the current params, because it doesn't matter in this case
+				return params;
 			}
 			
 			// POLICY IMPROVEMENT
@@ -149,11 +152,11 @@ public class ACTMCSymbolicParameterSynthesis extends ACTMCReduction
 				for (Map.Entry<Integer, Double> entry : reachRewards.entrySet()) {
 					int state = entry.getKey();
 					double reachRew = entry.getValue();
-					Polynomial poly = actmcPotatoData.meanDistributionsPolynomials.get(entrance).get(state);
+					Polynomial poly = actmcPotatoData.getMeanDistributionsPolynomials().get(entrance).get(state);
 					if (poly == null) {
 						continue;
 					}
-					poly = new Polynomial(actmcPotatoData.getMeanDistributionsPolynomials().get(entrance).get(state).coeffs);
+					poly = new Polynomial(poly.coeffs);
 					
 					poly.multiplyWithScalar(new BigDecimal(reachRew, mc), mc);
 					symbolicPolynomial.add(poly, mc);

@@ -1,5 +1,7 @@
 //Rmax=? [F (items=3)] {(Prod_event1, 1, 1..2)}
 //Rmin=? [F (items=3)] {(Prod_event1, 1, 1..2)}
+//Rmax=? [F (items=3)] {(Prod_event1, 1, 0.00001..0.5), (Prod_event2, 1, 0.00001..0.5), (Prod_event3, 1, 0.00001..0.5)}
+//Rmin=? [F (items=3)] {(Prod_event1, 1, 1.6..2.5), (Prod_event2, 1, 0.00001..0.8), (Prod_event3, 1, 0.041..4)}
 
 gsmp
 
