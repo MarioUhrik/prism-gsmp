@@ -51,13 +51,15 @@ import prism.PrismException;
 public class ACTMCSymbolicParameterSynthesis extends ACTMCReduction
 {
 	
-	/** Map where the keys are string identifiers of the GSMPEvents,
-	 *  and the values are corresponding ACTMCPotato_poly structures.
-	 *  This is useful for fast access and efficient reusage of the ACTMCPotato_poly structures.*/
+	/** Map where the keys are string identifiers of the GSMPEvents that we are synthesizing,
+	 *  and the values are corresponding ACTMCPotato_poly structures. */
 	protected Map<String, ACTMCPotato_poly> polyPDMap;
+	/** Map where the keys are string identifiers of the GSMPEvents that we are synthesizing,
+	 *  and the values are corresponding synthesis parameter structures. */
+	protected Map<String, List<SynthParam>> polySPMap;
 	/** True if we are minimizing the rewards. Otherwise, if maximizing, this variable is false. */
 	protected boolean min;
-	/** Verified list of event parameters to synthesize. */
+	/** Verified original list of event parameters to synthesize. */
 	protected List<SynthParam> synthParams;
 	/** Default ACTMC event map (eventMap from ACTMC) */
 	protected Map<Integer, GSMPEvent> defaultEventMap;
@@ -76,7 +78,8 @@ public class ACTMCSymbolicParameterSynthesis extends ACTMCReduction
 		this.defaultEventMap = copyEventMap(actmc.getEventMap());
 		this.synthParams = synthParams;
 		this.min = min;
-		this.polyPDMap = createPolyPotatoDataMap(actmc, actmcRew, target);
+		this.polySPMap = new HashMap<String, List<SynthParam>>();
+		this.polyPDMap = createPolyPDandSPMap(actmc, actmcRew, target);
 		
 		// Set kappa precision
 		setKappa(deduceKappa());
@@ -144,6 +147,9 @@ public class ACTMCSymbolicParameterSynthesis extends ACTMCReduction
 			
 			// POLICY IMPROVEMENT
 			for (ACTMCPotato_poly actmcPotatoData : polyPDMap.values()) {
+				//get relevant SynthParams
+				List<SynthParam> eventSPs = polySPMap.get(actmcPotatoData.getEvent().getIdentifier());
+				
 				// create symbolic polynomial
 				int entrance = (int)actmcPotatoData.getEntrances().toArray()[0]; // event entrance state
 				Polynomial symbolicPolynomial = new Polynomial();
@@ -160,16 +166,6 @@ public class ACTMCSymbolicParameterSynthesis extends ACTMCReduction
 					poly.multiplyWithScalar(new BigDecimal(reachRew, mc), mc);
 					symbolicPolynomial.add(poly, mc);
 				}
-				
-				//find relevant SynthParams
-				List<SynthParam> eventSPs = lookUpSynthParams(actmcPotatoData.getEvent(), synthParams);
-				if (eventSPs.isEmpty()) {
-					continue; // TODO MAJO - is this OK or not ?
-					//throw new PrismException("ACTMCSymbolicParameterSynthesis:findDerivPolyRoots could not find requested synthParams!");
-				}
-				// TODO MAJO - which parameter index to care about? Taking the first one, for now.
-				// TODO MAJO - duplicates within SynthParams will be harmful here! Taking the first one, for now.
-				eventSPs.removeIf(sp-> sp.getParamIndex() != 1);
 				
 				//find roots of the derivation of the symbolic polynomial
 				List<BigDecimal> roots = findDerivPolyRoots(symbolicPolynomial, eventSPs);
@@ -231,19 +227,31 @@ public class ACTMCSymbolicParameterSynthesis extends ACTMCReduction
 	}
 	
 	/**
-	 * Creates a map where the keys are string identifiers of the GSMPEvents,
-	 * and the values are corresponding ACTMCPotato_poly structures.
+	 * Creates and returns a map where the keys are string identifiers of the GSMPEvents
+	 * whose parameters we are synthesizing, and the values are corresponding ACTMCPotato_poly structures.
 	 * The ACTMCPotato_poly structures will then be used for parameter synthesis of individual events.
+	 * Furthermore, fills up the {@link ACTMCSymbolicParameterSynthesis#polySPMap} with relevant data.
 	 * @param actmc ACTMC model for which to create the ACTMCPotato_poly structures
 	 * @param rew Optional rewards associated with {@code actmc}. May be null, but calls
 	 *            to {@code ACTMCPotato.getMeanReward()} will throw an exception!
+	 * @return {@link ACTMCSymbolicParameterSynthesis#polyPDMap} for the given parameters
 	 */
-	protected Map<String, ACTMCPotato_poly> createPolyPotatoDataMap(ACTMCSimple actmc,
+	protected Map<String, ACTMCPotato_poly> createPolyPDandSPMap(ACTMCSimple actmc,
 			ACTMCRewardsSimple rew, BitSet target) throws PrismException {
 		Map<String, ACTMCPotato_poly> pdMap = new HashMap<String, ACTMCPotato_poly>();
 		List<GSMPEvent> events = actmc.getEventList();
 		
 		for (GSMPEvent event: events) {
+			//find relevant SynthParams
+			List<SynthParam> eventSPs = lookUpSynthParams(event, synthParams);
+			if (eventSPs.isEmpty()) {
+				continue;
+			}
+			// TODO MAJO - which parameter index to care about? Taking the first one, for now.
+			// TODO MAJO - duplicates within SynthParams will be harmful here! Taking the first one, for now.
+			eventSPs.removeIf(sp-> sp.getParamIndex() != 1);
+			this.polySPMap.put(event.getIdentifier(), eventSPs);
+			
 			ACTMCPotato_poly potatoData;
 			
 			switch (event.getDistributionType().getEnum()) { //Symbolic parameter synthesis requires the "poly" implementations!
@@ -259,7 +267,7 @@ public class ACTMCSymbolicParameterSynthesis extends ACTMCReduction
 				// TODO MAJO - implement weibull distributed event support
 				//break;
 			case UNIFORM:
-				throw new UnsupportedOperationException("ACTMCSymbolicParameterSynthesis does not yet support the Weibull distribution!");
+				throw new UnsupportedOperationException("ACTMCSymbolicParameterSynthesis does not yet support the uniform distribution!");
 				// TODO MAJO - implement weibull distributed event support
 				//break;
 			case WEIBULL:
