@@ -72,6 +72,7 @@ public class ACTMCSymbolicParameterSynthesis extends ACTMCReduction
 	public ACTMCSymbolicParameterSynthesis(ACTMCSimple actmc, ACTMCRewardsSimple actmcRew, BitSet target,
 			boolean computingSteadyState, PrismComponent parent, List<SynthParam> synthParams, boolean min) throws PrismException {
 		super(actmc, actmcRew, target, computingSteadyState, parent);
+		this.actmc = new ACTMCSimple(actmc); // use hard copy of the ACTMC, because we will be modifying it
 		this.defaultEventMap = copyEventMap(actmc.getEventMap());
 		this.synthParams = synthParams;
 		this.min = min;
@@ -137,8 +138,6 @@ public class ACTMCSymbolicParameterSynthesis extends ACTMCReduction
 			// POLICY EVALUATION
 			Map<Integer, Double> reachRewards = computeReachRewards();
 			if (reachRewards.containsValue(new Double(Double.POSITIVE_INFINITY))) {
-				//Put the actmc events back in order
-				actmc.setEventParameters(defaultEventMap);
 				//return the current params, because it doesn't matter in this case
 				return params;
 			}
@@ -206,10 +205,7 @@ public class ACTMCSymbolicParameterSynthesis extends ACTMCReduction
 			}
 			
 		} while(!params.equals(newParams));
-		
-		//Put the actmc events back in order
-		actmc.setEventParameters(defaultEventMap);
-		
+
 		return newParams;
 	}
 	

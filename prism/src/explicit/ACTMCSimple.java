@@ -74,6 +74,24 @@ public class ACTMCSimple extends CTMCSimple
 		}
 	}
 	
+	/**
+	 * Hard copy constructor
+	 */
+	public ACTMCSimple(ACTMCSimple other) {
+		super(new CTMCSimple(other));
+		this.eventMap = new HashMap<Integer, GSMPEvent>(other.eventMap.size());
+		this.eventList = new ArrayList<GSMPEvent>(other.eventList.size());
+		List<GSMPEvent> allEvents = other.getEventList();
+		for (int e = 0; e < allEvents.size(); ++e) {
+			GSMPEvent event = new GSMPEvent(allEvents.get(e));
+			this.eventList.add(event);
+			BitSet activeStates = event.getActive();
+			for (int s = activeStates.nextSetBit(0); s >= 0; s = activeStates.nextSetBit(s+1)) {
+				this.eventMap.put(s, event); // hard copies
+			}
+		}
+	}
+	
 	@Override
 	public ModelType getModelType() {
 		return ModelType.GSMP;
