@@ -29,6 +29,7 @@ package explicit;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -410,7 +411,8 @@ public class GSMPModelChecker extends ProbModelChecker
 		//Print the requested optimal parameters into the log
 		mainLog.println("Symbolic Reachability Reward Parameter Synthesis finished after " + synthesisTime/1000.0 + " seconds.");
 		mainLog.println("Printing the list of optimal event parameters below!");
-		for(GSMPEvent event : optimalParams.values()) {
+		Set<GSMPEvent> optimalParamSet = new HashSet<GSMPEvent>(optimalParams.values());
+		for(GSMPEvent event : optimalParamSet) {
 			mainLog.println(event.getParameterString());
 		}
 		

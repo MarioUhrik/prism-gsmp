@@ -39,6 +39,7 @@ import java.util.Set;
 import ch.obermuhlner.math.big.BigDecimalMath;
 import common.BigDecimalUtils;
 import explicit.ProbModelChecker.LinEqMethod;
+import explicit.ProbModelChecker.TermCrit;
 import explicit.rewards.ACTMCRewardsSimple;
 import explicit.rewards.MCRewards;
 import explicit.rewards.StateRewardsConstant;
@@ -47,6 +48,7 @@ import prism.Pair;
 import prism.PrismComponent;
 import prism.PrismDevNullLog;
 import prism.PrismException;
+import prism.PrismNotSupportedException;
 import prism.PrismSettings;
 
 /**
@@ -89,6 +91,8 @@ public class ACTMCReduction extends PrismComponent
 	 *  This is an option from the parent prismComponent settings.
 	 *  (termCritParam / Termination epsilon) */
 	protected BigDecimal epsilon;
+	// Iterative numerical method termination criteria
+	protected TermCrit termCrit;
 	/** If this is true, kappa should be computed for the model.
 	 *  This is an option from parent prismComponent settings.
 	 *  (PRISM_ACTMC_COMPUTE_KAPPA / Compute precision for ACTMC (GSMP) reduction) */
@@ -128,6 +132,15 @@ public class ACTMCReduction extends PrismComponent
 		}
 		this.computingSteadyState = computingSteadyState;
 		this.epsilon = new BigDecimal(this.getSettings().getDouble(PrismSettings.PRISM_TERM_CRIT_PARAM));
+		// PRISM_TERM_CRIT
+		String s = settings.getString(PrismSettings.PRISM_TERM_CRIT);
+		if (s.equals("Absolute")) {
+			termCrit = TermCrit.ABSOLUTE;
+		} else if (s.equals("Relative")) {
+			termCrit = TermCrit.RELATIVE;
+		} else {
+			throw new PrismNotSupportedException("Unknown termination criterion \"" + s + "\"");
+		}
 		this.computeKappa = this.getSettings().getBoolean(PrismSettings.PRISM_ACTMC_COMPUTE_KAPPA);
 		this.constantKappa = BigDecimalUtils.allowedError(this.getSettings().getInteger(PrismSettings.PRISM_ACTMC_CONSTANT_KAPPA_DECIMAL_DIGITS));
 		this.pdMap = createPotatoDataMap(this.actmc, this.actmcRew, this.target);

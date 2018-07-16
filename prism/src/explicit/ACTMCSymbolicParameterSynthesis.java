@@ -32,17 +32,21 @@ import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import common.BigDecimalUtils;
 import common.polynomials.Polynomial;
 import common.polynomials.PolynomialRootFinding;
+import explicit.ProbModelChecker.TermCrit;
 import explicit.rewards.ACTMCRewardsSimple;
 import parser.ast.SynthParam;
 import prism.PrismComponent;
 import prism.PrismDevNullLog;
 import prism.PrismException;
+import prism.PrismUtils;
 
 /**
  * Specialized class for carrying out symbolic parameter synthesis of ACTMCs.
@@ -126,7 +130,6 @@ public class ACTMCSymbolicParameterSynthesis extends ACTMCReduction
 		// set ACTMC event parameters to the their upper synthesis bounds to ensure enough precision
 		Map<Integer, GSMPEvent> params = chooseUpperBoundParams();
 		Map<Integer, GSMPEvent> newParams = chooseUpperBoundParams();
-		Map<Integer, GSMPEvent> tmp;
 		actmc.setEventParameters(newParams);
 		
 		// adjust local MathContext
@@ -134,9 +137,7 @@ public class ACTMCSymbolicParameterSynthesis extends ACTMCReduction
 		getMinimumKappaAndSetMC();
 		
 		do {
-			tmp = params;
-			params = newParams;
-			newParams = tmp;
+			params = copyEventMap(newParams);
 			actmc.setEventParameters(params);
 			// POLICY EVALUATION
 			Map<Integer, Double> reachRewards = computeReachRewards();
@@ -151,7 +152,7 @@ public class ACTMCSymbolicParameterSynthesis extends ACTMCReduction
 				List<SynthParam> eventSPs = polySPMap.get(actmcPotatoData.getEvent().getIdentifier());
 				
 				// create symbolic polynomial
-				int entrance = (int)actmcPotatoData.getEntrances().toArray()[0]; // event entrance state
+				int entrance = (int)actmcPotatoData.getEntrances().toArray()[0]; // localized event entrance state
 				Polynomial symbolicPolynomial = new Polynomial();
 				symbolicPolynomial.add(actmcPotatoData.getMeanRewardsPolynomials().get(entrance), mc);
 				for (Map.Entry<Integer, Double> entry : reachRewards.entrySet()) {
@@ -171,6 +172,7 @@ public class ACTMCSymbolicParameterSynthesis extends ACTMCReduction
 				List<BigDecimal> roots = findDerivPolyRoots(symbolicPolynomial, eventSPs);
 				
 				//Make a list of candidate optimal parameters
+				// TODO MAJO - add epsilon-surroundings of the roots?
 				List<BigDecimal> candidates = new ArrayList<BigDecimal>(roots);
 				candidates.add(new BigDecimal(String.valueOf(eventSPs.get(0).getLowerBound()), mc));
 				candidates.add(new BigDecimal(String.valueOf(eventSPs.get(0).getUpperBound()), mc));
@@ -200,7 +202,7 @@ public class ACTMCSymbolicParameterSynthesis extends ACTMCReduction
 				newParams.get(entrance).setFirstParameter(bestParam.doubleValue());
 			}
 			
-		} while(!params.equals(newParams));
+		} while(!parameterDifferenceWithinTerminationEpsilon(params, newParams));
 
 		return newParams;
 	}
@@ -312,12 +314,44 @@ public class ACTMCSymbolicParameterSynthesis extends ACTMCReduction
 	 */
 	private Map<Integer, GSMPEvent> copyEventMap(Map<Integer, GSMPEvent> eventMap) {
 		Map<Integer, GSMPEvent> newEventMap = new HashMap<Integer, GSMPEvent>(eventMap.size());
-		for (Map.Entry<Integer, GSMPEvent> entry : eventMap.entrySet()) {
-			int state = entry.getKey();
-			GSMPEvent event = new GSMPEvent(entry.getValue());
-			newEventMap.put(state, event);
+		Set<GSMPEvent> eventSet = new HashSet<GSMPEvent>(eventMap.values());
+		for (GSMPEvent otherEvent : eventSet) {
+			GSMPEvent thisEvent = new GSMPEvent(otherEvent);
+			BitSet active = thisEvent.getActive();
+			for (int state = active.nextSetBit(0); state >= 0; state = active.nextSetBit(state+1)) {
+				newEventMap.put(state, thisEvent);
+			}
 		}
 		return newEventMap;
+	}
+	
+	/**
+	 * Returns true if all of the event parameters of the firstEM are within {@link ACTMCReduction#epsilon}
+	 * of secondEM event parameters. This is used as a termination condition for the parameter synthesis.
+	 * The comparison is done with respect to current PRISM settings of termination epsilon and termination criteria.
+	 * firstEM and secondEM are maps where the keys are states are values are GSMPEvents active in the states.
+	 * firstEM and secondEM are supposed to be equivalent EXCEPT of some difference in firstParameter and secondParameter.
+	 * @param firstEM 
+	 * @param secondEM
+	 */
+	private boolean parameterDifferenceWithinTerminationEpsilon(Map<Integer, GSMPEvent> firstEM, Map<Integer, GSMPEvent> secondEM) {
+		// absolute or relative termination criteria ?
+		boolean absolute = true;
+		if (termCrit == TermCrit.RELATIVE) {
+			absolute = false;
+		}
+		
+		for (int state : firstEM.keySet()) {
+			GSMPEvent first = firstEM.get(state);
+			GSMPEvent second = secondEM.get(state);
+			if (!PrismUtils.doublesAreClose(first.getFirstParameter(), second.getFirstParameter(), epsilon.doubleValue(), absolute)) {
+				return false;
+			}
+			if (!PrismUtils.doublesAreClose(first.getSecondParameter(), second.getSecondParameter(), epsilon.doubleValue(), absolute)) {
+				return false;
+			}
+		}
+		return true;
 	}
 	
 	/**
