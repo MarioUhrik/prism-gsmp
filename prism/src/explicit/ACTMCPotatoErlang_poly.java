@@ -428,7 +428,8 @@ public class ACTMCPotatoErlang_poly extends ACTMCPotato_poly
 		double[] soln = new double[numStates];
 		double[] soln2 = new double[numStates];
 		double[] result = new double[numStates];
-		Polynomial[] polynomials = new Polynomial[numStates];
+		Polynomial[] polynomialsBeforeEvent = new Polynomial[numStates];
+		Polynomial[] polynomialsAfterEvent = new Polynomial[numStates];
 		Polynomial[] antiderivatives = new Polynomial[numStates];
 		double[] tmpsoln = new double[numStates];
 
@@ -442,25 +443,25 @@ public class ACTMCPotatoErlang_poly extends ACTMCPotato_poly
 			} else {
 				soln[s] = 0;
 			}
-			polynomials[s] = new Polynomial();
+			polynomialsBeforeEvent[s] = new Polynomial();
 		}
 
 		// do 0th element of summation (doesn't require any matrix powers), and initialize the coefficients
 		result = new double[numStates];
 		if (left == 0) {
 			for (int i = 0; i < numStates; i++) {
-				polynomials[i].coeffs.add(left, BigDecimal.ZERO);
+				polynomialsBeforeEvent[i].coeffs.add(left, BigDecimal.ZERO);
 				for (int j = 1; j <= right; ++j) {
-					polynomials[i].coeffs.add(j, new BigDecimal(soln[i], mc).multiply(weights_BD[j - left], mc));
+					polynomialsBeforeEvent[i].coeffs.add(j, new BigDecimal(soln[i], mc).multiply(weights_BD[j - left], mc));
 				}
 			}
 		} else {
 			for (int i = 0; i < numStates; i++) {
 				for (int j = 0; j < left; ++j) {
-					polynomials[i].coeffs.add(j, BigDecimal.ZERO);
+					polynomialsBeforeEvent[i].coeffs.add(j, BigDecimal.ZERO);
 				}
 				for (int j = left; j <= right; ++j) {
-					polynomials[i].coeffs.add(j, new BigDecimal(soln[i], mc).divide(new BigDecimal(String.valueOf(uniformizationRate), mc), mc));
+					polynomialsBeforeEvent[i].coeffs.add(j, new BigDecimal(soln[i], mc).divide(new BigDecimal(String.valueOf(uniformizationRate), mc), mc));
 				}
 			}
 		}
@@ -478,15 +479,15 @@ public class ACTMCPotatoErlang_poly extends ACTMCPotato_poly
 			if (iters >= left) {
 				for (int i = 0; i < numStates; i++) {
 					for (int j = iters + 1; j < right; ++j) {
-						BigDecimal tmp = polynomials[i].coeffs.get(j).add(new BigDecimal(soln[i], mc).multiply(weights_BD[j - left], mc), mc);
-						polynomials[i].coeffs.set(j, tmp);
+						BigDecimal tmp = polynomialsBeforeEvent[i].coeffs.get(j).add(new BigDecimal(soln[i], mc).multiply(weights_BD[j - left], mc), mc);
+						polynomialsBeforeEvent[i].coeffs.set(j, tmp);
 					}
 				}
 			} else {
 				for (int i = 0; i < numStates; i++) {
 					for (int j = left; j <= right; ++j) {
-						BigDecimal tmp = polynomials[i].coeffs.get(j).add(new BigDecimal(soln[i], mc).divide(new BigDecimal(String.valueOf(uniformizationRate), mc), mc), mc);
-						polynomials[i].coeffs.set(j, tmp);
+						BigDecimal tmp = polynomialsBeforeEvent[i].coeffs.get(j).add(new BigDecimal(soln[i], mc).divide(new BigDecimal(String.valueOf(uniformizationRate), mc), mc), mc);
+						polynomialsBeforeEvent[i].coeffs.set(j, tmp);
 					}
 				}
 			}
@@ -504,13 +505,13 @@ public class ACTMCPotatoErlang_poly extends ACTMCPotato_poly
 		//Multiply the polynomial by t^(k-1)
 		for (int n = 0; n < numStates  ; ++n) {
 			for (int k = 0; k < (int)(event.getSecondParameter() - 1); ++k) {
-				polynomials[n].coeffs.add(0, BigDecimal.ZERO);
+				polynomialsBeforeEvent[n].coeffs.add(0, BigDecimal.ZERO);
 			}
 		}
 		
 		//Compute antiderivative of (e^(-(lambda + erlangRate) * time) * polynomial) using integration by parts
 		for (int n = 0; n < numStates ; ++n) {
-			antiderivatives[n] = computeAntiderivative(polynomials[n]);
+			antiderivatives[n] = computeAntiderivative(polynomialsBeforeEvent[n]);
 		}
 		
 		// Store the solution polynomials for later use.
@@ -530,9 +531,22 @@ public class ACTMCPotatoErlang_poly extends ACTMCPotato_poly
 		
 		//Now that we have the expected rewards for the underlying CTMC behavior,
 		//event behavior is applied.
-		applyEventRewards(result, false);
+		polynomialsAfterEvent = getEventRewardsPoly(false);
+		antiderivatives = antiderivatives.clone();
+		for (int n = 0; n < numStates ; ++n) {
+			antiderivatives[n] = new Polynomial(antiderivatives[n].coeffs);
+			antiderivatives[n].add(polynomialsAfterEvent[n], mc);
+		}
 		
-		// TODO MAJO - store polynomials after event!
+		// Store the solution polynomials for later use.
+		for (int n = 0; n < numStates ; ++n) {
+			meanRewardsPolynomials.put(DTMCtoACTMC.get(n), antiderivatives[n]);
+		}
+		
+		//Compute the definite integral using the obtained antiderivative
+		for (int n = 0; n < numStates ; ++n) {
+			result[n] = evaluateAntiderivative(antiderivatives[n]).doubleValue();
+		}
 		
 		// Store the finalized expected rewards using the original indexing.
 		for (int entrance : entrances) {

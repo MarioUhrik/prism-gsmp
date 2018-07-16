@@ -26,9 +26,11 @@
 
 package explicit;
 
+import java.math.BigDecimal;
 import java.util.BitSet;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 import common.polynomials.Polynomial;
 import explicit.rewards.ACTMCRewardsSimple;
@@ -172,6 +174,58 @@ public abstract class ACTMCPotato_poly extends ACTMCPotato
 			computeMeanRewards();
 		}
 		return meanRewardsPolynomials;
+	}
+	
+	/**
+	 * Returns an array of polynomials that represents the event transition rewards.
+	 * I.e. if n is an entrance state index and t is a time parameter, resPoly[n](t)
+	 * returns the mean event transition reward for n and t. 
+	 * <br>
+	 * This is done by weighting the event transition reward by the probability of the model
+	 * being in the correct state at the time of event occurrence, and by the probability
+	 * that event transition then actually occurs.
+	 * NOTE: No adjustment for the mean time it takes the event to occur is done!!!
+	 * @param originalIndexing true if the array is indexed the same way as the original ACTMC.
+	 *                         This should generally be true when this method is called from the outside.
+	 *                         However, when called from within, the array may be indexed differently.
+	 * @return New array of polynomials with potato event transition reward application.
+	 * @throws PrismException 
+	 */
+	public Polynomial[] getEventRewardsPoly(boolean originalIndexing) throws PrismException {
+		if (!meanDistributionsComputed) {
+			computeMeanDistributions();
+		}
+		
+		//Create a hard copy of rewPolyBeforeEvent array
+		Polynomial[] resPoly = new Polynomial[actmc.getNumStates()];
+		for (int n = 0; n < resPoly.length ; ++n) {
+			resPoly[n] = new Polynomial();
+		}
+		
+		for (int entrance : entrances) {
+			for (int ps : potato) {
+				Map<Integer, Double> rews = rewards.getEventTransitionRewards(ps);
+				if (rews == null) {
+					continue;
+				}
+				
+				Distribution eventTransitions = event.getTransitions(ps);
+				Polynomial additionPoly = new Polynomial(meanDistributionsBeforeEventPolynomials.get(entrance).get(ps).coeffs);
+				Set<Integer> rewSet = rews.keySet();
+				for (int succ : rewSet) {
+					double prob = eventTransitions.get(succ);
+					double eventRew = rews.get(succ);
+					BigDecimal factor = new BigDecimal(String.valueOf(prob), mc).multiply(new BigDecimal(String.valueOf(eventRew), mc), mc);
+					additionPoly.multiplyWithScalar(factor, mc);
+					if (originalIndexing) {
+						resPoly[entrance].add(additionPoly, mc);
+					} else {
+						resPoly[ACTMCtoDTMC.get(entrance)].add(additionPoly, mc);
+					}
+				}
+			}
+		}
+		return resPoly;
 	}
 	
 

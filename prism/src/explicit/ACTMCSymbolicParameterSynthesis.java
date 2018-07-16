@@ -153,7 +153,7 @@ public class ACTMCSymbolicParameterSynthesis extends ACTMCReduction
 				// create symbolic polynomial
 				int entrance = (int)actmcPotatoData.getEntrances().toArray()[0]; // event entrance state
 				Polynomial symbolicPolynomial = new Polynomial();
-				symbolicPolynomial.add(actmcPotatoData.getMeanRewardsBeforeEventPolynomials().get(entrance), mc);
+				symbolicPolynomial.add(actmcPotatoData.getMeanRewardsPolynomials().get(entrance), mc);
 				for (Map.Entry<Integer, Double> entry : reachRewards.entrySet()) {
 					int state = entry.getKey();
 					double reachRew = entry.getValue();
@@ -260,19 +260,19 @@ public class ACTMCSymbolicParameterSynthesis extends ACTMCReduction
 				break;
 			case ERLANG:
 				throw new UnsupportedOperationException("ACTMCSymbolicParameterSynthesis does not yet support the Erlang distribution!");
-				// TODO MAJO - implement weibull distributed event support
+				// TODO MAJO - implement Erlang distributed event support
 				//break;
 			case EXPONENTIAL:
-				throw new UnsupportedOperationException("ACTMCSymbolicParameterSynthesis not yet support the Exponential distribution!");
-				// TODO MAJO - implement weibull distributed event support
+				throw new UnsupportedOperationException("ACTMCSymbolicParameterSynthesis not yet support the exponential distribution!");
+				// TODO MAJO - implement exponential distributed event support
 				//break;
 			case UNIFORM:
 				throw new UnsupportedOperationException("ACTMCSymbolicParameterSynthesis does not yet support the uniform distribution!");
-				// TODO MAJO - implement weibull distributed event support
+				// TODO MAJO - implement uniform distributed event support
 				//break;
 			case WEIBULL:
 				throw new UnsupportedOperationException("ACTMCSymbolicParameterSynthesis does not yet support the Weibull distribution!");
-				// TODO MAJO - implement weibull distributed event support
+				// TODO MAJO - implement Weibull distributed event support
 				//break;
 			default:
 				throw new PrismException("ACTMCSymbolicParameterSynthesis received an event with unrecognized distribution!");

@@ -592,7 +592,7 @@ public abstract class ACTMCPotato
 	 * being in the correct state at the time of event occurrence, and by the probability
 	 * that event transition then actually occurs. This value is then added to the reward vector.
 	 * NOTE: No adjustment for the mean time it takes the event to occur is done!!!
-	 * @param rewardsArray rewards array of rewards where each index is a state of the model
+	 * @param rewardsArray array of before-the-event rewards where each index is a state of the model
 	 * @param originalIndexing true if the array is indexed the same way as the original ACTMC.
 	 *                         This should generally be true when this method is called from the outside.
 	 *                         However, when called from within, the array may be indexed differently.
