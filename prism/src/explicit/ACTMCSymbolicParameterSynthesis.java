@@ -172,10 +172,21 @@ public class ACTMCSymbolicParameterSynthesis extends ACTMCReduction
 				List<BigDecimal> roots = findDerivPolyRoots(symbolicPolynomial, eventSPs);
 				
 				//Make a list of candidate optimal parameters
-				// TODO MAJO - add epsilon-surroundings of the roots?
 				List<BigDecimal> candidates = new ArrayList<BigDecimal>(roots);
-				candidates.add(new BigDecimal(String.valueOf(eventSPs.get(0).getLowerBound()), mc));
-				candidates.add(new BigDecimal(String.valueOf(eventSPs.get(0).getUpperBound()), mc));
+				BigDecimal lowerBound = new BigDecimal(String.valueOf(eventSPs.get(0).getLowerBound()), mc);
+				BigDecimal upperBound = new BigDecimal(String.valueOf(eventSPs.get(0).getUpperBound()), mc);
+				candidates.add(lowerBound);
+				candidates.add(upperBound);
+				for (BigDecimal root : roots) {
+					BigDecimal lRoot = root.subtract(epsilon, mc);
+					BigDecimal rRoot = root.add(epsilon, mc);
+					if (lRoot.compareTo(lowerBound) > 0 && lRoot.compareTo(upperBound) < 0) {
+						candidates.add(lRoot);
+					}
+					if (rRoot.compareTo(lowerBound) > 0 && rRoot.compareTo(upperBound) < 0) {
+						candidates.add(rRoot);
+					}
+				}
 				
 				//evaluate the polynomial for the candidates and find min/max
 				//first, try the current one
