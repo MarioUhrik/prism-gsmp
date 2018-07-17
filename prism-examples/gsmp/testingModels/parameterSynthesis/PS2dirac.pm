@@ -1,6 +1,6 @@
-// This is a model is taken (and modified) from http://www.fi.muni.cz/~xuhrik/
-// R=? [F (target=1)] =~38376
-// Rmin=? [F (target=1)] {(maintenanceEvent, 1, 0.0000001..50)} =~ 24
+// This is a model taken (and modified) from http://www.fi.muni.cz/~xuhrik/
+// R=? [F (target=1)] =~38392.98
+// Rmin=? [F (target=1)] {(maintenanceEvent, 1, 0.0000001..50)} =~ 23.7353628
 
 gsmp
 
