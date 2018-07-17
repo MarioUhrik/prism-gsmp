@@ -164,7 +164,7 @@ public class ACTMCSymbolicParameterSynthesis extends ACTMCReduction
 					}
 					poly = new Polynomial(poly.coeffs);
 					
-					poly.multiplyWithScalar(new BigDecimal(reachRew, mc), mc);
+					poly.multiplyWithScalar(new BigDecimal(String.valueOf(reachRew), mc), mc);
 					symbolicPolynomial.add(poly, mc);
 				}
 				
@@ -374,6 +374,8 @@ public class ACTMCSymbolicParameterSynthesis extends ACTMCReduction
 	private Map<Integer, Double> computeReachRewards() throws PrismException {
 		GSMPModelChecker modelChecker = new GSMPModelChecker(this);
 		modelChecker.setLog(new PrismDevNullLog());
+		modelChecker.setTermCritParam(1.0E-15 * modelChecker.getTermCritParam()); // TODO MAJO - is this a good idea ?
+		modelChecker.setMaxIters(modelChecker.getMaxIters() + 100000000); // TODO MAJO - is this a good idea ?
 		ModelCheckerResult res = modelChecker.computeReachRewardsACTMC(actmc, actmcRew, target);
 		lastComputedSoln = res.soln;
 		
@@ -402,7 +404,7 @@ public class ACTMCSymbolicParameterSynthesis extends ACTMCReduction
 				lowestKappa = kappa;
 			}
 		}
-		mc = new MathContext(BigDecimalUtils.decimalDigits(lowestKappa) + 3, RoundingMode.HALF_UP);
+		mc = new MathContext(BigDecimalUtils.decimalDigits(lowestKappa) + 3 + BigDecimalUtils.decimalDigits(epsilon), RoundingMode.HALF_UP);
 		return lowestKappa;
 	}
 	

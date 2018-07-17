@@ -219,7 +219,8 @@ public class ACTMCReduction extends PrismComponent
 	}
 	
 	/**
-	 * Works out the exact value of kappa precision to use for the ACTMC analysis
+	 * Works out the exact value of kappa precision to use for the ACTMC analysis.
+	 * Termination epsilon is also factored in.
 	 * @return BigDecimal kappa
 	 */
 	protected BigDecimal deduceKappa() throws PrismException {
@@ -229,7 +230,7 @@ public class ACTMCReduction extends PrismComponent
 		} else {
 			kappa = constantKappa;
 		}
-		return kappa;
+		return kappa.multiply(epsilon);
 	}
 	
 	/**

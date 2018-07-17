@@ -237,7 +237,7 @@ public class GSMPModelChecker extends ProbModelChecker
 			}
 		}
 		
-		mainLog.print("\nSynthesis parameter list is valid. Proceeding with the computation. The list is:\n" + paramList +  "\n");
+		//mainLog.print("\nSynthesis parameter list is valid. Proceeding with the computation. The list is:\n" + paramList +  "\n");
 	}
 
 	// ACTMC model checking functions (fast alternative for GSMPs that are ACTMCs)
@@ -260,6 +260,7 @@ public class GSMPModelChecker extends ProbModelChecker
 		
 		// Compute the steady-state distribution for the equivalent DTMC
 		DTMCModelChecker mc = new DTMCModelChecker(this);
+		mc.inheritSettings(this);
 		StateValues result = mc.doSteadyState(dtmc, initDistr);
 		
 		// Lastly, in order to reintroduce non-regenerative states to the result,
@@ -313,6 +314,7 @@ public class GSMPModelChecker extends ProbModelChecker
 		
 		// Compute the reachability rewards for the equivalent DTMC
 		DTMCModelChecker mc = new DTMCModelChecker(this);
+		mc.inheritSettings(this);
 		ModelCheckerResult result = mc.computeReachRewards(dtmc, dtmcRew, target);
 		
 		result.timeTaken += result.timePre;
@@ -347,6 +349,7 @@ public class GSMPModelChecker extends ProbModelChecker
 		
 		// Compute the steady-state distribution for the equivalent DTMC
 		DTMCModelChecker mc = new DTMCModelChecker(this);
+		mc.inheritSettings(this);
 		StateValues result = mc.doSteadyState(dtmc, buildInitialDistribution(dtmc));
 		
 		// In order to reintroduce non-regenerative states to the result,
