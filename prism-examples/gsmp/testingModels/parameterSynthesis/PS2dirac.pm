@@ -1,24 +1,25 @@
 // This is a model is taken (and modified) from http://www.fi.muni.cz/~xuhrik/
-// R=? [F (target=1)]   ==  205517.8555684478
-// Rmin=? [F (target=1)] {(maintenanceEvent, 1, 0.0000001..100)}
+// R=? [F (target=1)] =~38376
+// Rmin=? [F (target=1)] {(maintenanceEvent, 1, 0.0000001..50)} =~ 24
 
 gsmp
 
 // costs in states
-const double UNAVAILABLE_COST=20.0;
-const double DEGRADED_COST=0.5;
+const double UNAVAILABLE_COST=5.0;
+const double DEGRADED_COST=0.01;
+const double REPAIR_COST=2.0;
 
 rewards 
 	avail=0 : UNAVAILABLE_COST; // cost for system unavailability
 	status=1 & avail=1 : DEGRADED_COST; // cost for availability with degraded performance
-
+	[repair] true: REPAIR_COST; // additional repair costs
 endrewards
 
 module rejuvenation
 
-event repairEvent      = uniform(0.1, 1);     
-event maintenanceEvent = dirac(50); 
-event rejuvenationEvent= erlang(200, 10);        
+event repairEvent      = dirac(4);     
+event maintenanceEvent = dirac(24); 
+event rejuvenationEvent= dirac(0.083333333);        
 event failureEvent     = exponential(1/225);
 event degradationEvent = exponential(1/50);
 
