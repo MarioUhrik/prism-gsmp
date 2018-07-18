@@ -119,10 +119,10 @@ public class ACTMCReduction extends PrismComponent
 	public ACTMCReduction(ACTMCSimple actmc, ACTMCRewardsSimple actmcRew, BitSet target, boolean computingSteadyState, PrismComponent parent) throws PrismException {
 		super(parent);
 		if (actmc == null) {
-			throw new NullPointerException("ACTMCReduction constructor has received a null actmc!");
+			throw new NullPointerException("ACTMCReduction constructor has received a null actmc");
 		}
 		if (parent == null) {
-			throw new NullPointerException("ACTMCReduction constructor has received a null parent (model checker object)!");
+			throw new NullPointerException("ACTMCReduction constructor has received a null parent (model checker object)");
 		}
 		this.actmc = actmc;
 		this.actmcRew = actmcRew;
@@ -627,11 +627,11 @@ public class ACTMCReduction extends PrismComponent
 				potatoData = new ACTMCPotatoUniform_poly(actmc, event, rew, target);
 				break;
 			case WEIBULL:
-				throw new UnsupportedOperationException("ACTMCReduction does not yet support the Weibull distribution!");
+				throw new UnsupportedOperationException("ACTMCReduction does not yet support the Weibull distribution");
 				// TODO MAJO - implement weibull distributed event support
 				//break;
 			default:
-				throw new PrismException("ACTMCReduction received an event with unrecognized distribution!");
+				throw new PrismException("ACTMCReduction received an event with unrecognized distribution");
 			}
 			
 			pdMap.put(event.getIdentifier(), potatoData);

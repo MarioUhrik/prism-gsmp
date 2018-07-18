@@ -123,10 +123,13 @@ public class ACTMCSymbolicParameterSynthesis extends ACTMCReduction
 	/**
 	 * Performs parameter synthesis for the given member variables.
 	 * <BR>
-	 * NOTE: The ACTMC is expected to be strongly connected, with only localized alarms, and without unreachable states.
+	 * NOTE: The ACTMC is expected to be without unreachable states,
+	 * and the synthesized events must be localized (with only one entrance).
 	 * @return actmc events where the queried event parameters are kappa-optimal, mapped onto states of the actmc.
 	 */
 	public Map<Integer, GSMPEvent> reachabilityRewardParameterSynthesis() throws PrismException {
+		// TODO MAJO - run a check to make sure the actmc has no unreachable states!
+		ensureSynthesizedEventsAreLocalized();
 		// set ACTMC event parameters to the their upper synthesis bounds to ensure enough precision
 		Map<Integer, GSMPEvent> params = chooseUpperBoundParams();
 		Map<Integer, GSMPEvent> newParams = chooseUpperBoundParams();
@@ -217,7 +220,7 @@ public class ACTMCSymbolicParameterSynthesis extends ACTMCReduction
 
 		return newParams;
 	}
-	
+
 	/**
 	 * Return the contents of {@link ACTMCSymbolicParameterSynthesis#lastComputedSoln},
 	 * i.e. an array holding the results of the related computation.
@@ -272,28 +275,53 @@ public class ACTMCSymbolicParameterSynthesis extends ACTMCReduction
 				potatoData = new ACTMCPotatoDirac_polyTaylor(actmc, event, rew, target);
 				break;
 			case ERLANG:
-				throw new UnsupportedOperationException("ACTMCSymbolicParameterSynthesis does not yet support the Erlang distribution!");
+				throw new UnsupportedOperationException("ACTMCSymbolicParameterSynthesis does not yet support the Erlang distribution");
 				// TODO MAJO - implement Erlang distributed event support
 				//break;
 			case EXPONENTIAL:
-				throw new UnsupportedOperationException("ACTMCSymbolicParameterSynthesis not yet support the exponential distribution!");
+				throw new UnsupportedOperationException("ACTMCSymbolicParameterSynthesis not yet support the exponential distribution");
 				// TODO MAJO - implement exponential distributed event support
 				//break;
 			case UNIFORM:
-				throw new UnsupportedOperationException("ACTMCSymbolicParameterSynthesis does not yet support the uniform distribution!");
+				throw new UnsupportedOperationException("ACTMCSymbolicParameterSynthesis does not yet support the uniform distribution");
 				// TODO MAJO - implement uniform distributed event support
 				//break;
 			case WEIBULL:
-				throw new UnsupportedOperationException("ACTMCSymbolicParameterSynthesis does not yet support the Weibull distribution!");
+				throw new UnsupportedOperationException("ACTMCSymbolicParameterSynthesis does not yet support the Weibull distribution");
 				// TODO MAJO - implement Weibull distributed event support
 				//break;
 			default:
-				throw new PrismException("ACTMCSymbolicParameterSynthesis received an event with unrecognized distribution!");
+				throw new PrismException("ACTMCSymbolicParameterSynthesis received an event with unrecognized distribution");
 			}
 			
 			pdMap.put(event.getIdentifier(), potatoData);
 		}
 		return pdMap;
+	}
+	
+	/**
+	 * Makes sure that the synthesized events of this.actmc are localized.
+	 * <br>
+	 * Events (or alarms) are localized iff they only have one state where the
+	 * event/alarm timer is newly set.
+	 * (i.e. ACTMCPotato deduces that the set of entrances {@link ACTMCPotato#entrances} is a singleton)
+	 * @return returns true, otherwise throws an exception
+	 * @throws PrismException
+	 */
+	protected boolean ensureSynthesizedEventsAreLocalized() throws PrismException {
+		for (ACTMCPotato_poly actmcPotatoData : polyPDMap.values()) {
+			if (actmcPotatoData.getEntrances().size() > 1) {
+				throw new PrismException("ACTMC reachability reward parameter synthesis: event "
+						+ actmcPotatoData.getEvent().getIdentifier()
+						+ " has more than one entrance");
+			}
+			if (actmcPotatoData.getEntrances().size() < 1) {
+				throw new PrismException("ACTMC reachability reward parameter synthesis: event "
+						+ actmcPotatoData.getEvent().getIdentifier()
+						+ " has more no entrances");
+			}
+		}
+		return true;
 	}
 	
 	/**
@@ -375,6 +403,7 @@ public class ACTMCSymbolicParameterSynthesis extends ACTMCReduction
 		GSMPModelChecker modelChecker = new GSMPModelChecker(this);
 		modelChecker.setLog(new PrismDevNullLog());
 		modelChecker.setTermCritParam(1.0E-15 * modelChecker.getTermCritParam()); // TODO MAJO - is this a good idea ?
+		// TODO MAJO - I need to accurately compute this, but it often fails!
 		modelChecker.setMaxIters(modelChecker.getMaxIters() + 100000000); // TODO MAJO - is this a good idea ?
 		ModelCheckerResult res = modelChecker.computeReachRewardsACTMC(actmc, actmcRew, target);
 		lastComputedSoln = res.soln;
@@ -398,7 +427,7 @@ public class ACTMCSymbolicParameterSynthesis extends ACTMCReduction
 		for (ACTMCPotato_poly actmcPotatoData : polyPDMap.values()) {
 			BigDecimal kappa = actmcPotatoData.getKappa();
 			if (kappa == null) {
-				throw new PrismException("ACTMCSymbolicParameterSynthesis.getMinimumKappa: kappa not yet set for the potato!");
+				throw new PrismException("ACTMCSymbolicParameterSynthesis.getMinimumKappa: kappa not yet set for the potato");
 			}
 			if (kappa.compareTo(lowestKappa) < 0) {
 				lowestKappa = kappa;
