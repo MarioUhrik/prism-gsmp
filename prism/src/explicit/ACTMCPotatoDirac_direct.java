@@ -337,8 +337,7 @@ public class ACTMCPotatoDirac_direct extends ACTMCPotato
 		for (int s = 0; s < numStates; s++) {
 			int index = DTMCtoACTMC.get(s);
 			if (potato.contains(index)) {
-				// NOTE: transition rewards have already been merged into state rewards
-				soln[s] = rewards.getStateReward(index);
+				soln[s] = rewards.getMergedStateReward(index);
 			} else {
 				soln[s] = 0;
 			}

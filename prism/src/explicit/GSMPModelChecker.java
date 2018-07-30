@@ -46,7 +46,7 @@ import prism.PrismNotSupportedException;
 
 /**
  * Explicit-state model checker for generalized semi-Markov processes (GSMPs).
- * ACTMCs are treated as special cases, and solved differently.
+ * ACTMCs are treated as special cases of GSMPs, and solved differently.
  */
 public class GSMPModelChecker extends ProbModelChecker
 {
@@ -107,8 +107,7 @@ public class GSMPModelChecker extends ProbModelChecker
 	public ModelCheckerResult doReachRewards(GSMP gsmp, GSMPRewards rew, BitSet target) throws PrismException {
 		if (isACTMC(gsmp) && gsmp instanceof GSMPSimple && rew instanceof GSMPRewardsSimple) {
 			ACTMCSimple actmc = new ACTMCSimple((GSMPSimple)gsmp);
-			ACTMCRewardsSimple actmcRew = new ACTMCRewardsSimple((GSMPRewardsSimple)rew, gsmp);
-			actmcRew = actmcRew.mergeCTMCTransitionRewards(actmc);
+			ACTMCRewardsSimple actmcRew = new ACTMCRewardsSimple((GSMPRewardsSimple)rew, gsmp, actmc);
 			return computeReachRewardsACTMC(actmc, actmcRew, target);
 		} else {
 			return computeReachRewardsGSMP(gsmp, rew, target);
@@ -125,8 +124,7 @@ public class GSMPModelChecker extends ProbModelChecker
 	public ModelCheckerResult doSteadyStateRewards(GSMP gsmp, GSMPRewards rew) throws PrismException {
 		if (isACTMC(gsmp) && gsmp instanceof GSMPSimple && rew instanceof GSMPRewardsSimple) {
 			ACTMCSimple actmc = new ACTMCSimple((GSMPSimple)gsmp);
-			ACTMCRewardsSimple actmcRew = new ACTMCRewardsSimple((GSMPRewardsSimple)rew, gsmp);
-			actmcRew = actmcRew.mergeCTMCTransitionRewards(actmc);
+			ACTMCRewardsSimple actmcRew = new ACTMCRewardsSimple((GSMPRewardsSimple)rew, gsmp, actmc);
 			return computeSteadyStateRewardsACTMC(actmc, actmcRew);
 		} else {
 			return computeSteadyStateRewardsGSMP(gsmp, rew);
@@ -140,8 +138,9 @@ public class GSMPModelChecker extends ProbModelChecker
 	 * @param target target states
 	 * @param min true iff we are minimizing the expected rewards. Else we are maximizing them.
 	 * @param paramList list of parameters to synthesize. Extracted from ProbModelChecker.
-	 * @return //TODO MAJO - what should this return anyway? optimal list of parameter values?
-	 */ // TODO MAJO - javadoc return value
+	 * @return ModelCheckerResult for reachability reward computation with optimal parameters.
+	 *         The synthesized optimal parameters are also printed into the log.
+	 */
 	public ModelCheckerResult doReachParameterSynthesis(GSMP gsmp, GSMPRewards rew, BitSet target, boolean min) throws PrismException {
 		List<SynthParam> paramList = new ArrayList<SynthParam>(getParamList());
 		boolean isACTMC = isACTMC(gsmp);
@@ -149,8 +148,7 @@ public class GSMPModelChecker extends ProbModelChecker
 		
 		if (isACTMC && gsmp instanceof GSMPSimple && rew instanceof GSMPRewardsSimple) {
 			ACTMCSimple actmc = new ACTMCSimple((GSMPSimple)gsmp);
-			ACTMCRewardsSimple actmcRew = new ACTMCRewardsSimple((GSMPRewardsSimple)rew, gsmp);
-			actmcRew = actmcRew.mergeCTMCTransitionRewards(actmc);
+			ACTMCRewardsSimple actmcRew = new ACTMCRewardsSimple((GSMPRewardsSimple)rew, gsmp, actmc);
 			return computeReachParameterSynthesisACTMC(actmc, actmcRew, target, min, paramList);
 		} else {
 			return computeReachParameterSynthesisGSMP(gsmp, rew, target, min, paramList);
@@ -163,8 +161,9 @@ public class GSMPModelChecker extends ProbModelChecker
 	 * @param rew the rewards built for the GSMP model
 	 * @param min true iff we are minimizing the expected rewards. Else we are maximizing them.
 	 * @param paramList list of parameters to synthesize. Extracted from ProbModelChecker.
-	 * @return //TODO MAJO - what should this return anyway? optimal list of parameter values?
-	 */ // TODO MAJO - javadoc return value
+	 * @return ModelCheckerResult for steady-state reward computation with optimal parameters.
+	 *         The synthesized optimal parameters are also printed into the log.
+	 */
 	public ModelCheckerResult doSteadyStateParameterSynthesis(GSMP gsmp, GSMPRewards rew, boolean min) throws PrismException {
 		List<SynthParam> paramList = new ArrayList<SynthParam>(getParamList());
 		boolean isACTMC = isACTMC(gsmp);
@@ -172,8 +171,7 @@ public class GSMPModelChecker extends ProbModelChecker
 		
 		if (isACTMC && gsmp instanceof GSMPSimple && rew instanceof GSMPRewardsSimple) {
 			ACTMCSimple actmc = new ACTMCSimple((GSMPSimple)gsmp);
-			ACTMCRewardsSimple actmcRew = new ACTMCRewardsSimple((GSMPRewardsSimple)rew, gsmp);
-			actmcRew = actmcRew.mergeCTMCTransitionRewards(actmc);
+			ACTMCRewardsSimple actmcRew = new ACTMCRewardsSimple((GSMPRewardsSimple)rew, gsmp, actmc);
 			return computeSteadyStateParameterSynthesisACTMC(actmc, actmcRew, min, paramList);
 		} else {
 			return computeSteadyStateParameterSynthesisGSMP(gsmp, rew, min, paramList);

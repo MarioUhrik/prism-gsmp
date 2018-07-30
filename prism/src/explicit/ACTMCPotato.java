@@ -62,8 +62,7 @@ public abstract class ACTMCPotato
 	protected ACTMCSimple actmc;
 	/** specific event of {@code actmc} this data is associated with */
 	protected GSMPEvent event;
-	/** Reward structure of the {@code actmc}. May be null.
-	 *  The CTMC transition rewards are expected to have already been converted to state rewards only. */
+	/** Reward structure of the {@code actmc}. May be null. */
 	protected ACTMCRewardsSimple rewards = null;
 	/** Bitset of target states for reachability analysis. May be null. */
 	protected BitSet target = null;

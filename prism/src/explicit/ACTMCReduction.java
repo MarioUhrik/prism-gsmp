@@ -64,7 +64,6 @@ public class ACTMCReduction extends PrismComponent
 	/** ACTMC model this class is associated with */
 	protected ACTMCSimple actmc;
 	/** Optional reward structure associated with {@code actmc}.
-	 *  The CTMC transition rewards are already expected to have been converted to state rewards.
 	 *  May be null if rewards are not of interest for given model checking method.*/
 	protected ACTMCRewardsSimple actmcRew = null;
 	/** Optional bitset of target states (for reachability) */
@@ -554,6 +553,11 @@ public class ACTMCReduction extends PrismComponent
 		}
 		
 		for (int s = 0; s < numStates ; ++s) {
+			double ctmcTransitionRewAddition = actmcRew.getMergedStateReward(s) - actmcRew.getStateReward(s);
+			rewArray[s] += ctmcTransitionRewAddition;
+		}
+		
+		for (int s = 0; s < numStates ; ++s) {
 			newRew.setStateReward(s, rewArray[s]);
 		}
 		
@@ -575,9 +579,11 @@ public class ACTMCReduction extends PrismComponent
 		
 		int numStates = dtmc.getNumStates();
 		for (int s = 0; s < numStates ; ++s) {
-			double rew = actmcRew.getStateReward(s);
+			double stateRew = actmcRew.getStateReward(s);
+			double ctmcTransitionRewAddition = actmcRew.getMergedStateReward(s) - actmcRew.getStateReward(s);
+			double rew = (stateRew + ctmcTransitionRewAddition) / dtmc.uniformizationRate;
 			if (rew > 0) {
-				newRew.setStateReward(s, rew / dtmc.uniformizationRate);
+				newRew.setStateReward(s, rew);
 			}
 		}
 		

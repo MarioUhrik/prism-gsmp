@@ -405,6 +405,7 @@ public class ACTMCSymbolicParameterSynthesis extends ACTMCReduction
 		modelChecker.setTermCritParam(1.0E-15 * modelChecker.getTermCritParam()); // TODO MAJO - is this a good idea ?
 		// TODO MAJO - I need to accurately compute this, but it often fails!
 		modelChecker.setMaxIters(modelChecker.getMaxIters() + 100000000); // TODO MAJO - is this a good idea ?
+		// TODO MAJO - I could optimize this by reusing some of the computed ACTMCPotato structures
 		ModelCheckerResult res = modelChecker.computeReachRewardsACTMC(actmc, actmcRew, target);
 		lastComputedSoln = res.soln;
 		

@@ -425,8 +425,7 @@ public class ACTMCPotatoDirac_polyTaylor extends ACTMCPotato_poly
 		for (int i = 0; i < numStates; i++) {
 			int index = DTMCtoACTMC.get(i);
 			if (potato.contains(index)) {
-				// NOTE: transition rewards have already been merged into state rewards
-				soln[i] = rewards.getStateReward(index);
+				soln[i] = rewards.getMergedStateReward(index);
 			} else {
 				soln[i] = 0;
 			}

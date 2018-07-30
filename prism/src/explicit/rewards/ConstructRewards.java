@@ -230,7 +230,7 @@ public class ConstructRewards
 		GSMPRewardsSimple rewSimple = new GSMPRewardsSimple();
 
 		// Special case: constant state rewards
-		if (rewStr.getNumStateItems() == 1 && Expression.isTrue(rewStr.getStates(0)) && rewStr.getReward(0).isConstant()) {
+		/*if (rewStr.getNumStateItems() == 1 && Expression.isTrue(rewStr.getStates(0)) && rewStr.getReward(0).isConstant()) {
 			double rew = rewStr.getReward(0).evaluateDouble(constantValues);
 			if (Double.isNaN(rew))
 				throw new PrismLangException("Reward structure evaluates to NaN (at any state)", rewStr.getReward(0));
@@ -240,8 +240,13 @@ public class ConstructRewards
 				rewSimple.setStateReward(s, rew);
 			}
 			return rewSimple;
-		}
+		}*/
 		// Normal:
+		if (false) {
+			return rewSimple;
+			// TODO MAJO - the above commented out code should be here, but I think it's broken, so I removed it.
+	        // The code was written by them for MDPs. I don't really like the way they handle that anyway.
+		}
 		else {
 			//state rewards
 			List<GSMPEvent> events = gsmp.getEventList();

@@ -59,6 +59,13 @@ public class ACTMCRewardsSimple implements MCRewards
 	private Map<Integer, Double> stateRewards;
 	
 	/**
+	 * Indices of states with rewards mapped onto them.
+	 * On the contrary to {@link ACTMCRewardsSimple#stateRewards}, this map already keeps merged
+	 * CTMC transition rewards.
+	 */
+	private Map<Integer, Double> mergedStateRewards;
+	
+	/**
 	 * The First map   contains Second Maps mapped onto source state indices.
 	 * The Second maps contain non-exponential event rewards mapped onto destination state indices.
 	 * <br>
@@ -77,11 +84,11 @@ public class ACTMCRewardsSimple implements MCRewards
 	 * Otherwise, the behavior of this function is undefined.
 	 * @param gsmpRew GSMP rewards of belonging to the {@code gsmpModel}
 	 * @param gsmpModel GSMP confirmed to fit the definition of an ACTMC.
-	 *                  Required to distinguish exponential events.
+	 * @param actmc is an equivalent ACTMC constructed from {@code gsmpModel}
 	 */
-	public ACTMCRewardsSimple(GSMPRewardsSimple gsmpRew, GSMP gsmpModel) {
-		// TODO MAJO - confirm this is without bugs!
+	public ACTMCRewardsSimple(GSMPRewardsSimple gsmpRew, GSMP gsmpModel, ACTMCSimple actmc) {
 		this.stateRewards = new HashMap<Integer, Double>(gsmpRew.getStateRewards());
+		this.mergedStateRewards = new HashMap<Integer, Double>(gsmpRew.getStateRewards());
 		this.eventTransitionRewards = new HashMap<Integer, Map<Integer, Double>>();
 		this.ctmcTransitionRewards = new HashMap<Integer, Map<Integer, Double>>();
 		
@@ -134,6 +141,7 @@ public class ACTMCRewardsSimple implements MCRewards
 			}
 		}
 		
+		mergeCTMCTransitionRewards(actmc);
 	}
 	
 	/**
@@ -141,12 +149,32 @@ public class ACTMCRewardsSimple implements MCRewards
 	 */
 	public ACTMCRewardsSimple(ACTMCRewardsSimple rews) {
 		this.stateRewards = new HashMap<Integer, Double>(rews.stateRewards);
+		this.mergedStateRewards = new HashMap<Integer, Double>(rews.mergedStateRewards);
 		this.eventTransitionRewards = new HashMap<Integer, Map<Integer, Double>>(rews.eventTransitionRewards);
 		this.ctmcTransitionRewards = new HashMap<Integer, Map<Integer, Double>>(rews.ctmcTransitionRewards);
 	}
 
+	/**
+	 * @param s state index
+	 * @return state reward for state {@code s}.
+	 * 		   See {@link ACTMCRewardsSimple#stateRewards}.
+	 */
 	public double getStateReward(int s) {
 		Double reward = stateRewards.get(s);
+		if (reward == null) {
+			return 0.0;
+		} else {
+			return reward;
+		}
+	}
+	
+	/**
+	 * @param s state index
+	 * @return state reward for state {@code s}, incremented by the ctmc transition reward addition.
+	 * 		   See {@link ACTMCRewardsSimple#mergedStateRewards}.
+	 */
+	public double getMergedStateReward(int s) {
+		Double reward = mergedStateRewards.get(s);
 		if (reward == null) {
 			return 0.0;
 		} else {
@@ -205,42 +233,6 @@ public class ACTMCRewardsSimple implements MCRewards
 	public Map<Integer, Double> getTransitionRewards(int s) {
 		return ctmcTransitionRewards.get(s);
 	}
-	
-	/**
-	 * Creates new ACTMCRewardsSimple where the exponential transition rewards are merged
-	 * into the state rewards. I.e. after calling this, exponential transition rewards no longer
-	 * exist and state rewards may be increased so that the reward structure remains equivalent.
-	 * @param actmc ACTMC model these rewards are created from.
-	 *              This is needed because the rates are required as weights.
-	 *              Assumes the {@code actmc} is uniformised!
-	 */
-	public ACTMCRewardsSimple mergeCTMCTransitionRewards(ACTMCSimple actmc) {
-		// TODO MAJO - make sure this is valid for reachability
-		ACTMCRewardsSimple newRew = new ACTMCRewardsSimple(this);
-		
-		for (Map.Entry<Integer, Map<Integer,Double>> entry : newRew.ctmcTransitionRewards.entrySet()) {
-			int s = entry.getKey();
-			Map<Integer, Double> rews = entry.getValue();
-			Set<Integer> rewSet = rews.keySet();
-			
-			// prepare transition rates from state s
-			Distribution distr = actmc.getTransitions(s);
-			
-			double stateRewardAddition = 0;
-			// multiply transitions rewards to state t by rates
-			for ( int t : rewSet) {
-				stateRewardAddition += rews.get(t) * distr.get(t);
-			}
-			
-			// add the computed value to the existing state reward
-			if (stateRewardAddition > 0) {
-				newRew.stateRewards.put(s, newRew.getStateReward(s) + stateRewardAddition);
-			}
-		}
-		// when done, remove the transition rewards
-		newRew.ctmcTransitionRewards.clear();
-		return newRew;
-	}
 
 	public ACTMCRewardsSimple liftFromModel(Product<? extends Model> product) {
 		throw new UnsupportedOperationException("Not implemented!");
@@ -279,6 +271,35 @@ public class ACTMCRewardsSimple implements MCRewards
 	
 	public boolean hasEventTransitionRewards() {
 		return (! eventTransitionRewards.isEmpty());
+	}
+	
+	/**
+	 * Fills {@link ACTMCRewardsSimple#mergedStateRewards} with additions of the ctmc transition
+	 * rewardsmaccording to {@code actmc}.
+	 * @param actmc ACTMC model these rewards are created from.
+	 *              This is needed because the rates are required as weights.
+	 *              Assumes the {@code actmc} is uniformised!
+	 */
+	private void mergeCTMCTransitionRewards(ACTMCSimple actmc) {
+		for (Map.Entry<Integer, Map<Integer,Double>> entry : ctmcTransitionRewards.entrySet()) {
+			int s = entry.getKey();
+			Map<Integer, Double> rews = entry.getValue();
+			Set<Integer> rewSet = rews.keySet();
+			
+			// prepare transition rates from state s
+			Distribution distr = actmc.getTransitions(s);
+			
+			double stateRewardAddition = 0;
+			// multiply transitions rewards to state t by rates
+			for ( int t : rewSet) {
+				stateRewardAddition += rews.get(t) * distr.get(t);
+			}
+			
+			// add the computed value to the existing state reward
+			if (stateRewardAddition > 0) {
+				mergedStateRewards.put(s, getStateReward(s) + stateRewardAddition);
+			}
+		}
 	}
 	
 }
