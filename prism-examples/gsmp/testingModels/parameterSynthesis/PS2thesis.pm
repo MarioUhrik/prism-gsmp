@@ -1,6 +1,6 @@
 // This is a model taken (and modified) from http://www.fi.muni.cz/~xuhrik/
 // R=? [F (target=1)]   ==  37717
-// Rmin=? [F (target=1)] {(maintenanceEvent, 1, 0.0000001..50)} == 23.17043716985154
+// Rmin=? [F (target=1)] {(maintenanceEvent, 1, 0.0000001..50)} == 23.1783667
 
 gsmp
 

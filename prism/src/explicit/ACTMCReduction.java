@@ -621,7 +621,9 @@ public class ACTMCReduction extends PrismComponent
 			
 			switch (event.getDistributionType().getEnum()) {
 			case DIRAC:
-				potatoData = new ACTMCPotatoDirac_direct(actmc, event, rew, target); 
+				potatoData = new ACTMCPotatoDirac_direct(actmc, event, rew, target);
+				//potatoData = new ACTMCPotatoDirac_poly(actmc, event, rew, target); 
+				//potatoData = new ACTMCPotatoDirac_polyTaylor(actmc, event, rew, target); 
 				break;
 			case ERLANG:
 				potatoData = new ACTMCPotatoErlang_poly(actmc, event, rew, target);
@@ -633,9 +635,10 @@ public class ACTMCReduction extends PrismComponent
 				potatoData = new ACTMCPotatoUniform_poly(actmc, event, rew, target);
 				break;
 			case WEIBULL:
-				throw new UnsupportedOperationException("ACTMCReduction does not yet support the Weibull distribution");
+				//throw new UnsupportedOperationException("ACTMCReduction does not yet support the Weibull distribution");
 				// TODO MAJO - implement weibull distributed event support
-				//break;
+				potatoData = new ACTMCPotatoWeibull_polyTaylor(actmc, event, rew, target);
+				break;
 			default:
 				throw new PrismException("ACTMCReduction received an event with unrecognized distribution");
 			}
