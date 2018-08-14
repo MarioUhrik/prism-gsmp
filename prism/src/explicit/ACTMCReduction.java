@@ -635,8 +635,6 @@ public class ACTMCReduction extends PrismComponent
 				potatoData = new ACTMCPotatoUniform_poly(actmc, event, rew, target);
 				break;
 			case WEIBULL:
-				//throw new UnsupportedOperationException("ACTMCReduction does not yet support the Weibull distribution");
-				// TODO MAJO - implement weibull distributed event support
 				potatoData = new ACTMCPotatoWeibull_polyTaylor(actmc, event, rew, target);
 				break;
 			default:
