@@ -33,6 +33,7 @@ import java.util.Set;
 import ch.obermuhlner.math.big.BigDecimalMath;
 import common.BigDecimalUtils;
 import common.polynomials.Polynomial;
+import common.polynomials.PolynomialReal;
 import explicit.rewards.ACTMCRewardsSimple;
 import prism.PrismException;
 
@@ -59,27 +60,28 @@ import prism.PrismException;
 public class ACTMCPotatoWeibull_polyTaylor extends ACTMCPotato_poly
 {
 	
+	/**
+	 * Taylor series representation of e^(-((t/weibullRate)^k) - (uniformizationRate * t)).
+	 * Computed during a call to {@link ACTMCPotatoWeibull_polyTaylor#computeFoxGlynn()}.
+	 */
+	PolynomialReal taylor;
+	/**
+	 * Number {@code b} such that when computing the Riemann integral
+	 * from 0 to b for Weibull distribution in {@link ACTMCPotatoWeibull_polyTaylor#evaluateAntiderivative(Polynomial)},
+	 * proper results are yielded.
+	 * In other words, computes {@code b} such that it is high enough for the result to be proper, but also
+	 * low enough for the result not to be rubbish because of the used precision or degree of the polynomials.
+	 * Computed during a call to {@link ACTMCPotatoWeibull_polyTaylor#computeFoxGlynn()}.
+	 */
+	BigDecimal integralCeil;
+	
 	/** {@link ACTMCPotato#ACTMCPotato(ACTMCSimple, GSMPEvent, ACTMCRewardsSimple, BitSet)} */
 	public ACTMCPotatoWeibull_polyTaylor(ACTMCSimple actmc, GSMPEvent event, ACTMCRewardsSimple rewards, BitSet target) throws PrismException {
 		super(actmc, event, rewards, target);
-		
-		// TODO MAJO - we do not yet support non-integer second parameter (shape k). Remove this when we do.
-		double secondParam = event.getSecondParameter();
-		int secondParamIntCast = (int)secondParam; // int cast rounds down
-		if ((secondParam - (double)secondParamIntCast) > 1.0E-15) {
-			throw new PrismException("Sorry, only integers are supported as Weibull second parameter (shape k) for now");
-		}
 	}
 	
 	public ACTMCPotatoWeibull_polyTaylor(ACTMCPotato_poly other) throws PrismException {
 		super(other);
-		
-		// TODO MAJO - we do not yet support non-integer second parameter (shape k). Remove this when we do.
-		double secondParam = event.getSecondParameter();
-		int secondParamIntCast = (int)secondParam; // int cast rounds down
-		if ((secondParam - (double)secondParamIntCast) > 1.0E-15) {
-			throw new PrismException("Sorry, only integers are supported as Weibull second parameter (shape k) for now");
-		}
 	}
 	
 	@Override
@@ -87,7 +89,7 @@ public class ACTMCPotatoWeibull_polyTaylor extends ACTMCPotato_poly
 		// ACTMCPotatoWeibull usually requires better precision, dependent on the distribution parameters.
 		// So, adjust kappa by the possible distribution parameter values.
 		int basePrecision = BigDecimalUtils.decimalDigits(kappa); // TODO MAJO - I think [upper_bound]*(kappa + lambda) is needed, but thats extremely high!
-		int weibullPrecision = 100 + basePrecision + (int)actmc.getMaxExitRate() + (int)event.getSecondParameter() * 5 + (int)event.getFirstParameter()  +
+		int weibullPrecision = 200 + basePrecision + (int)actmc.getMaxExitRate() + (int)event.getSecondParameter() * 5 + (int)(30/event.getSecondParameter())  + (int)event.getFirstParameter()  +
 				((int)Math.ceil(Math.log(((event.getFirstParameter() + (int)actmc.getMaxExitRate()) * basePrecision * event.getSecondParameter()))));
 		
 		BigDecimal weibullKappa = BigDecimalUtils.allowedError(weibullPrecision);
@@ -120,6 +122,10 @@ public class ACTMCPotatoWeibull_polyTaylor extends ACTMCPotato_poly
 			weights[i - left] = weights[i - left].divide(factor, mc);
 		}
 		
+		taylor = computeTaylorSeriesWeibull(event.getFirstParameter(), event.getSecondParameter(), right + (int)(right/event.getSecondParameter()));
+		taylor.multiply(computeTaylorSeriesPoisson(right + taylor.coeffs.size() / 10));
+		integralCeil = computeIntegralCeil(event.getFirstParameter(), event.getSecondParameter(), taylor);
+		
 		foxGlynnComputed = true;
 	}
 
@@ -140,28 +146,21 @@ public class ACTMCPotatoWeibull_polyTaylor extends ACTMCPotato_poly
 			weights_BD[i - left] = weights_BD[i - left].divide(totalWeight_BD.multiply(new BigDecimal(String.valueOf(uniformizationRate), mc), mc), mc);
 		}
 		
-		// Prepare the Taylor series representation of e^(-((t/weibullRate)^k))
-		Polynomial taylorWeibull = computeTaylorSeriesWeibull(event.getFirstParameter(), event.getSecondParameter(), right);
-		// Prepare the Taylor series representation of e^(- uniformizationRate * t)
-		Polynomial taylorPoisson = computeTaylorSeriesPoisson(right);
-		// Prepare the top integration value up to which to perform the integration
-		BigDecimal integralCeil = computeIntegralUpperBound(event.getFirstParameter(), event.getSecondParameter(), right);
-		
 		for (int entrance : entrances) {
 			
 			// Prepare solution arrays
 			double[] soln = new double[numStates];
 			double[] soln2 = new double[numStates];
 			double[] result = new double[numStates];
-			Polynomial[] polynomials = new Polynomial[numStates];
-			Polynomial[] antiderivatives = new Polynomial[numStates];
+			PolynomialReal[] polynomials = new PolynomialReal[numStates];
+			PolynomialReal[] antiderivatives = new PolynomialReal[numStates];
 			double[] tmpsoln = new double[numStates];
 
 			// Initialize the solution array by assigning reward 1 to the entrance and 0 to all others.
 			// Also, initialize the polynomials.
 			for (int i = 0; i < numStates; i++) {
 				soln[i] = 0;
-				polynomials[i] = new Polynomial();
+				polynomials[i] = new PolynomialReal();
 			}
 			soln[ACTMCtoDTMC.get(entrance)] = 1;
 
@@ -169,18 +168,17 @@ public class ACTMCPotatoWeibull_polyTaylor extends ACTMCPotato_poly
 			result = new double[numStates];
 			if (left == 0) {
 				for (int i = 0; i < numStates; i++) {
-					polynomials[i].coeffs.add(left, BigDecimal.ZERO);
 					for (int j = 1; j <= right; ++j) {
-						polynomials[i].coeffs.add(j, new BigDecimal(soln[i], mc).multiply(weights_BD[j - left], mc));
+						polynomials[i].coeffs.put(new BigDecimal(String.valueOf(j), mc), new BigDecimal(soln[i], mc).multiply(weights_BD[j - left], mc));
 					}
 				}
 			} else {
 				for (int i = 0; i < numStates; i++) {
 					for (int j = 0; j < left; ++j) {
-						polynomials[i].coeffs.add(j, BigDecimal.ZERO);
+						polynomials[i].coeffs.put(new BigDecimal(String.valueOf(j), mc), BigDecimal.ZERO);
 					}
 					for (int j = left; j <= right; ++j) {
-						polynomials[i].coeffs.add(j, new BigDecimal(soln[i], mc).divide(new BigDecimal(String.valueOf(uniformizationRate), mc), mc));
+						polynomials[i].coeffs.put(new BigDecimal(String.valueOf(j), mc), new BigDecimal(soln[i], mc).divide(new BigDecimal(String.valueOf(uniformizationRate), mc), mc));
 					}
 				}
 			}
@@ -198,15 +196,15 @@ public class ACTMCPotatoWeibull_polyTaylor extends ACTMCPotato_poly
 				if (iters >= left) {
 					for (int i = 0; i < numStates; i++) {
 						for (int j = iters + 1; j < right; ++j) {
-							BigDecimal tmp = polynomials[i].coeffs.get(j).add(new BigDecimal(soln[i], mc).multiply(weights_BD[j - left], mc), mc);
-							polynomials[i].coeffs.set(j, tmp);
+							BigDecimal tmp = polynomials[i].coeffs.get(new BigDecimal(String.valueOf(j), mc)).add(new BigDecimal(soln[i], mc).multiply(weights_BD[j - left], mc), mc);
+							polynomials[i].coeffs.put(new BigDecimal(String.valueOf(j), mc), tmp);
 						}
 					}
 				} else {
 					for (int i = 0; i < numStates; i++) {
 						for (int j = left; j <= right; ++j) {
-							BigDecimal tmp = polynomials[i].coeffs.get(j).add(new BigDecimal(soln[i], mc).divide(new BigDecimal(String.valueOf(uniformizationRate), mc), mc), mc);
-							polynomials[i].coeffs.set(j, tmp);
+							BigDecimal tmp = polynomials[i].coeffs.get(new BigDecimal(String.valueOf(j), mc)).add(new BigDecimal(soln[i], mc).divide(new BigDecimal(String.valueOf(uniformizationRate), mc), mc), mc);
+							polynomials[i].coeffs.put(new BigDecimal(String.valueOf(j), mc), tmp);
 						}
 					}
 				}
@@ -225,15 +223,15 @@ public class ACTMCPotatoWeibull_polyTaylor extends ACTMCPotato_poly
 			
 			//Factor the Taylor series representation into the polynomial
 			for (int n = 0; n < numStates ; ++n) {
-				polynomials[n].multiply(taylorWeibull, mc);				
-				polynomials[n].multiply(taylorPoisson, mc);
+				polynomials[n].multiply(taylor, mc);
 			}
 			
 			//Multiply the polynomial by t^(k-1)
 			for (int n = 0; n < numStates  ; ++n) {
-				for (int k = 0; k < (int)(event.getSecondParameter() - 1); ++k) {
-					polynomials[n].coeffs.add(0, BigDecimal.ZERO);
-				}
+				PolynomialReal tmp = new PolynomialReal();
+				BigDecimal kMinusOne = new BigDecimal(String.valueOf(event.getSecondParameter()), mc).subtract(BigDecimal.ONE, mc);
+				tmp.coeffs.put(kMinusOne, BigDecimal.ONE);
+				polynomials[n].multiply(tmp, mc);
 			}
 			
 			//Compute the antiderivatives of the polynomial
@@ -281,13 +279,6 @@ public class ACTMCPotatoWeibull_polyTaylor extends ACTMCPotato_poly
 			weights_BD[i - left] = weights_BD[i - left].divide(totalWeight_BD, mc);
 		}
 		
-		// Prepare the Taylor series representation of e^(-((t/weibullRate)^k))
-		Polynomial taylorWeibull = computeTaylorSeriesWeibull(event.getFirstParameter(), event.getSecondParameter(), right);
-		// Prepare the Taylor series representation of e^(- uniformizationRate * t)
-		Polynomial taylorPoisson = computeTaylorSeriesPoisson(right);
-		// Prepare the top integration value up to which to perform the integration
-		BigDecimal integralCeil = computeIntegralUpperBound(event.getFirstParameter(), event.getSecondParameter(), right);
-		
 		for (int entrance : entrances) {
 			
 			// Prepare solution arrays
@@ -295,9 +286,9 @@ public class ACTMCPotatoWeibull_polyTaylor extends ACTMCPotato_poly
 			double[] soln;
 			double[] soln2 = new double[numStates];
 			double[] result = new double[numStates];
-			Polynomial[] polynomialsBeforeEvent = new Polynomial[numStates];
-			Polynomial[] polynomialsAfterEvent = new Polynomial[numStates];
-			Polynomial[] antiderivatives = new Polynomial[numStates];
+			PolynomialReal[] polynomialsBeforeEvent = new PolynomialReal[numStates];
+			PolynomialReal[] polynomialsAfterEvent = new PolynomialReal[numStates];
+			PolynomialReal[] antiderivatives = new PolynomialReal[numStates];
 			double[] tmpsoln = new double[numStates];
 			
 			// Build the initial distribution for this potato entrance
@@ -310,21 +301,18 @@ public class ACTMCPotatoWeibull_polyTaylor extends ACTMCPotato_poly
 			// Initialize the arrays
 			for (int i = 0; i < numStates; i++) {
 				result[i] = 0.0;
-				polynomialsBeforeEvent[i] = new Polynomial();
-				polynomialsAfterEvent[i] = new Polynomial(BigDecimal.ZERO);
+				polynomialsBeforeEvent[i] = new PolynomialReal();
+				polynomialsAfterEvent[i] = new PolynomialReal(BigDecimal.ZERO);
 			}
 
 			// If necessary, compute the 0th element of summation
 			// (doesn't require any matrix powers)
 			if (left == 0) {
 				for (int i = 0; i < numStates; i++) {
-					polynomialsBeforeEvent[i].coeffs.add(0, new BigDecimal(soln[i], mc).multiply(weights_BD[0], mc));
+					polynomialsBeforeEvent[i].coeffs.put(BigDecimal.ZERO, new BigDecimal(soln[i], mc).multiply(weights_BD[0], mc));
 				}
 			} else {
-				// Initialise new polynomial coefficient
-				for (int i = 0; i < numStates; i++) {
-					polynomialsBeforeEvent[i].coeffs.add(0, BigDecimal.ZERO);
-				}
+
 			}
 
 			// Start iterations
@@ -339,13 +327,10 @@ public class ACTMCPotatoWeibull_polyTaylor extends ACTMCPotato_poly
 				// Add to sum
 				if (iters >= left) {
 					for (int i = 0; i < numStates; i++) {
-						polynomialsBeforeEvent[i].coeffs.add(iters, new BigDecimal(soln[i], mc).multiply(weights_BD[iters - left], mc));
+						polynomialsBeforeEvent[i].coeffs.put(new BigDecimal(String.valueOf(iters), mc), new BigDecimal(soln[i], mc).multiply(weights_BD[iters - left], mc));
 					}
 				} else {
-					// Initialize new polynomial coefficient
-					for (int i = 0; i < numStates; i++) {
-						polynomialsBeforeEvent[i].coeffs.add(iters, BigDecimal.ZERO);
-					}
+
 				}
 				iters++;
 			}
@@ -362,15 +347,15 @@ public class ACTMCPotatoWeibull_polyTaylor extends ACTMCPotato_poly
 			
 			//Factor the Taylor series representation into the polynomial
 			for (int n = 0; n < numStates ; ++n) {
-				polynomialsBeforeEvent[n].multiply(taylorWeibull, mc);
-				polynomialsBeforeEvent[n].multiply(taylorPoisson, mc);
+				polynomialsBeforeEvent[n].multiply(taylor, mc);
 			}
 			
 			//Multiply the polynomial by t^(k-1)
 			for (int n = 0; n < numStates  ; ++n) {
-				for (int k = 0; k < (int)(event.getSecondParameter() - 1); ++k) {
-					polynomialsBeforeEvent[n].coeffs.add(0, BigDecimal.ZERO);
-				}
+				PolynomialReal tmp = new PolynomialReal();
+				BigDecimal kMinusOne = new BigDecimal(String.valueOf(event.getSecondParameter()), mc).subtract(BigDecimal.ONE, mc);
+				tmp.coeffs.put(kMinusOne, BigDecimal.ONE);
+				polynomialsBeforeEvent[n].multiply(tmp, mc);
 			}
 			
 			//Compute the antiderivatives of the polynomial
@@ -465,20 +450,13 @@ public class ACTMCPotatoWeibull_polyTaylor extends ACTMCPotato_poly
 			weights_BD[i - left] = weights_BD[i - left].divide(totalWeight_BD.multiply(new BigDecimal(String.valueOf(uniformizationRate), mc), mc), mc);
 		}
 		
-		// Prepare the Taylor series representation of e^(-((t/weibullRate)^k))
-		Polynomial taylorWeibull = computeTaylorSeriesWeibull(event.getFirstParameter(), event.getSecondParameter(), right);
-		// Prepare the Taylor series representation of e^(- uniformizationRate * t)
-		Polynomial taylorPoisson = computeTaylorSeriesPoisson(right);
-		// Prepare the top integration value up to which to perform the integration
-		BigDecimal integralCeil = computeIntegralUpperBound(event.getFirstParameter(), event.getSecondParameter(), right);
-		
 		// Prepare solution arrays
 		double[] soln = new double[numStates];
 		double[] soln2 = new double[numStates];
 		double[] result = new double[numStates];
-		Polynomial[] polynomialsBeforeEvent = new Polynomial[numStates];
-		Polynomial[] polynomialsAfterEvent = new Polynomial[numStates];
-		Polynomial[] antiderivatives = new Polynomial[numStates];
+		PolynomialReal[] polynomialsBeforeEvent = new PolynomialReal[numStates];
+		PolynomialReal[] polynomialsAfterEvent = new PolynomialReal[numStates];
+		PolynomialReal[] antiderivatives = new PolynomialReal[numStates];
 		double[] tmpsoln = new double[numStates];
 
 		// Initialize the solution array by assigning rewards to the potato states
@@ -490,25 +468,21 @@ public class ACTMCPotatoWeibull_polyTaylor extends ACTMCPotato_poly
 			} else {
 				soln[s] = 0;
 			}
-			polynomialsBeforeEvent[s] = new Polynomial();
+			polynomialsBeforeEvent[s] = new PolynomialReal();
 		}
 
 		// do 0th element of summation (doesn't require any matrix powers), and initialize the coefficients
 		result = new double[numStates];
 		if (left == 0) {
 			for (int i = 0; i < numStates; i++) {
-				polynomialsBeforeEvent[i].coeffs.add(left, BigDecimal.ZERO);
 				for (int j = 1; j <= right; ++j) {
-					polynomialsBeforeEvent[i].coeffs.add(j, new BigDecimal(soln[i], mc).multiply(weights_BD[j - left], mc));
+					polynomialsBeforeEvent[i].coeffs.put(new BigDecimal(String.valueOf(j), mc), new BigDecimal(soln[i], mc).multiply(weights_BD[j - left], mc));
 				}
 			}
 		} else {
 			for (int i = 0; i < numStates; i++) {
-				for (int j = 0; j < left; ++j) {
-					polynomialsBeforeEvent[i].coeffs.add(j, BigDecimal.ZERO);
-				}
 				for (int j = left; j <= right; ++j) {
-					polynomialsBeforeEvent[i].coeffs.add(j, new BigDecimal(soln[i], mc).divide(new BigDecimal(String.valueOf(uniformizationRate), mc), mc));
+					polynomialsBeforeEvent[i].coeffs.put(new BigDecimal(String.valueOf(j), mc), new BigDecimal(soln[i], mc).divide(new BigDecimal(String.valueOf(uniformizationRate), mc), mc));
 				}
 			}
 		}
@@ -526,15 +500,15 @@ public class ACTMCPotatoWeibull_polyTaylor extends ACTMCPotato_poly
 			if (iters >= left) {
 				for (int i = 0; i < numStates; i++) {
 					for (int j = iters + 1; j < right; ++j) {
-						BigDecimal tmp = polynomialsBeforeEvent[i].coeffs.get(j).add(new BigDecimal(soln[i], mc).multiply(weights_BD[j - left], mc), mc);
-						polynomialsBeforeEvent[i].coeffs.set(j, tmp);
+						BigDecimal tmp = polynomialsBeforeEvent[i].coeffs.get(new BigDecimal(String.valueOf(j), mc)).add(new BigDecimal(soln[i], mc).multiply(weights_BD[j - left], mc), mc);
+						polynomialsBeforeEvent[i].coeffs.put(new BigDecimal(String.valueOf(j), mc), tmp);
 					}
 				}
 			} else {
 				for (int i = 0; i < numStates; i++) {
 					for (int j = left; j <= right; ++j) {
-						BigDecimal tmp = polynomialsBeforeEvent[i].coeffs.get(j).add(new BigDecimal(soln[i], mc).divide(new BigDecimal(String.valueOf(uniformizationRate), mc), mc), mc);
-						polynomialsBeforeEvent[i].coeffs.set(j, tmp);
+						BigDecimal tmp = polynomialsBeforeEvent[i].coeffs.get(new BigDecimal(String.valueOf(j), mc)).add(new BigDecimal(soln[i], mc).divide(new BigDecimal(String.valueOf(uniformizationRate), mc), mc), mc);
+						polynomialsBeforeEvent[i].coeffs.put(new BigDecimal(String.valueOf(j), mc), tmp);
 					}
 				}
 			}
@@ -551,15 +525,15 @@ public class ACTMCPotatoWeibull_polyTaylor extends ACTMCPotato_poly
 		
 		//Factor the Taylor series representation into the polynomial
 		for (int n = 0; n < numStates ; ++n) {
-			polynomialsBeforeEvent[n].multiply(taylorWeibull, mc);
-			polynomialsBeforeEvent[n].multiply(taylorPoisson, mc);
+			polynomialsBeforeEvent[n].multiply(taylor, mc);
 		}
 		
 		//Multiply the polynomial by t^(k-1)
 		for (int n = 0; n < numStates  ; ++n) {
-			for (int k = 0; k < (int)(event.getSecondParameter() - 1); ++k) {
-				polynomialsBeforeEvent[n].coeffs.add(0, BigDecimal.ZERO);
-			}
+			PolynomialReal tmp = new PolynomialReal();
+			BigDecimal kMinusOne = new BigDecimal(String.valueOf(event.getSecondParameter()), mc).subtract(BigDecimal.ONE, mc);
+			tmp.coeffs.put(kMinusOne, BigDecimal.ONE);
+			polynomialsBeforeEvent[n].multiply(tmp, mc);
 		}
 		
 		//Compute the antiderivatives of the polynomial
@@ -584,10 +558,10 @@ public class ACTMCPotatoWeibull_polyTaylor extends ACTMCPotato_poly
 		
 		//Now that we have the expected rewards for the underlying CTMC behavior,
 		//event behavior is applied.
-		polynomialsAfterEvent = getEventRewardsPoly(false);
+		polynomialsAfterEvent = (PolynomialReal[])getEventRewardsPoly(false);
 		antiderivatives = antiderivatives.clone();
 		for (int n = 0; n < numStates ; ++n) {
-			antiderivatives[n] = new Polynomial(antiderivatives[n].coeffs);
+			antiderivatives[n] = new PolynomialReal(antiderivatives[n].coeffs);
 			antiderivatives[n].add(polynomialsAfterEvent[n], mc);
 		}
 		
@@ -616,26 +590,27 @@ public class ACTMCPotatoWeibull_polyTaylor extends ACTMCPotato_poly
 	 * @param i integer >1 of how many elements of the series to include. Internally incremented by wRate.
 	 * @return polynomial that is the Taylor series representation of e^(-((t/weibullRate)^k))
 	 */
-	private Polynomial computeTaylorSeriesWeibull(double wRate, double wK, int i) {
+	private PolynomialReal computeTaylorSeriesWeibull(double wRate, double wK, int i) {
 		BigDecimal rateBD = new BigDecimal(String.valueOf(wRate), mc);
 		BigDecimal kBD = new BigDecimal(String.valueOf(wK), mc);
-		int k = (int)wK;
-		i = i + (int)wRate;
+		i = i + (int)wRate * 5;
+		if (wK < 1) {
+			i = i + (int)(30/wK);
+		} else {
+			i = i + (int)(wK * 3);
+		}
 		
 		BigDecimal powerElem = BigDecimalMath.pow(BigDecimal.ONE.divide(rateBD, mc), kBD, mc).negate();
-		Polynomial taylor = new Polynomial();
-		for (int n = 0; n <= i*k; ++n) {
-			taylor.coeffs.add(BigDecimal.ZERO);
-		}
+		PolynomialReal taylor = new PolynomialReal();
 		
 		BigDecimal revFact = BigDecimal.ONE; 
 		BigDecimal power = BigDecimal.ONE;
 		BigDecimal augment = BigDecimal.ONE;
 		for (int n = 0; n <= i; ++n) {
-			BigDecimal tmp = taylor.coeffs.get(n*k).add(augment, mc);
-			taylor.coeffs.set(n*k, tmp);
+			BigDecimal exponent = new BigDecimal(String.valueOf(n), mc).multiply(kBD, mc);
+			taylor.coeffs.put(exponent, augment);
 			
-			revFact = revFact.divide(new BigDecimal(n+1, mc), mc);
+			revFact = revFact.divide(new BigDecimal(String.valueOf(n), mc).add(BigDecimal.ONE, mc), mc);
 			power = power.multiply(powerElem, mc);
 			augment = revFact.multiply(power, mc);
 		}
@@ -648,15 +623,15 @@ public class ACTMCPotatoWeibull_polyTaylor extends ACTMCPotato_poly
 	 * @param i integer >1 of how many elements of the series to include
 	 * @return polynomial that is the Taylor series representation of e^(- uniformizationRate * t)
 	 */
-	private Polynomial computeTaylorSeriesPoisson(int i) {
+	private PolynomialReal computeTaylorSeriesPoisson(int i) {
 		BigDecimal powerElem = new BigDecimal(String.valueOf(uniformizationRate), mc).negate();
-		Polynomial taylor = new Polynomial();
+		PolynomialReal taylor = new PolynomialReal();
 		
 		BigDecimal revFact = BigDecimal.ONE; 
 		BigDecimal power = BigDecimal.ONE;
 		BigDecimal augment = BigDecimal.ONE;
 		for (int n = 0; n <= i; ++n) {
-			taylor.coeffs.add(augment);
+			taylor.coeffs.put(new BigDecimal(String.valueOf(n), mc), augment);
 			
 			revFact = revFact.divide(new BigDecimal(n+1, mc), mc);
 			power = power.multiply(powerElem, mc);
@@ -674,7 +649,7 @@ public class ACTMCPotatoWeibull_polyTaylor extends ACTMCPotato_poly
 	 * @param Value up to which to perform the integration
 	 * @return result BigDecimal number, actually the mean time,distribution or reward for given entrance and state
 	 */
-	private BigDecimal evaluateAntiderivative(Polynomial antiderivative, BigDecimal b) {
+	private BigDecimal evaluateAntiderivative(PolynomialReal antiderivative, BigDecimal b) {
 		BigDecimal a = BigDecimal.ZERO;
 		BigDecimal aVal = antiderivative.value(a, mc);
 		BigDecimal bVal = antiderivative.value(b, mc);
@@ -694,45 +669,110 @@ public class ACTMCPotatoWeibull_polyTaylor extends ACTMCPotato_poly
 	 * low enough for the result not to be rubbish because of the used precision or degree of the polynomials.
 	 * @param wRate Weibull Rate/scale (first) parameter
 	 * @param wK Weibull shape (second) parameter
-	 * @param int i  - requested number of elements for the Taylor series polynomial to represent e^(-((t/weibullRate)^k))
+	 * @param taylor - taylor series polynomial to be used
 	 * @return BigDecimal {@code b}
 	 */
-	private BigDecimal computeIntegralUpperBound(double wRate, double wK, int i) {
-		//Get the Taylor series representation of e^(-((t/weibullRate)^k))
-		Polynomial taylorWeibull = computeTaylorSeriesWeibull(wRate, wK, i);
-		Polynomial taylorPoisson = computeTaylorSeriesPoisson(i);
-		taylorWeibull.multiply(taylorPoisson, mc); // TODO MAJO - create the taylor series before and pass them as a parameter
+	private BigDecimal computeIntegralCeil(double wRate, double wK, PolynomialReal taylor) throws PrismException {
+		BigDecimal wRateBD = new BigDecimal(String.valueOf(wRate), mc);
+		BigDecimal wKBD = new BigDecimal(String.valueOf(wK), mc);
+		
+		//Make a hard copy of the taylor series
+		PolynomialReal taylorTmp = new PolynomialReal(taylor);
 		
 		//Multiply the Taylor series polynomial by t^(k-1)
-		for (int k = 0; k < (int)(wK - 1); ++k) {
-			taylorWeibull.coeffs.add(0, BigDecimal.ZERO);
-		}
+	    PolynomialReal tmp = new PolynomialReal();
+		BigDecimal kMinusOne = wKBD.subtract(BigDecimal.ONE, mc);
+		tmp.coeffs.put(kMinusOne, BigDecimal.ONE);
+		taylorTmp.multiply(tmp, mc);
 		
 		//Factor in the rest
-		BigDecimal firstFactor = new BigDecimal(String.valueOf(wK), mc).divide(new BigDecimal(String.valueOf(wRate), mc), mc);
-		BigDecimal secondFactor = BigDecimal.ONE.divide(BigDecimalMath.pow(new BigDecimal(String.valueOf(wRate), mc), new BigDecimal(String.valueOf(wK), mc).subtract(BigDecimal.ONE, mc), mc), mc);
-		taylorWeibull.multiplyWithScalar(firstFactor, mc);
-		taylorWeibull.multiplyWithScalar(secondFactor, mc);
+		BigDecimal firstFactor = wKBD.divide(wRateBD, mc);
+		BigDecimal secondFactor = BigDecimal.ONE.divide(BigDecimalMath.pow(wRateBD, wKBD.subtract(BigDecimal.ONE, mc), mc), mc);
+		BigDecimal totalFactor = firstFactor.multiply(secondFactor, mc);
+		taylorTmp.multiplyWithScalar(totalFactor, mc);
 		
 		//compute the integral of the Taylor series
-		Polynomial antiderivative = taylorWeibull.antiderivative(mc);
+		PolynomialReal antiderivative = taylorTmp.antiderivative(mc);
 		
 		// find the optimal b
-		BigDecimal b = new BigDecimal("0.01", mc).divide(new BigDecimal(wK,  mc), mc);
-		BigDecimal increment = new BigDecimal("0.1", mc).divide(new BigDecimal(wK,  mc), mc).multiply(new BigDecimal(wRate,  mc), mc);
+		BigDecimal b = BigDecimal.ZERO;
+		BigDecimal increment = new BigDecimal("5.0", mc).multiply(wRateBD, mc).divide(wKBD,  mc);
 		BigDecimal prob = BigDecimal.ZERO;
-		BigDecimal lastProb = prob;
-		BigDecimal probSumTreshold = new BigDecimal("0.5", mc);
-		BigDecimal lowerProbSumTreshold = new BigDecimal("0.4", mc);
-		do {
+		BigDecimal lastProb;
+		BigDecimal diff = BigDecimal.ZERO;
+		BigDecimal lastDiff;
+		int iters = 0;
+		do { //upward slope search
+			b = b.add(increment.divide(BigDecimal.TEN.multiply(BigDecimal.TEN, mc), mc), mc);
+			lastProb = prob;
+			prob = antiderivative.value(b, mc);
+			lastDiff = diff;
+			diff = prob.subtract(lastProb, mc);
+			if (diff.compareTo(lastDiff) < 0) {
+				break;
+			}
+		} while (prob.compareTo(lastProb) > 0);
+		diff = BigDecimal.ONE;
+		do { //downward slope search, low accuracy
 			b = b.add(increment, mc);
 			lastProb = prob;
 			prob = antiderivative.value(b, mc);
-			if (lastProb.compareTo(lowerProbSumTreshold) > 0 && lastProb.compareTo(prob) > 0) {
+			lastDiff = diff;
+			diff = prob.subtract(lastProb, mc);
+			if (diff.compareTo(lastDiff) > 0) {
 				break;
 			}
-		} while (prob.compareTo(probSumTreshold) < 0 && prob.compareTo(BigDecimal.ZERO) > 0);
-		
+			++iters;
+		} while (prob.compareTo(lastProb) > 0);
+		b = b.subtract(increment, mc);
+		prob = lastProb;
+		diff = lastDiff;
+		if (iters >= 2) {
+			b = b.subtract(increment, mc);
+			lastProb = prob;
+			prob = antiderivative.value(b, mc);
+			diff = BigDecimal.ONE;
+		}
+		increment = increment.divide(BigDecimal.TEN, mc);
+		do { //downward slope search, medium accuracy
+			b = b.add(increment, mc);
+			lastProb = prob;
+			prob = antiderivative.value(b, mc);
+			lastDiff = diff;
+			diff = prob.subtract(lastProb, mc);
+			if (diff.compareTo(lastDiff) > 0) {
+				break;
+			}
+		} while (prob.compareTo(lastProb) > 0);
+		b = b.subtract(increment, mc);
+		increment = increment.divide(BigDecimal.TEN, mc);
+		prob = lastProb;
+		diff = lastDiff;
+		do { //downward slope search, high accuracy
+			b = b.add(increment, mc);
+			lastProb = prob;
+			prob = antiderivative.value(b, mc);
+			lastDiff = diff;
+			diff = prob.subtract(lastProb, mc);
+			if (diff.compareTo(lastDiff) > 0) {
+				break;
+			}
+		} while (prob.compareTo(lastProb) > 0);
+		b = b.subtract(increment, mc);
+		increment = increment.divide(BigDecimal.TEN, mc);
+		prob = lastProb;
+		diff = lastDiff;
+		do { //downward slope search, very high accuracy
+			b = b.add(increment, mc);
+			lastProb = prob;
+			prob = antiderivative.value(b, mc);
+			lastDiff = diff;
+			diff = prob.subtract(lastProb, mc);
+			if (diff.compareTo(lastDiff) > 0) {
+				break;
+			}
+		} while (prob.compareTo(lastProb) > 0);
+			
 		return b.subtract(increment, mc);
 	}
 
