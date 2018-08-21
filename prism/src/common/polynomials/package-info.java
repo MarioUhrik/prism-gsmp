@@ -30,9 +30,7 @@
  * as the objective of his Master's thesis.
  * With the author's permission, it was inserted into PRISM by Mario Uhrik in 2018. 
  * <br>
- * For the most part, the relevant files have been copy-pasted as they were.
- * However, some small changes were made in order to better
- * integrate the library into PRISM codebase.
+ * Many changes were made in order to better integrate the library into PRISM codebase.
  * 
  * @author Adrian Elgyutt <396222@mail.muni.cz> (Masaryk University)
  * @author Mario Uhrik <433501@mail.muni.cz> (Masaryk University)

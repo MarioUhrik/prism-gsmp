@@ -37,12 +37,14 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import prism.PrismNotSupportedException;
+
 /**
  * Class representing polynomials
  * @author Adrian E.
  */
 
-public class Polynomial {
+public class Polynomial implements Poly {
 
 	/**
 	 * Coefficients, coeff.get(i) represents coefficients of x^i
@@ -132,10 +134,7 @@ public class Polynomial {
 		//this.derivative = other.derivative;
 	}
 	
-	/**
-	 * Compute the derivative of this 
-	 * @return derivative of this
-	 */
+	@Override
 	public Polynomial derivative(){
 		if(derivative != null) return derivative;
 
@@ -148,11 +147,7 @@ public class Polynomial {
 		return derivative;
 	}
 	
-	/**
-	 * Compute the derivative of this using the given MathContext
-	 * @param mc MathContext to use
-	 * @return derivative of this
-	 */
+	@Override
 	public Polynomial derivative(MathContext mc){
 		if(derivative != null) return derivative;
 
@@ -165,11 +160,7 @@ public class Polynomial {
 		return derivative;
 	}
 	
-	/**
-	 * Compute the antiderivative of this using the given MathContext
-	 * @param mc MathContext to use
-	 * @return antiderivative of this
-	 */
+	@Override
 	public Polynomial antiderivative(MathContext mc){
 		List<BigDecimal> antiderivCoeffs = new ArrayList<BigDecimal>();
 		
@@ -183,11 +174,7 @@ public class Polynomial {
 		return antiderivative;
 	}
 	
-	/**
-	 * Evaluate this polynomial in x
-	 * @param	x	x to evaluate
-	 * @return 	value of this in x
-	 */
+	@Override
 	public BigDecimal value(BigDecimal x){
 		BigDecimal sum = BigDecimal.ZERO;
 		BigDecimal xpower = BigDecimal.ONE;
@@ -198,12 +185,7 @@ public class Polynomial {
 		return sum;
 	}
 	
-	/**
-	 * Evaluate this polynomial in x using the given MathContext
-	 * @param	x	x to evaluate
-	 * @param   mc MathContext to use for the evaluation
-	 * @return 	value of this in x
-	 */
+	@Override
 	public BigDecimal value(BigDecimal x, MathContext mc){
 		BigDecimal sum = BigDecimal.ZERO;
 		BigDecimal xpower = BigDecimal.ONE;
@@ -262,10 +244,8 @@ public class Polynomial {
 	        }
 	    return d;
 	}
-	/**
-	 * Returns leading coefficient
-	 * @return	leading coefficient
-	 */
+	
+	@Override
 	public BigDecimal getHighestCoeff(){
 		BigDecimal hc = new BigDecimal("0");
 	    for (int i = coeffs.size() - 1; i >= 0; i--)
@@ -275,11 +255,22 @@ public class Polynomial {
 	        }
 	    return hc;
 	}
+	
+	@Override
+	public void add(Poly other) throws PrismNotSupportedException{
+		if (!(other instanceof Polynomial)) {
+			throw new PrismNotSupportedException("Unrecognized type of Poly in Polynomial arguments");
+		}
+		Polynomial otherI = (Polynomial)other;
+		
+		add(otherI);
+	}
+	
 	/**
 	 * Adds other polynomial to this
 	 * @param other	polynomial
 	 */
-	public void add(Polynomial other){
+	public void add(Polynomial other) {
 		for(int i = 0; i < coeffs.size() && i < other.coeffs.size(); i++){
 			coeffs.set(i, coeffs.get(i).add(other.coeffs.get(i)));
 		}
@@ -289,12 +280,22 @@ public class Polynomial {
 			}
 		}
 	}
+	
+	public void add(Poly other, MathContext mc) throws PrismNotSupportedException{
+		if (!(other instanceof Polynomial)) {
+			throw new PrismNotSupportedException("Unrecognized type of Poly in Polynomial arguments");
+		}
+		Polynomial otherI = (Polynomial)other;
+		
+		add(otherI, mc);
+	}
+	
 	/**
 	 * Adds other polynomial to this using the given MathContext
 	 * @param other	polynomial
 	 * @param mc MathContext to use for the addition
 	 */
-	public void add(Polynomial other, MathContext mc){
+	public void add(Polynomial other, MathContext mc) {
 		for(int i = 0; i < coeffs.size() && i < other.coeffs.size(); i++){
 			coeffs.set(i, coeffs.get(i).add(other.coeffs.get(i), mc));
 		}
@@ -304,11 +305,22 @@ public class Polynomial {
 			}
 		}
 	}
+	
+	@Override
+	public void subtract(Poly other) throws PrismNotSupportedException{
+		if (!(other instanceof Polynomial)) {
+			throw new PrismNotSupportedException("Unrecognized type of Poly in Polynomial arguments");
+		}
+		Polynomial otherI = (Polynomial)other;
+		
+		subtract(otherI);
+	}
+	
 	/**
-	 * Substracts other polynomial from this
+	 * Subtracts other polynomial from this
 	 * @param other	polynomial
 	 */
-	public void subtract(Polynomial other){
+	public void subtract(Polynomial other) {
 		for(int i = 0; i < coeffs.size() && i < other.coeffs.size(); i++){
 			coeffs.set(i, coeffs.get(i).subtract(other.coeffs.get(i)));
 		}
@@ -319,12 +331,23 @@ public class Polynomial {
 		}
 	}
 	
+	@Override
+	public void multiply(Poly other) throws PrismNotSupportedException{
+		if (!(other instanceof Polynomial)) {
+			throw new PrismNotSupportedException("Unrecognized type of Poly in Polynomial arguments");
+		}
+		Polynomial otherI = (Polynomial)other;
+		
+		multiply(otherI);
+	}
+	
 	/**
 	 * Multiplies this polynomial with other
 	 * @param other other polynomial
 	 */
-	public void multiply(Polynomial other){
+	public void multiply(Polynomial other) {
 		List<BigDecimal> newc = new ArrayList<>();
+		
 		for(int i = 0; i < coeffs.size() + other.coeffs.size() - 1; i++)
 			newc.add(new BigDecimal("0").setScale(10, RoundingMode.HALF_UP));
 		for(int i = 0; i < coeffs.size(); i++){
@@ -335,13 +358,24 @@ public class Polynomial {
 		this.coeffs = newc;
 	}
 	
+	@Override
+	public void multiply(Poly other, MathContext mc) throws PrismNotSupportedException{
+		if (!(other instanceof Polynomial)) {
+			throw new PrismNotSupportedException("Unrecognized type of Poly in Polynomial arguments");
+		}
+		Polynomial otherI = (Polynomial)other;
+		
+		multiply(otherI, mc);
+	}
+	
 	/**
 	 * Multiplies this polynomial with other using the given MathContext
 	 * @param other other polynomial
 	 * @param mc MathContext to use
 	 */
-	public void multiply(Polynomial other, MathContext mc){
+	public void multiply(Polynomial other, MathContext mc) throws PrismNotSupportedException{
 		List<BigDecimal> newc = new ArrayList<>();
+		
 		for(int i = 0; i < coeffs.size() + other.coeffs.size() - 1; i++)
 			newc.add(BigDecimal.ZERO);
 		for(int i = 0; i < coeffs.size(); i++){
@@ -510,7 +544,7 @@ public class Polynomial {
 		return blist;
 	}
 	/**
-	 * Reverses coeffiecients of this
+	 * Reverses coefficients of this
 	 */
 	public void reverseCoefficients(){
 		Collections.reverse(coeffs);
@@ -535,5 +569,6 @@ public class Polynomial {
 		}
 		if(sb.length() == 0) sb.append(0);
 		return sb.toString();
-	}	
+	}
+
 }

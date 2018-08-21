@@ -40,6 +40,7 @@ import java.util.regex.Pattern;
 
 import ch.obermuhlner.math.big.BigDecimalMath;
 import prism.PrismException;
+import prism.PrismNotSupportedException;
 
 /**
  * Class representing polynomials with real exponents. // TODO MAJO - Not yet tested.
@@ -47,7 +48,7 @@ import prism.PrismException;
  * <br>
  * Based on {@link Polynomial}
  */
-public class PolynomialReal {
+public class PolynomialReal implements Poly {
 
 	/**
 	 * Map of coefficients mapped onto their exponents, coeff.get(i) represents coefficients of x^i
@@ -148,16 +149,32 @@ public class PolynomialReal {
 	/**
 	 * Copy constructor
 	 * @param other Polynomial
+	 * @throws PrismNotSupportedException when Poly other has unsupported type
 	 */
-	public PolynomialReal(PolynomialReal other) {
-		this.coeffs = new HashMap<BigDecimal, BigDecimal>(other.coeffs);
+	public PolynomialReal(Poly other) throws PrismNotSupportedException {
+		PolynomialReal otherR;
+		if (other instanceof Polynomial) {
+			otherR = new PolynomialReal(((Polynomial)other).coeffs);
+		} else if (other instanceof PolynomialReal) {
+			otherR = (PolynomialReal)other;
+		} else {
+			throw new PrismNotSupportedException("Unrecognized type of Poly in PolynomialReal arguments");
+		}
+		
+		this.coeffs = new HashMap<BigDecimal, BigDecimal>(otherR.coeffs);
 		//this.derivative = other.derivative;
 	}
 	
 	/**
-	 * Compute the derivative of this 
-	 * @return derivative of this
+	 * Copy constructor
+	 * @param other Polynomial
 	 */
+	public PolynomialReal(PolynomialReal other) throws PrismNotSupportedException {
+		this.coeffs = new HashMap<BigDecimal, BigDecimal>(other.coeffs);
+		//this.derivative = other.derivative;
+	}
+	
+	@Override
 	public PolynomialReal derivative(){
 		if(derivative != null) return derivative;
 
@@ -203,12 +220,7 @@ public class PolynomialReal {
 		return derivative;
 	}
 	
-	/**
-	 * Compute the antiderivative of this using the given MathContext
-	 * @param mc MathContext to use
-	 * @return antiderivative of this
-	 * @throws PrismExpception if 
-	 */
+	@Override
 	public PolynomialReal antiderivative(MathContext mc) throws PrismException {
 		Map<BigDecimal, BigDecimal> antiderivCoeffs = new HashMap<BigDecimal, BigDecimal>();
 		
@@ -217,9 +229,9 @@ public class PolynomialReal {
 			BigDecimal coeff = entry.getValue();
 			
 			if (exponent.compareTo(BigDecimal.ONE.negate()) == 0) {
-				throw new PrismException("Refusing to compute antiderivative of a c*x^(-1)");
+				throw new PrismException("Refusing to compute antiderivative of a c*x^(-1)"); // This would be log(x) * c or something
 			} else {
-				antiderivCoeffs.put(exponent.add(BigDecimal.ONE, mc), coeff.divide(exponent, mc));
+				antiderivCoeffs.put(exponent.add(BigDecimal.ONE, mc), coeff.divide(exponent.add(BigDecimal.ONE, mc), mc));
 			}
 		}
 		
@@ -228,11 +240,7 @@ public class PolynomialReal {
 		return antiderivative;
 	}
 	
-	/**
-	 * Evaluate this polynomial in x
-	 * @param	x	x to evaluate
-	 * @return 	value of this in x
-	 */
+	@Override
 	public BigDecimal value(BigDecimal x){
 		BigDecimal sum = BigDecimal.ZERO;
 		
@@ -243,18 +251,14 @@ public class PolynomialReal {
 			BigDecimal exponent = entry.getKey();
 			BigDecimal coeff = entry.getValue();
 			
-			sum = sum.add(BigDecimalMath.pow(coeff, exponent, mc));
+			BigDecimal addition = BigDecimalMath.pow(x, exponent, mc).multiply(coeff);
+			sum = sum.add(addition);
 		}
 		
 		return sum;
 	}
 	
-	/**
-	 * Evaluate this polynomial in x using the given MathContext
-	 * @param	x	x to evaluate
-	 * @param   mc MathContext to use for the evaluation
-	 * @return 	value of this in x
-	 */
+	@Override
 	public BigDecimal value(BigDecimal x, MathContext mc){
 		BigDecimal sum = BigDecimal.ZERO;
 		
@@ -262,7 +266,8 @@ public class PolynomialReal {
 			BigDecimal exponent = entry.getKey();
 			BigDecimal coeff = entry.getValue();
 			
-			sum = sum.add(BigDecimalMath.pow(coeff, exponent, mc));
+			BigDecimal addition = BigDecimalMath.pow(x, exponent, mc).multiply(coeff, mc);
+			sum = sum.add(addition, mc);
 		}
 		
 		return sum;
@@ -309,13 +314,26 @@ public class PolynomialReal {
 		}
 	    return d;
 	}
-	/**
-	 * Returns leading coefficient
-	 * @return	leading coefficient
-	 */
+	
+	@Override
 	public BigDecimal getHighestCoeff(){
 		return coeffs.get(degree());
 	}
+	
+	@Override
+	public void add(Poly other) throws PrismNotSupportedException{
+		PolynomialReal otherR;
+		if (other instanceof Polynomial) {
+			otherR = new PolynomialReal(((Polynomial)other).coeffs);
+		} else if (other instanceof PolynomialReal) {
+			otherR = (PolynomialReal)other;
+		} else {
+			throw new PrismNotSupportedException("Unrecognized type of Poly in PolynomialReal arguments");
+		}
+		
+		add(otherR);
+	}
+	
 	/**
 	 * Adds other polynomial to this
 	 * @param other	polynomial
@@ -333,6 +351,21 @@ public class PolynomialReal {
 			}
 		}
 	}
+	
+	@Override
+	public void add(Poly other, MathContext mc) throws PrismNotSupportedException{
+		PolynomialReal otherR;
+		if (other instanceof Polynomial) {
+			otherR = new PolynomialReal(((Polynomial)other).coeffs);
+		} else if (other instanceof PolynomialReal) {
+			otherR = (PolynomialReal)other;
+		} else {
+			throw new PrismNotSupportedException("Unrecognized type of Poly in PolynomialReal arguments");
+		}
+		
+		add(otherR, mc);
+	}
+	
 	/**
 	 * Adds other polynomial to this using the given MathContext
 	 * @param other	polynomial
@@ -351,11 +384,26 @@ public class PolynomialReal {
 			}
 		}
 	}
+	
+	@Override
+	public void subtract(Poly other) throws PrismNotSupportedException{
+		PolynomialReal otherR;
+		if (other instanceof Polynomial) {
+			otherR = new PolynomialReal(((Polynomial)other).coeffs);
+		} else if (other instanceof PolynomialReal) {
+			otherR = (PolynomialReal)other;
+		} else {
+			throw new PrismNotSupportedException("Unrecognized type of Poly in PolynomialReal arguments");
+		}
+		
+		subtract(otherR);
+	}
+	
 	/**
-	 * Substracts other polynomial from this
+	 * Subtracts other polynomial from this
 	 * @param other	polynomial
 	 */
-	public void subtract(PolynomialReal other){
+	public void subtract(PolynomialReal other) {
 		for (Map.Entry<BigDecimal, BigDecimal> entry : other.coeffs.entrySet()) {
 			BigDecimal otherExponent = entry.getKey();
 			BigDecimal otherCoeff = entry.getValue();
@@ -369,11 +417,25 @@ public class PolynomialReal {
 		}
 	}
 	
+	@Override
+	public void multiply(Poly other)  throws PrismNotSupportedException{
+		PolynomialReal otherR;
+		if (other instanceof Polynomial) {
+			otherR = new PolynomialReal(((Polynomial)other).coeffs);
+		} else if (other instanceof PolynomialReal) {
+			otherR = (PolynomialReal)other;
+		} else {
+			throw new PrismNotSupportedException("Unrecognized type of Poly in PolynomialReal arguments");
+		}
+		
+		multiply(otherR);
+	}
+	
 	/**
 	 * Multiplies this polynomial with other
 	 * @param other other polynomial
 	 */
-	public void multiply(PolynomialReal other){
+	public void multiply(PolynomialReal other) {
 		Map<BigDecimal, BigDecimal> newc = new HashMap<BigDecimal, BigDecimal>();
 		
 		for (Map.Entry<BigDecimal, BigDecimal> thisEntry : this.coeffs.entrySet()) {
@@ -383,18 +445,32 @@ public class PolynomialReal {
 				BigDecimal otherExponent = otherEntry.getKey();
 				BigDecimal otherCoeff = otherEntry.getValue();
 				
-				BigDecimal multExponent = thisExponent.multiply(otherExponent);
+				BigDecimal addExponent = thisExponent.add(otherExponent);
 				BigDecimal multCoeff = thisCoeff.multiply(otherCoeff);
 				
-				if (newc.get(multExponent) == null) {
-					newc.put(multExponent, multCoeff);
+				if (newc.get(addExponent) == null) {
+					newc.put(addExponent, multCoeff);
 				} else {
-					newc.put(otherExponent, newc.get(multExponent).add(multCoeff));
+					newc.put(addExponent, newc.get(addExponent).add(multCoeff));
 				}
 			}
 		}
 		
 		this.coeffs = newc;
+	}
+	
+	@Override
+	public void multiply(Poly other, MathContext mc)  throws PrismNotSupportedException{
+		PolynomialReal otherR;
+		if (other instanceof Polynomial) {
+			otherR = new PolynomialReal(((Polynomial)other).coeffs);
+		} else if (other instanceof PolynomialReal) {
+			otherR = (PolynomialReal)other;
+		} else {
+			throw new PrismNotSupportedException("Unrecognized type of Poly in PolynomialReal arguments");
+		}
+		
+		multiply(otherR, mc);
 	}
 	
 	/**
@@ -402,7 +478,7 @@ public class PolynomialReal {
 	 * @param other other polynomial
 	 * @param mc MathContext to use
 	 */
-	public void multiply(PolynomialReal other, MathContext mc){
+	public void multiply(PolynomialReal other, MathContext mc) {
 		Map<BigDecimal, BigDecimal> newc = new HashMap<BigDecimal, BigDecimal>();
 		
 		for (Map.Entry<BigDecimal, BigDecimal> thisEntry : this.coeffs.entrySet()) {
@@ -412,13 +488,13 @@ public class PolynomialReal {
 				BigDecimal otherExponent = otherEntry.getKey();
 				BigDecimal otherCoeff = otherEntry.getValue();
 				
-				BigDecimal multExponent = thisExponent.multiply(otherExponent, mc);
+				BigDecimal addExponent = thisExponent.add(otherExponent, mc);
 				BigDecimal multCoeff = thisCoeff.multiply(otherCoeff, mc);
 				
-				if (newc.get(multExponent) == null) {
-					newc.put(multExponent, multCoeff);
+				if (newc.get(addExponent) == null) {
+					newc.put(addExponent, multCoeff);
 				} else {
-					newc.put(otherExponent, newc.get(multExponent).add(multCoeff, mc));
+					newc.put(addExponent, newc.get(addExponent).add(multCoeff, mc));
 				}
 			}
 		}
@@ -426,10 +502,7 @@ public class PolynomialReal {
 		this.coeffs = newc;
 	}
 	
-	/**
-	 * Multiplies this polynomial with scalar
-	 * @param scalar scalar to multiply with
-	 */
+	@Override
 	public void multiplyWithScalar(BigDecimal scalar){
 		for (Map.Entry<BigDecimal, BigDecimal> thisEntry : this.coeffs.entrySet()) {
 			BigDecimal thisExponent = thisEntry.getKey();
@@ -438,11 +511,8 @@ public class PolynomialReal {
 			this.coeffs.put(thisExponent, thisCoeff.multiply(scalar));
 		}
 	}
-	/**
-	 * Multiplies this polynomial with scalar using the given MathContext
-	 * @param scalar scalar to multiply with
-	 * @param mc MathContext to use for the multiplication
-	 */
+	
+	@Override
 	public void multiplyWithScalar(BigDecimal scalar, MathContext mc){
 		for (Map.Entry<BigDecimal, BigDecimal> thisEntry : this.coeffs.entrySet()) {
 			BigDecimal thisExponent = thisEntry.getKey();
