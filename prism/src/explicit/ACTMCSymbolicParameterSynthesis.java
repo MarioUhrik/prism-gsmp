@@ -38,6 +38,7 @@ import java.util.Map;
 import java.util.Set;
 
 import common.BigDecimalUtils;
+import common.polynomials.Poly;
 import common.polynomials.Polynomial;
 import common.polynomials.PolynomialRootFinding;
 import explicit.ProbModelChecker.TermCrit;
@@ -46,6 +47,7 @@ import parser.ast.SynthParam;
 import prism.PrismComponent;
 import prism.PrismDevNullLog;
 import prism.PrismException;
+import prism.PrismNotSupportedException;
 import prism.PrismUtils;
 
 /**
@@ -161,14 +163,18 @@ public class ACTMCSymbolicParameterSynthesis extends ACTMCReduction
 				for (Map.Entry<Integer, Double> entry : reachRewards.entrySet()) {
 					int state = entry.getKey();
 					double reachRew = entry.getValue();
-					Polynomial poly = actmcPotatoData.getMeanDistributionsPolynomials().get(entrance).get(state);
+					Poly poly = (Polynomial)actmcPotatoData.getMeanDistributionsPolynomials().get(entrance).get(state);
 					if (poly == null) {
 						continue;
 					}
-					poly = new Polynomial(poly.coeffs);
+					if (!(poly instanceof Polynomial)) {
+						throw new PrismNotSupportedException("ACTMCParameterSynthesis does not yet support Polynomials"
+								+ "with real exponents");
+					}
+					Polynomial polynomial = new Polynomial(((Polynomial)poly).coeffs);
 					
-					poly.multiplyWithScalar(new BigDecimal(String.valueOf(reachRew), mc), mc);
-					symbolicPolynomial.add(poly, mc);
+					polynomial.multiplyWithScalar(new BigDecimal(String.valueOf(reachRew), mc), mc);
+					symbolicPolynomial.add(polynomial, mc);
 				}
 				
 				//find roots of the derivation of the symbolic polynomial

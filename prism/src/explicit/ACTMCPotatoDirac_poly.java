@@ -498,7 +498,7 @@ public class ACTMCPotatoDirac_poly extends ACTMCPotato_poly
 		
 		//Now that we have the expected rewards for the underlying CTMC behavior,
 		//event behavior is applied.
-		polynomialsAfterEvent = getEventRewardsPoly(false);
+		polynomialsAfterEvent = (Polynomial[])getEventRewardsPoly(false);
 		for (int n = 0; n < numStates ; ++n) {
 			polynomialsAfterEvent[n].add(polynomialsBeforeEvent[n], mc);
 		}

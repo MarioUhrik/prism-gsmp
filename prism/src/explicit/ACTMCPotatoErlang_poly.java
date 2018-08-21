@@ -530,7 +530,7 @@ public class ACTMCPotatoErlang_poly extends ACTMCPotato_poly
 		
 		//Now that we have the expected rewards for the underlying CTMC behavior,
 		//event behavior is applied.
-		polynomialsAfterEvent = getEventRewardsPoly(false);
+		polynomialsAfterEvent = (Polynomial[])getEventRewardsPoly(false);
 		antiderivatives = antiderivatives.clone();
 		for (int n = 0; n < numStates ; ++n) {
 			antiderivatives[n] = new Polynomial(antiderivatives[n].coeffs);

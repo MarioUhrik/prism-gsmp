@@ -32,7 +32,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
+import common.polynomials.Poly;
 import common.polynomials.Polynomial;
+import common.polynomials.PolynomialReal;
 import explicit.rewards.ACTMCRewardsSimple;
 import prism.PrismException;
 
@@ -58,7 +60,7 @@ public abstract class ACTMCPotato_poly extends ACTMCPotato
 	 * <br>
 	 * First key is the potato entrance. The second key is the queried state within the potato.
 	 */
-	protected Map<Integer, Map<Integer, Polynomial>> meanTimesPolynomials;
+	protected Map<Integer, Map<Integer, Poly>> meanTimesPolynomials;
 	
 	/**
 	 * Map that holds polynomials which when evaluated at some firing time t yield
@@ -66,14 +68,14 @@ public abstract class ACTMCPotato_poly extends ACTMCPotato
 	 * <br>
 	 * First key is the potato entrance. The second key is the queried successor/potato state.
 	 */
-	protected Map<Integer, Map<Integer, Polynomial>> meanDistributionsPolynomials;
+	protected Map<Integer, Map<Integer, Poly>> meanDistributionsPolynomials;
 	/**
 	 * Map that holds polynomials which when evaluated at some firing time t yield
 	 * values of {@link ACTMCPotato#meanDistributionsBeforeEvent}. 
 	 * <br>
 	 * First key is the potato entrance. The second key is the queried successor/potato state.
 	 */
-	protected Map<Integer, Map<Integer, Polynomial>> meanDistributionsBeforeEventPolynomials;
+	protected Map<Integer, Map<Integer, Poly>> meanDistributionsBeforeEventPolynomials;
 	
 	/**
 	 * Map that holds polynomials which when evaluated at some firing time t yield
@@ -81,14 +83,14 @@ public abstract class ACTMCPotato_poly extends ACTMCPotato
 	 * <br>
 	 * Key is the potato entrance.
 	 */
-	protected Map<Integer, Polynomial> meanRewardsPolynomials;
+	protected Map<Integer, Poly> meanRewardsPolynomials;
 	/**
 	 * Map that holds polynomials which when evaluated at some firing time t yield
 	 * values of {@link ACTMCPotato#meanRewardsBeforeEvent}. 
 	 * <br>
 	 * Key is the potato entrance.
 	 */
-	protected Map<Integer, Polynomial> meanRewardsBeforeEventPolynomials;
+	protected Map<Integer, Poly> meanRewardsBeforeEventPolynomials;
 	
 	/**
 	 * {@link ACTMCPotato#ACTMCPotato(ACTMCSimple, GSMPEvent, ACTMCRewardsSimple, BitSet)}
@@ -108,28 +110,28 @@ public abstract class ACTMCPotato_poly extends ACTMCPotato
 	private void initializeMaps() {
 		computeStates();
 		
-		meanTimesPolynomials = new HashMap<Integer, Map<Integer, Polynomial>>(entrances.size());
+		meanTimesPolynomials = new HashMap<Integer, Map<Integer, Poly>>(entrances.size());
 		for (int entrance : entrances) {
-			meanTimesPolynomials.put(entrance, new HashMap<Integer, Polynomial>(potato.size()));
+			meanTimesPolynomials.put(entrance, new HashMap<Integer, Poly>(potato.size()));
 		}
 		
-		meanDistributionsBeforeEventPolynomials = new HashMap<Integer, Map<Integer, Polynomial>>(entrances.size());
+		meanDistributionsBeforeEventPolynomials = new HashMap<Integer, Map<Integer, Poly>>(entrances.size());
 		for (int entrance : entrances) {
-			meanDistributionsBeforeEventPolynomials.put(entrance, new HashMap<Integer, Polynomial>(potato.size() + successors.size()));
+			meanDistributionsBeforeEventPolynomials.put(entrance, new HashMap<Integer, Poly>(potato.size() + successors.size()));
 		}
-		meanDistributionsPolynomials = new HashMap<Integer, Map<Integer, Polynomial>>(entrances.size());
+		meanDistributionsPolynomials = new HashMap<Integer, Map<Integer, Poly>>(entrances.size());
 		for (int entrance : entrances) {
-			meanDistributionsPolynomials.put(entrance, new HashMap<Integer, Polynomial>(successors.size()));
+			meanDistributionsPolynomials.put(entrance, new HashMap<Integer, Poly>(successors.size()));
 		}
 		
-		meanRewardsBeforeEventPolynomials = new HashMap<Integer, Polynomial>(potato.size());
-		meanRewardsPolynomials = new HashMap<Integer, Polynomial>(potato.size());
+		meanRewardsBeforeEventPolynomials = new HashMap<Integer, Poly>(potato.size());
+		meanRewardsPolynomials = new HashMap<Integer, Poly>(potato.size());
 	}
 	
 	/**
 	 * Returns {@link ACTMCPotato_poly#meanTimesPolynomials}.
 	 */
-	public Map<Integer, Map<Integer, Polynomial>> getMeanTimesPolynomials() throws PrismException {
+	public Map<Integer, Map<Integer, Poly>> getMeanTimesPolynomials() throws PrismException {
 		if (!meanTimesComputed) {
 			computeMeanTimes();
 		}
@@ -139,7 +141,7 @@ public abstract class ACTMCPotato_poly extends ACTMCPotato
 	/**
 	 * Returns {@link ACTMCPotato_poly#meanDistributionsBeforeEventPolynomials}.
 	 */
-	public Map<Integer, Map<Integer, Polynomial>> getMeanDistributionsBeforeEventPolynomials() throws PrismException {
+	public Map<Integer, Map<Integer, Poly>> getMeanDistributionsBeforeEventPolynomials() throws PrismException {
 		if (!meanDistributionsComputed) {
 			computeMeanDistributions();
 		}
@@ -149,7 +151,7 @@ public abstract class ACTMCPotato_poly extends ACTMCPotato
 	/**
 	 * Returns {@link ACTMCPotato_poly#meanDistributionsPolynomials}.
 	 */
-	public Map<Integer, Map<Integer, Polynomial>> getMeanDistributionsPolynomials() throws PrismException {
+	public Map<Integer, Map<Integer, Poly>> getMeanDistributionsPolynomials() throws PrismException {
 		if (!meanDistributionsComputed) {
 			computeMeanDistributions();
 		}
@@ -159,7 +161,7 @@ public abstract class ACTMCPotato_poly extends ACTMCPotato
 	/**
 	 * Returns {@link ACTMCPotato_poly#meanRewardsBeforeEventPolynomials}.
 	 */
-	public Map<Integer, Polynomial> getMeanRewardsBeforeEventPolynomials() throws PrismException {
+	public Map<Integer, Poly> getMeanRewardsBeforeEventPolynomials() throws PrismException {
 		if (!meanRewardsComputed) {
 			computeMeanRewards();
 		}
@@ -169,7 +171,7 @@ public abstract class ACTMCPotato_poly extends ACTMCPotato
 	/**
 	 * Returns {@link ACTMCPotato_poly#meanRewardsPolynomials}.
 	 */
-	public Map<Integer, Polynomial> getMeanRewardsPolynomials() throws PrismException {
+	public Map<Integer, Poly> getMeanRewardsPolynomials() throws PrismException {
 		if (!meanRewardsComputed) {
 			computeMeanRewards();
 		}
@@ -191,15 +193,31 @@ public abstract class ACTMCPotato_poly extends ACTMCPotato
 	 * @return New array of polynomials with potato event transition reward application.
 	 * @throws PrismException 
 	 */
-	public Polynomial[] getEventRewardsPoly(boolean originalIndexing) throws PrismException {
+	public Poly[] getEventRewardsPoly(boolean originalIndexing) throws PrismException {
 		if (!meanDistributionsComputed) {
 			computeMeanDistributions();
 		}
 		
-		//Create a hard copy of rewPolyBeforeEvent array
-		Polynomial[] resPoly = new Polynomial[actmc.getNumStates()];
-		for (int n = 0; n < resPoly.length ; ++n) {
-			resPoly[n] = new Polynomial();
+		boolean realExponents = false; {
+			int someEntrance = (int)entrances.toArray()[0];
+			int somePotatoState = (int)potato.toArray()[0];
+			meanDistributionsBeforeEventPolynomials.get(someEntrance).get(somePotatoState);
+			if (meanDistributionsBeforeEventPolynomials.get(someEntrance).get(somePotatoState)  instanceof PolynomialReal) {
+				realExponents = true;
+			}
+		}
+		
+		Poly[] resPoly;
+		if (realExponents) {
+			resPoly = new PolynomialReal[actmc.getNumStates()];
+			for (int n = 0; n < resPoly.length ; ++n) {
+				resPoly[n] = new PolynomialReal();
+			}
+		} else {
+			resPoly = new Polynomial[actmc.getNumStates()];
+			for (int n = 0; n < resPoly.length ; ++n) {
+				resPoly[n] = new Polynomial();
+			}
 		}
 		
 		for (int entrance : entrances) {
@@ -210,7 +228,12 @@ public abstract class ACTMCPotato_poly extends ACTMCPotato
 				}
 				
 				Distribution eventTransitions = event.getTransitions(ps);
-				Polynomial additionPoly = new Polynomial(meanDistributionsBeforeEventPolynomials.get(entrance).get(ps).coeffs);
+				Poly additionPoly;
+				if (realExponents) {
+					additionPoly = new PolynomialReal(meanDistributionsBeforeEventPolynomials.get(entrance).get(ps));
+				} else {
+					additionPoly = new Polynomial((Polynomial)meanDistributionsBeforeEventPolynomials.get(entrance).get(ps));
+				}
 				Set<Integer> rewSet = rews.keySet();
 				for (int succ : rewSet) {
 					double prob = eventTransitions.get(succ);
