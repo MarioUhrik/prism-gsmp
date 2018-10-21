@@ -64,7 +64,7 @@ public class ACTMCPotatoWeibull_polyTaylor extends ACTMCPotato_poly
 	 * Taylor series representation of e^(-((t/weibullRate)^k) - (uniformizationRate * t)).
 	 * Computed during a call to {@link ACTMCPotatoWeibull_polyTaylor#computeFoxGlynn()}.
 	 */
-	PolynomialReal taylor;
+	private PolynomialReal taylor;
 	/**
 	 * Number {@code b} such that when computing the Riemann integral
 	 * from 0 to b for Weibull distribution in {@link ACTMCPotatoWeibull_polyTaylor#evaluateAntiderivative(Polynomial)},
@@ -73,7 +73,7 @@ public class ACTMCPotatoWeibull_polyTaylor extends ACTMCPotato_poly
 	 * low enough for the result not to be rubbish because of the used precision or degree of the polynomials.
 	 * Computed during a call to {@link ACTMCPotatoWeibull_polyTaylor#computeFoxGlynn()}.
 	 */
-	BigDecimal integralCeil;
+	private BigDecimal integralCeil;
 	
 	/** {@link ACTMCPotato#ACTMCPotato(ACTMCSimple, GSMPEvent, ACTMCRewardsSimple, BitSet)} */
 	public ACTMCPotatoWeibull_polyTaylor(ACTMCSimple actmc, GSMPEvent event, ACTMCRewardsSimple rewards, BitSet target) throws PrismException {
