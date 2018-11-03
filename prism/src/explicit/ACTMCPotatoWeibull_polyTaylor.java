@@ -27,7 +27,10 @@
 package explicit;
 
 import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.BitSet;
+import java.util.List;
 import java.util.Set;
 
 import ch.obermuhlner.math.big.BigDecimalMath;
@@ -636,6 +639,62 @@ public class ACTMCPotatoWeibull_polyTaylor extends ACTMCPotato_poly
 			revFact = revFact.divide(new BigDecimal(n+1, mc), mc);
 			power = power.multiply(powerElem, mc);
 			augment = revFact.multiply(power, mc);
+		}
+		
+		return taylor;
+	}
+	
+	/**
+	 * Computes the Taylor series representation of e^(-((t/weibullRate)^k) - uniformizationRate * t) where t is unknown
+	 * @param wRate Weibull Rate/scale (first) parameter
+	 * @param wK Weibull shape (second) parameter
+	 * @param i integer >1 of how many elements of the series to include.
+	 * @return polynomial that is the Taylor series representation of e^(-((t/weibullRate)^k) - uniformizationRate * t)
+	 */
+	private PolynomialReal computeTaylorSeriesBoth(double wRate, double wK, int i) {
+		BigDecimal rateBD = new BigDecimal(String.valueOf(wRate), mc);
+		BigDecimal kBD = new BigDecimal(String.valueOf(wK), mc);
+		
+		BigDecimal powerElemWeibull = BigDecimalMath.pow(BigDecimal.ONE.divide(rateBD, mc), kBD, mc).negate();
+		BigDecimal powerElemPoisson = new BigDecimal(String.valueOf(uniformizationRate), mc).negate();
+		PolynomialReal taylor = new PolynomialReal();
+		
+		BigDecimal revFact = BigDecimal.ONE; 
+		
+		//Precomputation of frequently used values
+		List<BigDecimal> weibullCoeffs = new ArrayList<BigDecimal>();
+		List<BigDecimal> poissonCoeffs = new ArrayList<BigDecimal>();
+		BigDecimal weibullCoeff = BigDecimal.ONE;
+		BigDecimal poissonCoeff = BigDecimal.ONE;
+		for (int n = 0; n <= i + 3; ++n) {
+			weibullCoeffs.add(weibullCoeff);
+			weibullCoeff.multiply(powerElemWeibull, mc);
+			
+			poissonCoeffs.add(poissonCoeff);
+			poissonCoeff.multiply(powerElemPoisson, mc);
+		}
+		
+		for (int n = 0; n <= i; ++n) {
+			List<BigDecimal> binomialLine = Polynomial.binomialLine(new BigInteger(String.valueOf(n)));
+			
+			for (int k = 0; k < binomialLine.size() ; ++k) {
+				BigDecimal binomial = binomialLine.get(k);
+				int weibullExponent = (binomialLine.size() - 1) - k;
+				int poissonExponent = k;
+				
+				BigDecimal exponent = kBD.multiply(new BigDecimal(weibullExponent, mc),  mc).add(new BigDecimal(poissonExponent, mc));
+				
+				weibullCoeff = weibullCoeffs.get(weibullExponent);
+				poissonCoeff = poissonCoeffs.get(poissonExponent);
+				BigDecimal coeff = binomial.multiply(weibullCoeff, mc).multiply(poissonCoeff, mc).multiply(revFact, mc);
+				
+				BigDecimal currentCoeff = taylor.coeffs.get(exponent);
+				if (currentCoeff == null) {
+					currentCoeff = BigDecimal.ZERO;
+				}
+				taylor.coeffs.put(exponent, coeff.add(currentCoeff, mc));
+			}
+			revFact = revFact.divide(new BigDecimal(String.valueOf(n), mc).add(BigDecimal.ONE, mc), mc);
 		}
 		
 		return taylor;
