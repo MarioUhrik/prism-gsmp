@@ -125,8 +125,14 @@ public class ACTMCPotatoWeibull_polyTaylor extends ACTMCPotato_poly
 			weights[i - left] = weights[i - left].divide(factor, mc);
 		}
 		
-		taylor = computeTaylorSeriesWeibull(event.getFirstParameter(), event.getSecondParameter(), right + (int)(right/event.getSecondParameter()));
-		taylor.multiply(computeTaylorSeriesPoisson(right + taylor.coeffs.size() / 10));
+		// Old approach - slower and less accurate
+		//taylor = computeTaylorSeriesWeibull(event.getFirstParameter(), event.getSecondParameter(), right + (int)(right/event.getSecondParameter()));
+		//taylor.multiply(computeTaylorSeriesPoisson(right + taylor.coeffs.size() / 10));
+		//integralCeil = computeIntegralCeil(event.getFirstParameter(), event.getSecondParameter(), taylor);
+		
+		// TODO MAJO - this taylorSize is insufficient. It should all be multiplied by event.getFirstParameter(), then it might be always accurate.
+		int taylorSize = right + (int)(right/event.getSecondParameter()) + (int)(event.getFirstParameter() * event.getFirstParameter());
+		taylor = computeTaylorSeriesBoth(event.getFirstParameter(), event.getSecondParameter(), taylorSize);
 		integralCeil = computeIntegralCeil(event.getFirstParameter(), event.getSecondParameter(), taylor);
 		
 		foxGlynnComputed = true;
@@ -593,6 +599,7 @@ public class ACTMCPotatoWeibull_polyTaylor extends ACTMCPotato_poly
 	 * @param i integer >1 of how many elements of the series to include. Internally incremented by wRate.
 	 * @return polynomial that is the Taylor series representation of e^(-((t/weibullRate)^k))
 	 */
+	@Deprecated
 	private PolynomialReal computeTaylorSeriesWeibull(double wRate, double wK, int i) {
 		BigDecimal rateBD = new BigDecimal(String.valueOf(wRate), mc);
 		BigDecimal kBD = new BigDecimal(String.valueOf(wK), mc);
@@ -626,6 +633,7 @@ public class ACTMCPotatoWeibull_polyTaylor extends ACTMCPotato_poly
 	 * @param i integer >1 of how many elements of the series to include
 	 * @return polynomial that is the Taylor series representation of e^(- uniformizationRate * t)
 	 */
+	@Deprecated
 	private PolynomialReal computeTaylorSeriesPoisson(int i) {
 		BigDecimal powerElem = new BigDecimal(String.valueOf(uniformizationRate), mc).negate();
 		PolynomialReal taylor = new PolynomialReal();
@@ -668,10 +676,10 @@ public class ACTMCPotatoWeibull_polyTaylor extends ACTMCPotato_poly
 		BigDecimal poissonCoeff = BigDecimal.ONE;
 		for (int n = 0; n <= i + 3; ++n) {
 			weibullCoeffs.add(weibullCoeff);
-			weibullCoeff.multiply(powerElemWeibull, mc);
+			weibullCoeff = weibullCoeff.multiply(powerElemWeibull, mc);
 			
 			poissonCoeffs.add(poissonCoeff);
-			poissonCoeff.multiply(powerElemPoisson, mc);
+			poissonCoeff = poissonCoeff.multiply(powerElemPoisson, mc);
 		}
 		
 		for (int n = 0; n <= i; ++n) {
@@ -792,6 +800,7 @@ public class ACTMCPotatoWeibull_polyTaylor extends ACTMCPotato_poly
 			prob = antiderivative.value(b, mc);
 			diff = BigDecimal.ONE;
 		}
+		iters = 0;
 		increment = increment.divide(BigDecimal.TEN, mc);
 		do { //downward slope search, medium accuracy
 			b = b.add(increment, mc);
@@ -802,11 +811,19 @@ public class ACTMCPotatoWeibull_polyTaylor extends ACTMCPotato_poly
 			if (diff.compareTo(lastDiff) > 0) {
 				break;
 			}
+			++iters;
 		} while (prob.compareTo(lastProb) > 0);
 		b = b.subtract(increment, mc);
-		increment = increment.divide(BigDecimal.TEN, mc);
 		prob = lastProb;
 		diff = lastDiff;
+		if (iters >= 2) {
+			b = b.subtract(increment, mc);
+			lastProb = prob;
+			prob = antiderivative.value(b, mc);
+			diff = BigDecimal.ONE;
+		}
+		iters = 0;
+		increment = increment.divide(BigDecimal.TEN, mc);
 		do { //downward slope search, high accuracy
 			b = b.add(increment, mc);
 			lastProb = prob;
@@ -816,11 +833,19 @@ public class ACTMCPotatoWeibull_polyTaylor extends ACTMCPotato_poly
 			if (diff.compareTo(lastDiff) > 0) {
 				break;
 			}
+			++iters;
 		} while (prob.compareTo(lastProb) > 0);
 		b = b.subtract(increment, mc);
-		increment = increment.divide(BigDecimal.TEN, mc);
 		prob = lastProb;
 		diff = lastDiff;
+		if (iters >= 2) {
+			b = b.subtract(increment, mc);
+			lastProb = prob;
+			prob = antiderivative.value(b, mc);
+			diff = BigDecimal.ONE;
+		}
+		iters = 0;
+		increment = increment.divide(BigDecimal.TEN, mc);
 		do { //downward slope search, very high accuracy
 			b = b.add(increment, mc);
 			lastProb = prob;
@@ -830,6 +855,7 @@ public class ACTMCPotatoWeibull_polyTaylor extends ACTMCPotato_poly
 			if (diff.compareTo(lastDiff) > 0) {
 				break;
 			}
+			++iters;
 		} while (prob.compareTo(lastProb) > 0);
 			
 		return b.subtract(increment, mc);
