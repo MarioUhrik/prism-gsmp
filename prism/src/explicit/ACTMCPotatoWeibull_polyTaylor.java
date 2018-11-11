@@ -91,7 +91,7 @@ public class ACTMCPotatoWeibull_polyTaylor extends ACTMCPotato_poly
 	public void setKappa(BigDecimal kappa) {
 		// ACTMCPotatoWeibull usually requires better precision, dependent on the distribution parameters.
 		// So, adjust kappa by the possible distribution parameter values.
-		int basePrecision = BigDecimalUtils.decimalDigits(kappa); // TODO MAJO - I think [upper_bound]*(kappa + lambda) is needed, but thats extremely high!
+		int basePrecision = BigDecimalUtils.decimalDigits(kappa);
 		int weibullPrecision = 100 + basePrecision + (int)actmc.getMaxExitRate() + (int)event.getSecondParameter() * 5 + (int)(10/event.getSecondParameter())  + (int)event.getFirstParameter()  +
 				((int)Math.ceil(Math.log(((event.getFirstParameter() + (int)actmc.getMaxExitRate()) * basePrecision * event.getSecondParameter()))));
 		
@@ -128,13 +128,6 @@ public class ACTMCPotatoWeibull_polyTaylor extends ACTMCPotato_poly
 			weights[i - left] = weights[i - left].divide(factor, mc);
 		}
 		
-		// Old approach - slower and less accurate
-		//taylor = computeTaylorSeriesWeibull(event.getFirstParameter(), event.getSecondParameter(), right + (int)(right/event.getSecondParameter()));
-		//taylor.multiply(computeTaylorSeriesPoisson(right + taylor.coeffs.size() / 10));
-		//integralCeil = computeIntegralCeil(event.getFirstParameter(), event.getSecondParameter(), taylor);
-		
-		// TODO MAJO - this taylorSize is insufficient. It should all be multiplied by event.getFirstParameter(), then it might be always accurate.
-		//int taylorSize = right + (int)(right/event.getSecondParameter()) + (int)(event.getFirstParameter() * event.getFirstParameter());
 		int taylorSize = right + 
 				(int)(
 				(event.getFirstParameter() +
@@ -755,13 +748,13 @@ public class ACTMCPotatoWeibull_polyTaylor extends ACTMCPotato_poly
 		//Make a hard copy of the taylor series
 		PolynomialReal taylorTmp = new PolynomialReal(taylor);
 		
-		//Multiply the Taylor series polynomial by t^(k-1)
+		//Multiply the Taylor series polynomial by t^(k-1) // TODO MAJO - not necessary, but doesn't hurt
 	    PolynomialReal tmp = new PolynomialReal();
 		BigDecimal kMinusOne = wKBD.subtract(BigDecimal.ONE, mc);
 		tmp.coeffs.put(kMinusOne, BigDecimal.ONE);
 		taylorTmp.multiply(tmp, mc);
 		
-		//Factor in the rest
+		//Factor in the rest // TODO MAJO - not necessary, but doesn't hurt
 		BigDecimal firstFactor = wKBD.divide(wRateBD, mc);
 		BigDecimal secondFactor = BigDecimal.ONE.divide(BigDecimalMath.pow(wRateBD, wKBD.subtract(BigDecimal.ONE, mc), mc), mc);
 		BigDecimal totalFactor = firstFactor.multiply(secondFactor, mc);
