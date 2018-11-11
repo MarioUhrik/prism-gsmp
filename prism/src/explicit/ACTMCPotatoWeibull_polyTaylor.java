@@ -92,7 +92,7 @@ public class ACTMCPotatoWeibull_polyTaylor extends ACTMCPotato_poly
 		// ACTMCPotatoWeibull usually requires better precision, dependent on the distribution parameters.
 		// So, adjust kappa by the possible distribution parameter values.
 		int basePrecision = BigDecimalUtils.decimalDigits(kappa); // TODO MAJO - I think [upper_bound]*(kappa + lambda) is needed, but thats extremely high!
-		int weibullPrecision = 200 + basePrecision + (int)actmc.getMaxExitRate() + (int)event.getSecondParameter() * 5 + (int)(30/event.getSecondParameter())  + (int)event.getFirstParameter()  +
+		int weibullPrecision = 100 + basePrecision + (int)actmc.getMaxExitRate() + (int)event.getSecondParameter() * 5 + (int)(10/event.getSecondParameter())  + (int)event.getFirstParameter()  +
 				((int)Math.ceil(Math.log(((event.getFirstParameter() + (int)actmc.getMaxExitRate()) * basePrecision * event.getSecondParameter()))));
 		
 		BigDecimal weibullKappa = BigDecimalUtils.allowedError(weibullPrecision);
@@ -111,7 +111,10 @@ public class ACTMCPotatoWeibull_polyTaylor extends ACTMCPotato_poly
 		}
 		
 		BigDecimal fgRate = new BigDecimal(String.valueOf(uniformizationRate), mc); // Compute FoxGlynn only for the uniformization rate
-		foxGlynn = new FoxGlynn_BD(fgRate, new BigDecimal(1e-300), new BigDecimal(1e+300), kappa);
+		int fgKappaFactor = (int)Math.pow((event.getFirstParameter() + (event.getFirstParameter() * 1 / Math.exp(event.getSecondParameter())) )
+				* (Math.exp((1/event.getSecondParameter()) - 1) + (1 - 1/Math.E)), 2);
+		BigDecimal fgKappa = kappa.multiply(BigDecimalUtils.allowedError(fgKappaFactor), mc);
+		foxGlynn = new FoxGlynn_BD(fgRate, new BigDecimal(1e-300), new BigDecimal(1e+300), fgKappa);
 		if (foxGlynn.getRightTruncationPoint() < 0) {
 			throw new PrismException("Overflow in Fox-Glynn computation of the Poisson distribution!");
 		}
@@ -131,7 +134,13 @@ public class ACTMCPotatoWeibull_polyTaylor extends ACTMCPotato_poly
 		//integralCeil = computeIntegralCeil(event.getFirstParameter(), event.getSecondParameter(), taylor);
 		
 		// TODO MAJO - this taylorSize is insufficient. It should all be multiplied by event.getFirstParameter(), then it might be always accurate.
-		int taylorSize = right + (int)(right/event.getSecondParameter()) + (int)(event.getFirstParameter() * event.getFirstParameter());
+		//int taylorSize = right + (int)(right/event.getSecondParameter()) + (int)(event.getFirstParameter() * event.getFirstParameter());
+		int taylorSize = right + 
+				(int)(
+				(event.getFirstParameter() +
+				(0.5 * event.getFirstParameter() * right / Math.exp(event.getSecondParameter()))
+				) * 
+				(Math.exp((1/event.getSecondParameter()) - 1) + (1 - 1/Math.E)));
 		taylor = computeTaylorSeriesBoth(event.getFirstParameter(), event.getSecondParameter(), taylorSize);
 		integralCeil = computeIntegralCeil(event.getFirstParameter(), event.getSecondParameter(), taylor);
 		
