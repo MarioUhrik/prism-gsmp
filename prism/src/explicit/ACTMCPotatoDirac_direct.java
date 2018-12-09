@@ -47,7 +47,7 @@ import prism.PrismException;
  * {@link CTMCModelChecker#computeTransientProbs(CTMC, double, double[])} and
  * {@link CTMCModelChecker#computeCumulativeRewards(CTMC, explicit.rewards.MCRewards, double)}.
  */
-public class ACTMCPotatoDirac_direct extends ACTMCPotato
+public class ACTMCPotatoDirac_direct extends ACTMCPotato // TODO MAJO - this class should use BigDecimal arithmetics internally!
 {
 	/** {@link ACTMCPotato#ACTMCPotato(ACTMCSimple, GSMPEvent, ACTMCRewardsSimple, BitSet)} */
 	public ACTMCPotatoDirac_direct(ACTMCSimple actmc, GSMPEvent event, ACTMCRewardsSimple rewards, BitSet target) throws PrismException {
