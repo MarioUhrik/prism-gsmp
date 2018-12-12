@@ -119,25 +119,30 @@ public class ACTMCRewardsSimple implements MCRewards
 		for (int s = 0; s < gsmpModel.getNumStates() ; ++s) {
 			List<GSMPEvent> activeExpEvents = gsmpModel.getActiveEvents(s);
 			activeExpEvents.removeIf(e -> !e.isExponential());
-			for (int t = 0; t < gsmpModel.getNumStates() ; ++t) {
-				double sumOfRates = 0.0;
-				double ctmcRew = 0.0;
-				for (GSMPEvent actExpEvent : activeExpEvents) {
+			
+			Map<Integer, Double> sumsOfRates = new HashMap<Integer, Double>();
+			Map<Integer, Double> ctmcRews = new HashMap<Integer, Double>();
+			for (GSMPEvent actExpEvent : activeExpEvents) {
+				for (Integer t : actExpEvent.getTransitions(s).getSupport()) {
 					double rew = gsmpRew.getTransitionReward(actExpEvent.getIdentifier(), s, t);
 					if (rew == 0.0) {
 						continue;
 					}
 					double rate = actExpEvent.getFirstParameter();
-					sumOfRates += rate;
-					ctmcRew += rew * rate; // weight the reward by the rate
+					sumsOfRates.putIfAbsent(t, sumsOfRates.getOrDefault(t, 0.0) + rate);
+					ctmcRews.putIfAbsent(t, ctmcRews.getOrDefault(t, 0.0) + (rew * rate)); // weight the reward by the rate
 				}
-				if (ctmcRew > 0.0) {
-					//finally, normalize the result to obtain weighted average (weighted by rates)
-					ctmcRew = ctmcRew / sumOfRates;
-					// and add it
-					ctmcTransitionRewards.putIfAbsent(s, new HashMap<Integer, Double>());
-					ctmcTransitionRewards.get(s).put(t, ctmcRew);
-				}
+			}
+			for (Map.Entry<Integer, Double> entry : sumsOfRates.entrySet()) {
+				int t = entry.getKey();
+				double sumOfRates = entry.getValue();
+				double ctmcRew = ctmcRews.get(t);
+				
+				//finally, normalize the result to obtain weighted average (weighted by rates)
+				ctmcRew = ctmcRew / sumOfRates;
+				// and add it
+				ctmcTransitionRewards.putIfAbsent(s, new HashMap<Integer, Double>());
+				ctmcTransitionRewards.get(s).put(t, ctmcRew);
 			}
 		}
 		
