@@ -146,9 +146,9 @@ public class ACTMCSymbolicParameterSynthesis extends ACTMCReduction
 			actmc.setEventParameters(params);
 			// POLICY EVALUATION
 			Map<Integer, Double> reachRewards = computeReachRewards();
-			if (reachRewards.containsValue(new Double(Double.POSITIVE_INFINITY))) {
-				//return the current params, because it doesn't matter in this case
-				return params;
+			for (int initState : actmc.getInitialStates()) {
+				if (reachRewards.get(initState).isInfinite())
+					return params; //return the current params, because it doesn't matter in this case
 			}
 			
 			// POLICY IMPROVEMENT
@@ -160,9 +160,8 @@ public class ACTMCSymbolicParameterSynthesis extends ACTMCReduction
 				int entrance = (int)actmcPotatoData.getEntrances().toArray()[0]; // localized event entrance state
 				Polynomial symbolicPolynomial = new Polynomial();
 				symbolicPolynomial.add(actmcPotatoData.getMeanRewardsPolynomials().get(entrance), mc);
-				for (Map.Entry<Integer, Double> entry : reachRewards.entrySet()) {
-					int state = entry.getKey();
-					double reachRew = entry.getValue();
+				for (int state = relevantStates.nextSetBit(0); state >= 0; state = relevantStates.nextSetBit(state+1)) {
+				    double reachRew = reachRewards.get(state);
 					Poly poly = (Polynomial)actmcPotatoData.getMeanDistributionsPolynomials().get(entrance).get(state);
 					if (poly == null) {
 						continue;
