@@ -228,82 +228,62 @@ public class ConstructRewards
 		Expression guard;
 		int numStates = gsmp.getNumStates();
 		GSMPRewardsSimple rewSimple = new GSMPRewardsSimple();
-
-		// Special case: constant state rewards
-		/*if (rewStr.getNumStateItems() == 1 && Expression.isTrue(rewStr.getStates(0)) && rewStr.getReward(0).isConstant()) {
-			double rew = rewStr.getReward(0).evaluateDouble(constantValues);
-			if (Double.isNaN(rew))
-				throw new PrismLangException("Reward structure evaluates to NaN (at any state)", rewStr.getReward(0));
-			if (!allowNegative && rew < 0)
-				throw new PrismLangException("Reward structure evaluates to " + rew + " (at any state), negative rewards not allowed", rewStr.getReward(0));
-			for (int s = 0; s < gsmp.getNumStates() ; ++s) {
-				rewSimple.setStateReward(s, rew);
+		
+		//state rewards
+		for (int i = 0; i < rewStr.getNumItems(); i++) {
+			guard = rewStr.getStates(i);
+			for (int j = 0; j < numStates; j++) {
+				// Is guard satisfied?
+				if (guard.evaluateBoolean(constantValues, statesList.get(j))) {
+					if (!rewStr.getRewardStructItem(i).isTransitionReward()) {
+						double rew = rewStr.getReward(i).evaluateDouble(constantValues, statesList.get(j));
+						if (Double.isNaN(rew))
+							throw new PrismLangException("Reward structure evaluates to NaN at state " + statesList.get(j), rewStr.getReward(i));
+						if (!allowNegative && rew < 0)
+							throw new PrismLangException("Reward structure evaluates to " + rew + " at state " + statesList.get(j) +", negative rewards not allowed", rewStr.getReward(i));
+						rewSimple.addToStateReward(j, rew);
+					}
+				}
 			}
-			return rewSimple;
-		}*/
-		// Normal:
-		if (false) {
-			return rewSimple;
-			// TODO MAJO - the above commented out code should be here, but I think it's broken, so I removed it.
-	        // The code was written by them for MDPs. I don't really like the way they handle that anyway.
 		}
-		else {
-			//state rewards
-			List<GSMPEvent> events = gsmp.getEventList();
-			for (int i = 0; i < rewStr.getNumItems(); i++) {
-				guard = rewStr.getStates(i);
-				for (int j = 0; j < numStates; j++) {
-					// Is guard satisfied?
-					if (guard.evaluateBoolean(constantValues, statesList.get(j))) {
-						if (!rewStr.getRewardStructItem(i).isTransitionReward()) {
+		//transition rewards
+		for (int j = 0; j < gsmp.getNumStates(); ++j) {
+			List<String> candidateRewardSynchs = new ArrayList<String>();
+			for (int i = 0 ; i < rewStr.getNumItems(); ++i) {
+				RewardStructItem item = rewStr.getRewardStructItem(i);
+				if (item.isTransitionReward() && item.getStates().evaluateBoolean(constantValues, statesList.get(j))) {
+					candidateRewardSynchs.add(item.getSynch());
+				}
+			}
+			List<GSMPEvent> actEvents = gsmp.getActiveEvents(j);
+			for (GSMPEvent actEvent : actEvents) {
+				for (Integer k : actEvent.getTransitions(j).getSupport()) {
+					Set<String> eventActions = actEvent.getActionLabels(j, k);
+					if (eventActions == null) { 
+						continue;
+					}
+					double rewardSum = 0; 
+					int rewardCount = 0;
+					// compute the sum of all rewards for this (sourceState,destState,event) tuple
+					for (String eventAction : eventActions) {
+						if (candidateRewardSynchs.contains(eventAction)) {
+							int i = rewStr.getItemIndex(eventAction);
 							double rew = rewStr.getReward(i).evaluateDouble(constantValues, statesList.get(j));
 							if (Double.isNaN(rew))
 								throw new PrismLangException("Reward structure evaluates to NaN at state " + statesList.get(j), rewStr.getReward(i));
 							if (!allowNegative && rew < 0)
 								throw new PrismLangException("Reward structure evaluates to " + rew + " at state " + statesList.get(j) +", negative rewards not allowed", rewStr.getReward(i));
-							rewSimple.addToStateReward(j, rew);
+							rewardSum += rew;
+							++rewardCount;
 						}
+					}
+					if (rewardCount > 0) { //assign uniform average of this sum as the actual reward
+						rewSimple.setTransitionReward(actEvent.getIdentifier(), j, k, rewardSum / rewardCount);
 					}
 				}
 			}
-			//transition rewards
-			for (int j = 0; j < gsmp.getNumStates(); ++j) {
-				List<String> candidateRewardSynchs = new ArrayList<String>();
-				for (int i = 0 ; i < rewStr.getNumItems(); ++i) {
-					RewardStructItem item = rewStr.getRewardStructItem(i);
-					if (item.isTransitionReward() && item.getStates().evaluateBoolean(constantValues, statesList.get(j))) {
-						candidateRewardSynchs.add(item.getSynch());
-					}
-				}
-				for (int k = 0; k < gsmp.getNumStates(); k++) {
-					for (int e = 0; e < events.size() ; ++e) {
-						Set<String> eventActions = events.get(e).getActionLabels(j, k);
-						if (eventActions == null) { 
-							continue;
-						}
-						double rewardSum = 0; 
-						int rewardCount = 0;
-						// compute the sum of all rewards for this (sourceState,destState,event) tuple
-						for (String eventAction : eventActions) {
-							if (candidateRewardSynchs.contains(eventAction)) {
-								int i = rewStr.getItemIndex(eventAction);
-								double rew = rewStr.getReward(i).evaluateDouble(constantValues, statesList.get(j));
-								if (Double.isNaN(rew))
-									throw new PrismLangException("Reward structure evaluates to NaN at state " + statesList.get(j), rewStr.getReward(i));
-								if (!allowNegative && rew < 0)
-									throw new PrismLangException("Reward structure evaluates to " + rew + " at state " + statesList.get(j) +", negative rewards not allowed", rewStr.getReward(i));
-								rewardSum += rew;
-								++rewardCount;
-							}
-						}
-						if (rewardCount > 0) { //assign uniform average of this sum as the actual reward
-							rewSimple.setTransitionReward(events.get(e).getIdentifier(), j, k, rewardSum / rewardCount);
-						}
-					}
-				}
-			}
-			return rewSimple;
 		}
+		return rewSimple;
 	}
 
 	/**
