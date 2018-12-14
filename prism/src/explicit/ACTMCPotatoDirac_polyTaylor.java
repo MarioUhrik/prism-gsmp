@@ -28,10 +28,12 @@ package explicit;
 
 import java.math.BigDecimal;
 import java.util.BitSet;
+import java.util.Map;
 import java.util.Set;
 
 import ch.obermuhlner.math.big.BigDecimalMath;
 import common.BigDecimalUtils;
+import common.polynomials.Poly;
 import common.polynomials.Polynomial;
 import explicit.rewards.ACTMCRewardsSimple;
 import prism.PrismException;
