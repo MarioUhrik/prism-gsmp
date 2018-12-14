@@ -380,7 +380,7 @@ public class Polynomial implements Poly {
 			newc.add(BigDecimal.ZERO);
 		for(int i = 0; i < coeffs.size(); i++){
 			for(int j = 0; j < other.coeffs.size(); j++){
-				newc.set(i+j, newc.get(i+j).add(coeffs.get(i).multiply(other.coeffs.get(j), mc)));
+				newc.set(i+j, newc.get(i+j).add(coeffs.get(i).multiply(other.coeffs.get(j), mc), mc));
 			}
 		}
 		this.coeffs = newc;

@@ -557,5 +557,93 @@ public class ACTMCPotatoDirac_polyTaylor extends ACTMCPotato_poly
 		
 		return taylor;
 	}
+	
+	/**
+	 * Reevaluates stored computed polynomials for the current value of event.getFirstParameter() (in case it has changed),
+	 * and overwrites the old values of meanTimes, meanDistributions, and meanRewards.
+	 * E.g. after this is called, the following holds. <br>
+	 * {@link #getMeanRewards()}.get(s) = {@link #getMeanRewardsPolynomials()}.get(s).value(event.getFirstParameter()).
+	 */
+	public void reevaluatePolynomials() throws PrismException { // TODO MAJO - potential small errors in the ranges of loops
+		if (!meanTimesComputed) {
+			computeMeanTimes();
+		}
+		if (!meanDistributionsComputed) {
+			computeMeanDistributions();
+		}
+		if (!meanRewardsComputed) {
+			computeMeanRewards();
+		}
+		
+		BigDecimal timeout = new BigDecimal(String.valueOf(event.getFirstParameter()), mc);
+		
+		// reevaluate meanTimes
+		for (Map.Entry<Integer, Map<Integer, Poly>> entry1 : meanTimesPolynomials.entrySet()) {
+			int entrance = entry1.getKey();
+			Map<Integer, Poly> entranceMap = entry1.getValue();
+			Distribution meanTimesForEntrance = meanTimes.get(entrance);
+			meanTimesForEntrance.clear();
+			
+			for (int s : potato) {
+				Poly polynomial = entranceMap.get(s);
+				
+				double val = polynomial.value(timeout, mc).doubleValue();
+				if (val != 0.0) {
+					meanTimesForEntrance.add(s, val);
+				}
+			}
+		}
+		
+		// reevaluate meanDistributionsBeforeEvent
+		for (Map.Entry<Integer, Map<Integer, Poly>> entry1 : meanDistributionsBeforeEventPolynomials.entrySet()) {
+			int entrance = entry1.getKey();
+			Map<Integer, Poly> entranceMap = entry1.getValue();
+			Distribution meanDistributionForEntrance = meanDistributionsBeforeEvent.get(entrance);
+			meanDistributionForEntrance.clear();
+			
+			for (Map.Entry<Integer, Poly> entry2 : entranceMap.entrySet()) {
+				int destination = entry2.getKey();
+				Poly polynomial = entry2.getValue();
+				
+				double val = polynomial.value(timeout, mc).doubleValue();
+				meanDistributionForEntrance.add(destination, val);
+			}
+		}
+		
+		// reevaluate meanDistributions
+		for (Map.Entry<Integer, Map<Integer, Poly>> entry1 : meanDistributionsPolynomials.entrySet()) {
+			int entrance = entry1.getKey();
+			Map<Integer, Poly> entranceMap = entry1.getValue();
+			Distribution meanDistributionForEntrance = meanDistributions.get(entrance);
+			meanDistributionForEntrance.clear();
+			
+			for (int s : successors) {
+				Poly polynomial = entranceMap.get(s);
+				
+				double val = polynomial.value(timeout, mc).doubleValue();
+				if (val != 0.0) {
+					meanDistributionForEntrance.add(s, val);
+				}
+			}
+			//normalize the distribution
+			double probSum = meanDistributionForEntrance.sum();
+			for (Integer destination : meanDistributionForEntrance.getSupport()) {
+				meanDistributionForEntrance.set(destination, meanDistributionForEntrance.get(destination) / probSum);
+			}
+		}
+		
+		// reevaluate meanRewardsBeforeEvent
+		for (int s : entrances) {
+			Poly polynomial = meanRewardsBeforeEventPolynomials.get(s);
+			meanRewardsBeforeEvent.set(s, polynomial.value(timeout, mc).doubleValue());
+		}
+
+		// reevaluate meanRewards
+		for (int s : entrances) {
+			Poly polynomial = meanRewardsPolynomials.get(s);
+			meanRewards.set(s, polynomial.value(timeout, mc).doubleValue());
+		}
+		
+	}
 
 }

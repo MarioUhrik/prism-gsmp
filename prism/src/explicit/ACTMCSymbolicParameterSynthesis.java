@@ -76,7 +76,8 @@ public class ACTMCSymbolicParameterSynthesis extends ACTMCReduction
 	
 	
 	/** {@link ACTMCReduction#ACTMCReduction(ACTMCSimple, ACTMCRewardsSimple, BitSet, boolean, PrismComponent)}
-	 *  @param synthParams List of synthesis event parameters. Assumed to be verified and fully correct. */
+	 *  @param synthParams List of synthesis event parameters. Assumed to be verified and fully correct.
+	 *  @param min true iff we are minimizing the rewards, else false */
 	public ACTMCSymbolicParameterSynthesis(ACTMCSimple actmc, ACTMCRewardsSimple actmcRew, BitSet target,
 			boolean computingSteadyState, PrismComponent parent, List<SynthParam> synthParams, boolean min) throws PrismException {
 		super(actmc, actmcRew, target, computingSteadyState, parent);
@@ -284,7 +285,7 @@ public class ACTMCSymbolicParameterSynthesis extends ACTMCReduction
 				// TODO MAJO - implement Erlang distributed event support
 				//break;
 			case EXPONENTIAL:
-				throw new UnsupportedOperationException("ACTMCSymbolicParameterSynthesis not yet support the exponential distribution");
+				throw new UnsupportedOperationException("ACTMCSymbolicParameterSynthesis does not yet support the exponential distribution");
 				// TODO MAJO - implement exponential distributed event support
 				//break;
 			case UNIFORM:
