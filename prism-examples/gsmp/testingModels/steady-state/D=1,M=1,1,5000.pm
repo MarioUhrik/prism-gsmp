@@ -1,6 +1,6 @@
 gsmp
 
-const int qCapacity = 10000;
+const int qCapacity = 5000;
 
 const double timeout = 1;
 const double lambda = 1;
