@@ -530,7 +530,7 @@ public class ACTMCPotatoWeibull_polyTaylor extends ACTMCPotato_poly
 		for (int ps : potato) {
 			double sol = soln[ACTMCtoDTMC.get(ps)];
 			if (sol != 0.0) {
-				meanRewardsSoln.add(ps, sol);
+				meanRewardsSoln.set(ps, sol);
 			}
 		}
 		
@@ -564,7 +564,7 @@ public class ACTMCPotatoWeibull_polyTaylor extends ACTMCPotato_poly
 		
 		// Store the rewards just before the event behavior using the original indexing.
 		for (int entrance : entrances) {
-			meanRewardsBeforeEvent.add(entrance, result[ACTMCtoDTMC.get(entrance)]);
+			meanRewardsBeforeEvent.set(entrance, result[ACTMCtoDTMC.get(entrance)]);
 		}
 		
 		//Now that we have the expected rewards for the underlying CTMC behavior,
@@ -588,7 +588,7 @@ public class ACTMCPotatoWeibull_polyTaylor extends ACTMCPotato_poly
 		
 		// Store the finalized expected rewards using the original indexing.
 		for (int entrance : entrances) {
-			meanRewards.add(entrance, result[ACTMCtoDTMC.get(entrance)]);
+			meanRewards.set(entrance, result[ACTMCtoDTMC.get(entrance)]);
 		}
 		
 		meanRewardsComputed = true;

@@ -86,7 +86,7 @@ public class ACTMCSymbolicParameterSynthesis extends ACTMCReduction
 		this.synthParams = synthParams;
 		this.min = min;
 		this.polySPMap = new HashMap<String, List<SynthParam>>();
-		this.polyPDMap = createPolyPDandSPMap(actmc, actmcRew, target);
+		this.polyPDMap = createPolyPDandSPMap(this.actmc, actmcRew, target);
 		
 		// Set kappa precision
 		setKappa(deduceKappa());
@@ -430,7 +430,7 @@ public class ACTMCSymbolicParameterSynthesis extends ACTMCReduction
 	 * @throws PrismException 
 	 */
 	private BigDecimal getMinimumKappaAndSetMC() throws PrismException {
-		BigDecimal lowestKappa = deduceKappa();
+		BigDecimal lowestKappa = epsilon;
 		for (ACTMCPotato_poly actmcPotatoData : polyPDMap.values()) {
 			BigDecimal kappa = actmcPotatoData.getKappa();
 			if (kappa == null) {
