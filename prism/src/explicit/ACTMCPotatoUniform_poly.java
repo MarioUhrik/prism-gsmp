@@ -160,11 +160,11 @@ public class ACTMCPotatoUniform_poly extends ACTMCPotato_poly
 			double[] tmpsoln = new double[numStates];
 
 			if (diracPrecompute) {
-				// Initialize the solution array by the solution array of the Dirac precomputation
+				// Initialize the solution array by the result of the Dirac precomputation
 				// Also, initialize the polynomials.
 				for (int i = 0; i < numStates; i++) {
-					dirac.getMeanTimes();
-					soln[i] = dirac.meanTimesSoln.get(entrance).get(DTMCtoACTMC.get(i));
+					dirac.getMeanDistributions();
+					soln[i] = dirac.meanDistributionsBeforeEvent.get(entrance).get(DTMCtoACTMC.get(i));
 					polynomials[i] = new Polynomial();
 				}
 			} else {
