@@ -373,6 +373,8 @@ public class ACTMCReduction extends PrismComponent
 		
 		// Adjust kappa for termination epsilon (just to be safe)
 		kappa = kappa.multiply(epsilon, mc);
+		
+		mainLog.println("Computed kappa precision ≈ 1.0E^-" + BigDecimalUtils.decimalDigits(kappa));
 		return kappa;
 	}
 	
