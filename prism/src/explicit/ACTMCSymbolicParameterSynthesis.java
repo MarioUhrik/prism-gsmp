@@ -464,7 +464,7 @@ public class ACTMCSymbolicParameterSynthesis extends ACTMCReduction
 				derivative,
 				lowerBound,
 				upperBound,
-				BigDecimalUtils.allowedError(mc.getPrecision()));
+				BigDecimalUtils.allowedError(mc.getPrecision())); // TODO MAJO - perhaps max(kappa, smallest possible double value)
 		
 		List<BigDecimal> boundedRoots = new ArrayList<BigDecimal>(roots);
 		boundedRoots.removeIf(root-> root.compareTo(lowerBound) < 0 || root.compareTo(upperBound) > 0);
