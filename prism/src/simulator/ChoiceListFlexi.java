@@ -31,6 +31,7 @@ import java.util.*;
 
 import parser.*;
 import parser.ast.*;
+import parser.ast.Module;
 import parser.type.TypeDistributionExponential;
 import prism.ModelType;
 import prism.PrismException;
